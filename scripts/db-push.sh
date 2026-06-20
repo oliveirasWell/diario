@@ -16,5 +16,12 @@ if [ -z "${MONGODB_URI:-}" ]; then
   exit 1
 fi
 
+# Validate that DB name exists in URI (e.g., ...mongodb.net/diario?....)
+if [[ ! "$MONGODB_URI" =~ ^mongodb(\+srv)?:\/\/[^\/]+\/[^^\/?#]+ ]]; then
+  echo "Invalid MONGODB_URI: missing database name."
+  echo "Example: mongodb+srv://user:pass@cluster0.x.mongodb.net/diario?retryWrites=true&w=majority"
+  exit 1
+fi
+
 cd packages/db
 pnpm run db:push
