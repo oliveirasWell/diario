@@ -48,6 +48,7 @@ model Enrollment {
   classId    String  @db.ObjectId
   studentId  String  @db.ObjectId
   status     String  @default("ACTIVE")
+  concept    String?
 
   class      Class   @relation(fields: [classId], references: [id])
   student    Student @relation(fields: [studentId], references: [id])

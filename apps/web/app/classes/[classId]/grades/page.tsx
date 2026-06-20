@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEvaluationsQuery } from "@/hooks/use-evaluations";
 import { useEnrollments } from "@/hooks/use-attendance";
+import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
 
@@ -11,6 +12,9 @@ export default function GradesPage() {
   const classId = params?.classId as string;
   const { data: evals, isLoading: loadingE } = useEvaluationsQuery(classId);
   const { data: enrolls, isLoading: loadingEn } = useEnrollments(classId);
+  const { data: grades } = useGradesByClass(classId);
+  const upsert = useUpsertGrade();
+  const setConcept = useSetConcept();
 
   const [q, setQ] = useState("");
   const list = useMemo(() => {
@@ -18,6 +22,12 @@ export default function GradesPage() {
     const filtered = q ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase())) : base;
     return filtered.slice().sort((a,b)=>a.student.name.localeCompare(b.student.name));
   }, [enrolls, q]);
+
+  const gradeIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    (grades ?? []).forEach(g => m.set(`${g.enrollmentId}|${g.evaluationId}`, g.score));
+    return m;
+  }, [grades]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -45,16 +55,35 @@ export default function GradesPage() {
                   <td className="whitespace-nowrap sticky left-0 bg-background z-10">{e.student.name}</td>
                   {evals?.map((ev) => (
                     <td key={ev.id}>
-                      <Input type="number" inputMode="decimal" placeholder="—" className="h-10 min-w-[80px]" disabled />
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.1"
+                        min={0}
+                        max={ev.maxScore ?? 10}
+                        className="input h-10 min-w-[84px]"
+                        defaultValue={gradeIndex.get(`${e.id}|${ev.id}`) ?? ""}
+                        onBlur={(evn) => {
+                          const v = evn.currentTarget.value.trim();
+                          if (v === "") return;
+                          const num = Number(v);
+                          if (Number.isNaN(num)) return;
+                          upsert.mutate({ classId, enrollmentId: e.id, evaluationId: ev.id, score: num });
+                        }}
+                      />
                     </td>
                   ))}
                   <td>
-                    <select className="select select-lg min-w-[96px]" disabled defaultValue="">
+                    <select
+                      className="select select-lg min-w-[96px]"
+                      defaultValue={(e as any).concept ?? ""}
+                      onChange={(evn) => setConcept.mutate({ classId, enrollmentId: e.id, concept: evn.currentTarget.value || null })}
+                    >
                       <option value="">—</option>
-                      <option>A</option>
-                      <option>B</option>
-                      <option>C</option>
-                      <option>D</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
                     </select>
                   </td>
                 </tr>

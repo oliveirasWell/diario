@@ -8,6 +8,9 @@ import { exportAttendanceToXlsx } from "@/lib/export-attendance";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { useDeleteAttendanceSession } from "@/hooks/use-attendance-admin";
 
 const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
 
@@ -31,6 +34,7 @@ export default function AttendancePage() {
   const { data: records } = useAttendanceRecords(classId);
   const mark = useMarkAttendance(classId);
   const clearMut = useClearAttendance(classId);
+  const deleteSess = useDeleteAttendanceSession(classId);
   const [hidePast, setHidePast] = useState(false);
   const [q, setQ] = useState("");
 
@@ -95,16 +99,21 @@ export default function AttendancePage() {
                     <th key={toISODate(d)} className="whitespace-nowrap text-xs snap-start">
                       <div className="flex items-center gap-2">
                         {d.toLocaleDateString()}
-                        <button
-                          className="btn-icon-xs hidden md:inline-flex"
-                          title="Marcar todos Presente"
-                          onClick={() => {
-                            enrollments.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }));
-                          }}
-                          type="button"
-                        >
-                          ✅
-                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0 hidden md:inline-flex" aria-label="Ações da data">
+                              ⋮
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => enrollments?.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }))}>
+                              Marcar todos Presente
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => deleteSess.mutate({ date: d })} className="text-destructive">
+                              Remover dia
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </th>
                   ))}

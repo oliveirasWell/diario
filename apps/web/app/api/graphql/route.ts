@@ -27,6 +27,7 @@ const yoga = createYoga({
         students(classId: ID!): [Student!]!
         enrollments(classId: ID!): [Enrollment!]!
         evaluations(classId: ID!): [Evaluation!]!
+        gradesByClass(classId: ID!): [Grade!]!
         attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
         attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
       }
@@ -39,8 +40,11 @@ const yoga = createYoga({
         createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
         unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
+        upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
+        setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
         markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
         clearAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!): Boolean!
+        deleteAttendanceSession(classId: ID!, date: DateTime!): Boolean!
       }
 
       type User {
@@ -76,6 +80,7 @@ const yoga = createYoga({
         classId: ID!
         studentId: ID!
         status: String!
+        concept: String
         student: Student!
       }
 
@@ -86,6 +91,13 @@ const yoga = createYoga({
         weight: Float
         maxScore: Float!
         createdAt: DateTime!
+      }
+
+      type Grade {
+        id: ID!
+        enrollmentId: ID!
+        evaluationId: ID!
+        score: Float!
       }
 
       enum AttendanceStatus { PRESENT ABSENT LATE }
@@ -135,6 +147,17 @@ const yoga = createYoga({
           const prisma = await getPrisma();
           return prisma.evaluation.findMany({
             where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
+          });
+        },
+        gradesByClass: async (_: unknown, { classId }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
+          const prisma = await getPrisma();
+          // Ensure class belongs to owner
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) return [];
+          return prisma.grade.findMany({
+            where: { evaluation: { classId: classId as string } },
           });
         },
         attendanceDates: async (_: unknown, { classId, from, to }: any, ctx: any) => {
@@ -230,6 +253,29 @@ const yoga = createYoga({
           if (!c) throw new Error("Not found");
           return prisma.evaluation.create({ data: { classId, title, weight: weight ?? 1, maxScore } });
         },
+        upsertGrade: async (_: unknown, { enrollmentId, evaluationId, score }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          // Check enrollment belongs to owner's class and evaluation belongs to same class
+          const enr = await prisma.enrollment.findFirst({ where: { id: enrollmentId as string, class: { ownerId: { in: ownerIds } } } });
+          if (!enr) throw new Error("Not found");
+          const ev = await prisma.evaluation.findFirst({ where: { id: evaluationId as string, classId: enr.classId } });
+          if (!ev) throw new Error("Not found");
+          return prisma.grade.upsert({
+            where: { enrollmentId_evaluationId: { enrollmentId, evaluationId } },
+            update: { score },
+            create: { enrollmentId, evaluationId, score },
+          });
+        },
+        setEnrollmentConcept: async (_: unknown, { enrollmentId, concept }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const enr = await prisma.enrollment.findFirst({ where: { id: enrollmentId as string, class: { ownerId: { in: ownerIds } } } });
+          if (!enr) throw new Error("Not found");
+          return prisma.enrollment.update({ where: { id: enrollmentId as string }, data: { concept: concept ?? null } });
+        },
         markAttendance: async (_: unknown, { classId, date, enrollmentId, status }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) throw new Error("Unauthorized");
@@ -256,6 +302,18 @@ const yoga = createYoga({
           const existing = await prisma.attendanceRecord.findFirst({ where: { sessionId: session.id, enrollmentId: enrollmentId as string } });
           if (!existing) return true;
           await prisma.attendanceRecord.delete({ where: { id: existing.id } });
+          return true;
+        },
+        deleteAttendanceSession: async (_: unknown, { classId, date }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const d = new Date(date);
+          const session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d, class: { ownerId: { in: ownerIds } } } });
+          if (!session) return true;
+          // Delete records then session
+          await prisma.attendanceRecord.deleteMany({ where: { sessionId: session.id } });
+          await prisma.attendanceSession.delete({ where: { id: session.id } });
           return true;
         },
       },
