@@ -41,15 +41,29 @@ export function ClassesPanel() {
         <div>Carregando...</div>
       ) : (
         <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-2 font-medium px-4 py-2 bg-muted/40">
+          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
             <div>Nome</div>
             <div>Ano</div>
+            <div className="text-right">Ações</div>
           </div>
           {data?.map((c) => (
-            <a key={c.id} href={`/classes/${c.id}`} className="grid grid-cols-2 px-4 py-2 hover:bg-muted/50 transition-colors">
-              <div className="underline-offset-2 hover:underline">{c.name}</div>
+            <div key={c.id} className="grid grid-cols-3 px-4 py-2 items-center hover:bg-muted/50 transition-colors">
+              <a href={`/classes/${c.id}`} className="underline-offset-2 hover:underline">{c.name}</a>
               <div>{c.year}</div>
-            </a>
+              <div className="text-right">
+                <button
+                  className="btn-icon-xs"
+                  title="Remover turma"
+                  onClick={async () => {
+                    if (!confirm("Remover esta turma e todos os dados relacionados?")) return;
+                    await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation DelClass($id: ID!) { deleteClass(id: $id) }`, variables: { id: c.id } }) });
+                    location.reload();
+                  }}
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
           ))}
         </div>
       )}

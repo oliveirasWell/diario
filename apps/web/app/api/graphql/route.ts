@@ -35,16 +35,20 @@ const yoga = createYoga({
       type Mutation {
         createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
         updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+        deleteClass(id: ID!): Boolean!
         createStudent(name: String!, email: String): Student!
         enrollStudent(classId: ID!, studentId: ID!): Enrollment!
         createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
         unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
+        deleteEvaluation(id: ID!): Boolean!
         upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
         setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
         markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
         clearAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!): Boolean!
         deleteAttendanceSession(classId: ID!, date: DateTime!): Boolean!
+        excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
+        includeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
       }
 
       type User {
@@ -170,9 +174,10 @@ const yoga = createYoga({
           const start = from ? new Date(from) : c.startDate ? new Date(c.startDate) : null;
           const end = to ? new Date(to) : c.endDate ? new Date(c.endDate) : null;
           if (!start || !end || !days.length) return [];
+          const excluded = new Set((c.excludedDates ?? []).map((x: Date) => new Date(x).toISOString().slice(0,10)));
           const out: Date[] = [];
           for (let d = new Date(start); d <= end; d = new Date(d.getTime() + 24*60*60*1000)) {
-            if (days.includes(d.getDay())) out.push(new Date(d));
+            if (days.includes(d.getDay()) && !excluded.has(new Date(d).toISOString().slice(0,10))) out.push(new Date(d));
           }
           return out;
         },
@@ -253,6 +258,16 @@ const yoga = createYoga({
           if (!c) throw new Error("Not found");
           return prisma.evaluation.create({ data: { classId, title, weight: weight ?? 1, maxScore } });
         },
+        deleteEvaluation: async (_: unknown, { id }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const ev = await prisma.evaluation.findFirst({ where: { id: id as string, class: { ownerId: { in: ownerIds } } } });
+          if (!ev) throw new Error("Not found");
+          await prisma.grade.deleteMany({ where: { evaluationId: id as string } });
+          await prisma.evaluation.delete({ where: { id: id as string } });
+          return true;
+        },
         upsertGrade: async (_: unknown, { enrollmentId, evaluationId, score }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) throw new Error("Unauthorized");
@@ -304,6 +319,24 @@ const yoga = createYoga({
           await prisma.attendanceRecord.delete({ where: { id: existing.id } });
           return true;
         },
+        deleteClass: async (_: unknown, { id }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          // cascade deletes
+          const classId = id as string;
+          const sessions = await prisma.attendanceSession.findMany({ where: { classId } });
+          await prisma.attendanceRecord.deleteMany({ where: { sessionId: { in: sessions.map(s=>s.id) } } });
+          await prisma.attendanceSession.deleteMany({ where: { classId } });
+          const evals = await prisma.evaluation.findMany({ where: { classId } });
+          await prisma.grade.deleteMany({ where: { evaluationId: { in: evals.map(e=>e.id) } } });
+          await prisma.evaluation.deleteMany({ where: { classId } });
+          await prisma.enrollment.deleteMany({ where: { classId } });
+          await prisma.class.delete({ where: { id: classId } });
+          return true;
+        },
         deleteAttendanceSession: async (_: unknown, { classId, date }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) throw new Error("Unauthorized");
@@ -314,6 +347,33 @@ const yoga = createYoga({
           // Delete records then session
           await prisma.attendanceRecord.deleteMany({ where: { sessionId: session.id } });
           await prisma.attendanceSession.delete({ where: { id: session.id } });
+          return true;
+        },
+        excludeAttendanceDate: async (_: unknown, { classId, date }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const d = new Date(date);
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const dk = d.toISOString().slice(0,10);
+          const cur = (c.excludedDates ?? []).map((x: any)=> new Date(x).toISOString().slice(0,10));
+          if (!cur.includes(dk)) {
+            const next = [...(c.excludedDates ?? []), d];
+            await prisma.class.update({ where: { id: c.id }, data: { excludedDates: next as any } });
+          }
+          return true;
+        },
+        includeAttendanceDate: async (_: unknown, { classId, date }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const d = new Date(date);
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const dk = d.toISOString().slice(0,10);
+          const next = (c.excludedDates ?? []).filter((x: any)=> new Date(x).toISOString().slice(0,10) !== dk);
+          await prisma.class.update({ where: { id: c.id }, data: { excludedDates: next as any } });
           return true;
         },
       },

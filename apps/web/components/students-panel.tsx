@@ -62,14 +62,15 @@ export function StudentsPanel({ classId }: { classId: string }) {
               <div>{e.student.name}</div>
               <div className="truncate">{e.student.email || "—"}</div>
               <div className="text-right">
-                <Button
-                  variant="ghost"
+                <button
+                  className="btn-icon-xs"
+                  title="Remover aluno desta turma"
                   onClick={() => {
                     if (confirm("Remover aluno desta turma?")) unenroll.mutate(e.id);
                   }}
                 >
-                  Remover
-                </Button>
+                  🗑️
+                </button>
               </div>
             </div>
           ))}

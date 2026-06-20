@@ -3,6 +3,17 @@ import GoogleProvider from "next-auth/providers/google";
 import getClientPromise from "@/lib/mongodb";
 import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
+
+let adapterAny: any;
+try {
+  adapterAny = MongoDBAdapter(getClientPromise());
+} catch {
+  adapterAny = undefined;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -15,6 +26,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
+  adapter: adapterAny as any,
   callbacks: {
     async jwt({ token, user }) {
       // Ensure prisma user exists and attach prismaUserId on token

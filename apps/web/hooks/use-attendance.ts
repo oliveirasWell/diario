@@ -24,14 +24,15 @@ export function useEnrollments(classId: string) {
   return useQuery({
     queryKey: ["enrollments", classId],
     queryFn: async () => {
-      const data = await gqlRequest<{ enrollments: { id: string; student: { id: string; name: string } }[] }>(/* GraphQL */ `
+      const data = await gqlRequest<{ enrollments: { id: string; concept?: string | null; student: { id: string; name: string } }[] }>(/* GraphQL */ `
         query Enrollments($classId: ID!) {
-          enrollments(classId: $classId) { id student { id name } }
+          enrollments(classId: $classId) { id concept student { id name } }
         }
       `, { classId });
       return data.enrollments;
     },
     enabled: !!classId,
+    staleTime: 30_000,
   });
 }
 

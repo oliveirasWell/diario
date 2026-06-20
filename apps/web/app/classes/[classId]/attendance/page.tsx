@@ -100,17 +100,22 @@ export default function AttendancePage() {
                       <div className="flex items-center gap-2">
                         {d.toLocaleDateString()}
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0 hidden md:inline-flex" aria-label="Ações da data">
-                              ⋮
-                            </Button>
+                          <DropdownMenuTrigger
+                            className="h-8 w-8 p-0 hidden md:inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted"
+                            aria-label="Ações da data"
+                          >
+                            ⋮
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => enrollments?.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }))}>
                               Marcar todos Presente
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => deleteSess.mutate({ date: d })} className="text-destructive">
-                              Remover dia
+                            <DropdownMenuItem onClick={async () => {
+                              // remove só da lista (excluir da agenda visível)
+                              await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation Ex($classId: ID!, $date: DateTime!) { excludeAttendanceDate(classId: $classId, date: $date) }`, variables: { classId, date: d } }) });
+                              location.reload();
+                            }} className="text-destructive">
+                              Remover dia da lista
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -49,6 +49,7 @@ export default function EvaluationsPage() {
               <tr>
                 <th className="text-left">Título</th>
                 <th className="text-left">Criada em</th>
+                <th className="text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -56,6 +57,19 @@ export default function EvaluationsPage() {
                 <tr key={ev.id}>
                   <td>{ev.title}</td>
                   <td>{new Date(ev.createdAt).toLocaleDateString()}</td>
+                  <td className="text-right">
+                    <button
+                      className="btn-icon-xs"
+                      title="Remover avaliação"
+                      onClick={async () => {
+                        if (!confirm("Remover esta avaliação e suas notas?")) return;
+                        await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation DelEval($id: ID!) { deleteEvaluation(id: $id) }`, variables: { id: ev.id } }) });
+                        location.reload();
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

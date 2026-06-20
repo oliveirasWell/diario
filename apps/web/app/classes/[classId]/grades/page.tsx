@@ -46,6 +46,7 @@ export default function GradesPage() {
                 {evals?.map((ev) => (
                   <th key={ev.id} className="whitespace-nowrap text-xs snap-start">{ev.title}</th>
                 ))}
+                <th className="whitespace-nowrap text-xs">Média</th>
                 <th className="whitespace-nowrap text-xs">Conceito</th>
               </tr>
             </thead>
@@ -73,6 +74,18 @@ export default function GradesPage() {
                       />
                     </td>
                   ))}
+                  <td>
+                    {(() => {
+                      const scores = (evals ?? []).map(ev => {
+                        const s = gradeIndex.get(`${e.id}|${ev.id}`);
+                        if (s == null) return null;
+                        const max = ev.maxScore ?? 10;
+                        return (s / max) * 10;
+                      }).filter((v): v is number => v != null);
+                      const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length) : null;
+                      return <div className="min-w-[64px] text-sm">{avg != null ? avg.toFixed(1) : "—"}</div>;
+                    })()}
+                  </td>
                   <td>
                     <select
                       className="select select-lg min-w-[96px]"

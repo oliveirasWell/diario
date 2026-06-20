@@ -17,15 +17,16 @@ model User {
 }
 
 model Class {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  year        Int
-  ownerId     String   @db.ObjectId
-  daysOfWeek  Int[]    @default([])
-  startDate   DateTime?
-  endDate     DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String     @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  year          Int
+  ownerId       String     @db.ObjectId
+  daysOfWeek    Int[]      @default([])
+  startDate     DateTime?
+  endDate       DateTime?
+  excludedDates DateTime[] @default([])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
   enrollments Enrollment[]
   evaluations Evaluation[]
