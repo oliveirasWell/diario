@@ -1,4 +1,5 @@
 import { createYoga, createSchema } from "graphql-yoga";
+import { attendanceDayKey, normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
 
 async function getPrisma() {
   const { prisma } = await import("@diario/db");
@@ -48,8 +49,7 @@ const { handleRequest } = createYoga({
         deleteEvaluation(id: ID!): Boolean!
         upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
         setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
-        markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
-        clearAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!): Boolean!
+        markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus): Boolean!
         deleteAttendanceSession(classId: ID!, date: DateTime!): Boolean!
         excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
         includeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
@@ -301,26 +301,39 @@ const { handleRequest } = createYoga({
           const prisma = await getPrisma();
           const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
           if (!c) throw new Error("Not found");
-          const d = new Date(date);
-          let session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d } });
-          if (!session) session = await prisma.attendanceSession.create({ data: { classId, date: d } });
-          const existing = await prisma.attendanceRecord.findFirst({ where: { sessionId: session.id, enrollmentId: enrollmentId as string } });
-          if (existing) await prisma.attendanceRecord.update({ where: { id: existing.id }, data: { status } });
-          else await prisma.attendanceRecord.create({ data: { sessionId: session.id, enrollmentId, status } });
-          return true;
-        },
-        clearAttendance: async (_: unknown, { classId, date, enrollmentId }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) throw new Error("Unauthorized");
-          const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
-          if (!c) throw new Error("Not found");
-          const d = new Date(date);
-          const session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d } });
-          if (!session) return true; // nothing to clear
-          const existing = await prisma.attendanceRecord.findFirst({ where: { sessionId: session.id, enrollmentId: enrollmentId as string } });
-          if (!existing) return true;
-          await prisma.attendanceRecord.delete({ where: { id: existing.id } });
+
+          const bounds = sessionDayBounds(date);
+          const session = await prisma.attendanceSession.findFirst({
+            where: { classId: classId as string, date: bounds },
+          });
+
+          if (status == null) {
+            if (!session) return true;
+            const existing = await prisma.attendanceRecord.findFirst({
+              where: { sessionId: session.id, enrollmentId: enrollmentId as string },
+            });
+            if (!existing) return true;
+            await prisma.attendanceRecord.delete({ where: { id: existing.id } });
+            return true;
+          }
+
+          let activeSession = session;
+          if (!activeSession) {
+            activeSession = await prisma.attendanceSession.create({
+              data: { classId, date: normalizeAttendanceDate(date) },
+            });
+          }
+
+          const existing = await prisma.attendanceRecord.findFirst({
+            where: { sessionId: activeSession.id, enrollmentId: enrollmentId as string },
+          });
+          if (existing) {
+            await prisma.attendanceRecord.update({ where: { id: existing.id }, data: { status } });
+          } else {
+            await prisma.attendanceRecord.create({
+              data: { sessionId: activeSession.id, enrollmentId, status },
+            });
+          }
           return true;
         },
         deleteClass: async (_: unknown, { id }: any, ctx: any) => {

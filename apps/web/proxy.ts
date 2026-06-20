@@ -4,7 +4,7 @@ import { getToken } from "next-auth/jwt";
 
 const PUBLIC_PATHS = ["/login", "/api/auth"];
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
     return NextResponse.next();

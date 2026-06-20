@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 const NewClassSchema = z.object({
@@ -41,26 +42,28 @@ export function ClassesPanel() {
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
-        <div className="surface">
-          <div className="grid grid-cols-3 surface-header">
+        <div className="bg-muted/25">
+          <div className="grid grid-cols-3 bg-muted/50 px-4 py-2 font-normal">
             <div>Nome</div>
             <div>Ano</div>
             <div className="text-right">Ações</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-3 surface-row items-center">
+            <div key={c.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
               <a href={`/classes/${c.id}`} className="underline-offset-2 hover:underline">{c.name}</a>
               <div>{c.year}</div>
               <div className="text-right">
-                <button
-                  className="btn-icon-xs"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   title="Remover turma"
                   onClick={() => {
                     if (confirm("Remover esta turma e todos os dados relacionados?")) deleteClass.mutate(c.id);
                   }}
                 >
                   🗑️
-                </button>
+                </Button>
               </div>
             </div>
           ))}
@@ -68,18 +71,18 @@ export function ClassesPanel() {
       )}
 
       {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-background shadow-lg w-full max-w-md p-3 sm:p-6 space-y-3 sm:space-y-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md space-y-3 bg-background p-3 shadow-lg sm:space-y-4 sm:p-6">
             <h3 className="text-lg font-normal">Nova Turma</h3>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Nome</label>
-                <input className="input" placeholder="Ex.: 1ºA" {...register("name")} />
+                <Input placeholder="Ex.: 1ºA" {...register("name")} />
                 {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Ano</label>
-                <input type="number" className="input" {...register("year", { valueAsNumber: true })} />
+                <Input type="number" {...register("year", { valueAsNumber: true })} />
                 {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
               </div>
               <div className="flex justify-end gap-2">

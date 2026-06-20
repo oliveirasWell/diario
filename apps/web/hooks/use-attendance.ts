@@ -2,8 +2,102 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { attendanceDayKey, normalizeAttendanceDate } from "@/lib/attendance-date";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+
+export type AttendanceRecord = {
+  id: string;
+  enrollmentId: string;
+  status: AttendanceStatus;
+  session: { id: string; date: string };
+};
+
+export { attendanceDayKey } from "@/lib/attendance-date";
+
+export function attendanceRecordsKey(classId: string) {
+  return ["attendanceRecords", classId] as const;
+}
+
+const CYCLE: (AttendanceStatus | null)[] = ["PRESENT", "ABSENT", "LATE", null];
+
+function nextStatus(current?: AttendanceStatus | null) {
+  const idx = CYCLE.indexOf(current ?? null);
+  return CYCLE[(idx + 1) % CYCLE.length];
+}
+
+function patchAttendanceRecords(
+  records: AttendanceRecord[],
+  enrollmentId: string,
+  date: Date,
+  status: AttendanceStatus | null
+): AttendanceRecord[] {
+  const dK = attendanceDayKey(date);
+  const sessionDate = normalizeAttendanceDate(date).toISOString();
+  if (status === null) {
+    return records.filter(
+      (r) => !(r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK)
+    );
+  }
+  const idx = records.findIndex(
+    (r) => r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK
+  );
+  if (idx >= 0) {
+    const next = records.slice();
+    next[idx] = { ...next[idx], status };
+    return next;
+  }
+  return [
+    ...records,
+    {
+      id: `optimistic-${enrollmentId}-${dK}`,
+      enrollmentId,
+      status,
+      session: { id: `optimistic-session-${dK}`, date: sessionDate },
+    },
+  ];
+}
+
+type CellVars = { date: Date; enrollmentId: string };
+type MutationVars = CellVars & { status: AttendanceStatus | null };
+type MutationCtx = { prev: AttendanceRecord[]; key: ReturnType<typeof attendanceRecordsKey> };
+
+export function useAttendanceMutation(classId: string) {
+  const qc = useQueryClient();
+  const key = attendanceRecordsKey(classId);
+
+  const mutation = useMutation({
+    mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
+      const data = await gqlRequest<{ markAttendance: boolean }>(/* GraphQL */ `
+        mutation MarkAttendance($classId: ID!, $date: DateTime!, $enrollmentId: ID!, $status: AttendanceStatus) {
+          markAttendance(classId: $classId, date: $date, enrollmentId: $enrollmentId, status: $status)
+        }
+      `, {
+        classId,
+        date: normalizeAttendanceDate(date),
+        enrollmentId,
+        status,
+      });
+      return data.markAttendance;
+    },
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
+      qc.setQueryData(key, patchAttendanceRecords(prev, vars.enrollmentId, vars.date, vars.status));
+      return { prev, key } satisfies MutationCtx;
+    },
+    onError: (_err, _vars, ctx?: MutationCtx) => {
+      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
+    },
+  });
+
+  return {
+    cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
+      mutation.mutate({ ...vars, status: nextStatus(current) }),
+    markPresent: (vars: CellVars) =>
+      mutation.mutate({ ...vars, status: "PRESENT" }),
+  };
+}
 
 export function useAttendanceDates(classId: string, from?: string, to?: string) {
   return useQuery({
@@ -38,9 +132,9 @@ export function useEnrollments(classId: string) {
 
 export function useAttendanceRecords(classId: string, from?: string, to?: string) {
   return useQuery({
-    queryKey: ["attendanceRecords", classId, from, to],
+    queryKey: attendanceRecordsKey(classId),
     queryFn: async () => {
-      const data = await gqlRequest<{ attendanceRecords: { id: string; enrollmentId: string; status: AttendanceStatus; session: { id: string; date: string } }[] }>(/* GraphQL */ `
+      const data = await gqlRequest<{ attendanceRecords: AttendanceRecord[] }>(/* GraphQL */ `
         query AttendanceRecords($classId: ID!, $from: DateTime, $to: DateTime) {
           attendanceRecords(classId: $classId, from: $from, to: $to) {
             id enrollmentId status session { id date }
@@ -50,39 +144,5 @@ export function useAttendanceRecords(classId: string, from?: string, to?: string
       return data.attendanceRecords;
     },
     enabled: !!classId,
-  });
-}
-
-const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
-
-export function useMarkAttendance(classId: string) {
-  const qc = useQueryClient();
-  const key = ["attendanceRecords", classId, undefined, undefined] as const;
-  return useMutation({
-    mutationFn: async (vars: { date: Date; enrollmentId: string; status: AttendanceStatus }) => {
-      const data = await gqlRequest<{ markAttendance: boolean }>(/* GraphQL */ `
-        mutation MarkAttendance($classId: ID!, $date: DateTime!, $enrollmentId: ID!, $status: AttendanceStatus!) {
-          markAttendance(classId: $classId, date: $date, enrollmentId: $enrollmentId, status: $status)
-        }
-      `, { classId, date: vars.date, enrollmentId: vars.enrollmentId, status: vars.status });
-      return data.markAttendance;
-    },
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<typeof key extends any ? any[] : never>(key) as any[] | undefined;
-      const next = (prev ?? []).slice();
-      const dK = dayKey(vars.date);
-      const idx = next.findIndex((r) => r.enrollmentId === vars.enrollmentId && dayKey(r.session.date) === dK);
-      if (idx >= 0) next[idx] = { ...next[idx], status: vars.status };
-      else next.push({ id: `optimistic-${vars.enrollmentId}-${dK}`, enrollmentId: vars.enrollmentId, status: vars.status, session: { id: `optimistic-session-${dK}`, date: new Date(vars.date).toISOString() } });
-      qc.setQueryData(key, next);
-      return { prev };
-    },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key });
-    },
   });
 }

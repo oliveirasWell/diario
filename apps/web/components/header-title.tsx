@@ -37,7 +37,7 @@ export function HeaderTitle() {
   }
   if (inClassDetail) {
     return (
-      <div className="font-medium truncate text-sm sm:text-base flex items-center gap-1">
+      <div className="font-semibold truncate text-base sm:text-lg flex items-center gap-1.5">
         <Link href="/classes" className="underline underline-offset-2">Turmas</Link>
         <span>/</span>
         <span className="truncate max-w-[60vw] sm:max-w-none">{className}</span>

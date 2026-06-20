@@ -10,7 +10,7 @@ export default async function ClassLayout({
   const { classId } = await params;
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-4 sm:space-y-6">
+    <div className="p-4 sm:p-6 sm:px-0 space-y-4 sm:space-y-6">
       <ClassTabs classId={classId} />
       <div>{children}</div>
     </div>

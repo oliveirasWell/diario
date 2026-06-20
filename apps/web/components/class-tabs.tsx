@@ -13,7 +13,7 @@ export function ClassTabs({ classId }: { classId: string }) {
     { href: `/classes/${classId}/config`, label: "Config" },
   ];
   return (
-    <div className="overflow-x-auto scroll-area">
+    <div className="overflow-x-auto">
       <nav className="flex gap-1 whitespace-nowrap">
         {tabs.map((t) => {
           const active = pathname === t.href;

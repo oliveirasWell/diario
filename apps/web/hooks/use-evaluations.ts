@@ -37,7 +37,7 @@ export function useCreateEvaluationMutation(classId: string) {
       return data.createEvaluation;
     },
     onSuccess: () => {
-      useQueryClient().invalidateQueries({ queryKey: ["evaluations", classId] });
+      qc.invalidateQueries({ queryKey: ["evaluations", classId] });
     },
   });
 }

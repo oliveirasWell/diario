@@ -7,6 +7,15 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const schema = z.object({ title: z.string().min(1, "Informe um título") });
 
@@ -30,8 +39,8 @@ export default function EvaluationsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="surface-form">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2 items-end">
+      <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex items-end gap-2">
           <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium">Nova avaliação</label>
             <Input placeholder="Ex.: Prova 1" {...register("title")} />
@@ -44,36 +53,38 @@ export default function EvaluationsPage() {
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
-        <div className="overflow-auto scroll-area">
-          <table className="min-w-full table-grid">
-            <thead>
-              <tr>
-                <th className="text-left">Título</th>
-                <th className="text-left">Criada em</th>
-                <th className="text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
+        <TableContainer>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Título</TableHead>
+                <TableHead>Criada em</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {data?.map((ev) => (
-                <tr key={ev.id}>
-                  <td>{ev.title}</td>
-                  <td>{new Date(ev.createdAt).toLocaleDateString()}</td>
-                  <td className="text-right">
-                    <button
-                      className="btn-icon-xs"
+                <TableRow key={ev.id}>
+                  <TableCell>{ev.title}</TableCell>
+                  <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       title="Remover avaliação"
                       onClick={() => {
                         if (confirm("Remover esta avaliação e suas notas?")) deleteEval.mutate(ev.id);
                       }}
                     >
                       🗑️
-                    </button>
-                  </td>
-                </tr>
+                    </Button>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </div>
   );

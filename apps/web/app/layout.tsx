@@ -4,7 +4,6 @@ import "./globals.css";
 import { AuthSessionProvider } from "@/components/session-provider";
 import { Header } from "@/components/header";
 import { QueryProvider } from "@/components/query-provider";
-import { AppToaster } from "@/components/toaster";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500"],
@@ -39,7 +38,6 @@ export default function RootLayout({
           <QueryProvider>
             <Header />
             <main className="flex-1 w-full mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">{children}</main>
-            <AppToaster />
           </QueryProvider>
         </AuthSessionProvider>
       </body>

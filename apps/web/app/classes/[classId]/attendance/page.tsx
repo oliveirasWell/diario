@@ -1,32 +1,48 @@
 "use client";
 
-import { useAttendanceDates, useAttendanceRecords, useEnrollments, useMarkAttendance } from "@/hooks/use-attendance";
-import { useClearAttendance } from "@/hooks/use-clear-attendance";
+import {
+  useAttendanceDates,
+  useAttendanceMutation,
+  useAttendanceRecords,
+  useEnrollments,
+  attendanceDayKey,
+} from "@/hooks/use-attendance";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { exportAttendanceToXlsx } from "@/lib/export-attendance";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { MoreVertical } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TablePinCell,
+  TablePinHead,
+  TableRow,
+} from "@/components/ui/table";
 
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
+import { cn } from "@/lib/utils";
+import type { AttendanceStatus } from "@/hooks/use-attendance";
 
-const STICKY_COL_WIDTH = 120;
-
-const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
-
-type Status = typeof statuses[number];
-
-const LABELS: Record<Status, string> = {
+const STATUS_LABEL: Record<AttendanceStatus, string> = {
   PRESENT: "✅ P",
   ABSENT: "❌ F",
   LATE: "⏰ A",
 };
 
-function toISODate(d: Date) {
-  return new Date(d).toISOString().slice(0, 10);
-}
+const STATUS_CLASS: Record<AttendanceStatus, string> = {
+  PRESENT: "bg-green-500/15 hover:bg-green-500/25",
+  ABSENT: "bg-red-500/15 hover:bg-red-500/25",
+  LATE: "bg-orange-500/15 hover:bg-orange-500/25",
+};
 
 export default function AttendancePage() {
   const params = useParams();
@@ -34,42 +50,44 @@ export default function AttendancePage() {
   const { data: dates, isLoading: isLoadingDates } = useAttendanceDates(classId);
   const { data: enrollments, isLoading: isLoadingEnroll } = useEnrollments(classId);
   const { data: records } = useAttendanceRecords(classId);
-  const mark = useMarkAttendance(classId);
-  const clearMut = useClearAttendance(classId);
+  const attendance = useAttendanceMutation(classId);
   const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
   const [q, setQ] = useState("");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const todayKey = toISODate(new Date());
+  const todayKey = attendanceDayKey(new Date());
   const visibleDates = useMemo(() => {
     if (!dates) return [] as Date[];
     if (!hidePast) return dates;
-    return dates.filter((d) => toISODate(d) >= todayKey);
+    return dates.filter((d) => attendanceDayKey(d) >= todayKey);
   }, [dates, hidePast, todayKey]);
 
   const recMap = useMemo(() => {
-    const m = new Map<string, Status>();
+    const m = new Map<string, AttendanceStatus>();
     if (!records) return m;
-    for (const r of records) m.set(`${r.enrollmentId}|${toISODate(new Date(r.session.date))}`, r.status as Status);
+    for (const r of records) {
+      m.set(`${r.enrollmentId}|${attendanceDayKey(r.session.date)}`, r.status);
+    }
     return m;
   }, [records]);
 
   const list = useMemo(() => {
     const base = enrollments ?? [];
     const filtered = q ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase())) : base;
-    return filtered.slice().sort((a,b)=>a.student.name.localeCompare(b.student.name));
+    return filtered.slice().sort((a, b) => a.student.name.localeCompare(b.student.name));
   }, [enrollments, q]);
 
   useEffect(() => {
-    const container = scrollRef.current;
+    const container = containerRef.current;
     if (!container) return;
     const todayCol = container.querySelector<HTMLElement>('[data-today="true"]');
-    if (!todayCol) return;
+    const pinCol = container.querySelector<HTMLElement>("[data-table-pin]");
+    if (!todayCol || !pinCol) return;
     requestAnimationFrame(() => {
-      container.scrollLeft = Math.max(0, todayCol.offsetLeft - STICKY_COL_WIDTH);
+      container.scrollLeft = Math.max(0, todayCol.offsetLeft - pinCol.offsetWidth);
     });
-  }, [visibleDates, todayKey]);
+  }, [todayKey, visibleDates, list.length, hidePast]);
 
   const onExport = () => {
     if (!dates || !enrollments) return;
@@ -90,105 +108,122 @@ export default function AttendancePage() {
       ) : null}
       {dates && dates.length > 0 && enrollments && (
         <>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <Checkbox id="hidePast" checked={hidePast} onCheckedChange={(v)=>setHidePast(Boolean(v))} />
+              <Checkbox id="hidePast" checked={hidePast} onCheckedChange={(v) => setHidePast(Boolean(v))} />
               <Label htmlFor="hidePast">Ocultar datas passadas</Label>
             </div>
-            <div className="hidden sm:flex items-center gap-2 text-xs">
-              <span className="badge">✅ Presente</span>
-              <span className="badge">❌ Falta</span>
-              <span className="badge">⏰ Atraso</span>
+            <div className="hidden items-center gap-2 text-xs sm:flex">
+              <span className="inline-flex items-center bg-green-500/15 px-2 py-0.5 text-xs">✅ Presente</span>
+              <span className="inline-flex items-center bg-red-500/15 px-2 py-0.5 text-xs">❌ Falta</span>
+              <span className="inline-flex items-center bg-orange-500/15 px-2 py-0.5 text-xs">⏰ Atraso</span>
             </div>
-            <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px] ml-auto" />
-            <button className="px-2 py-1 text-sm bg-muted/60 hover:bg-muted" onClick={onExport} type="button">Exportar XLSX</button>
+            <Input placeholder="Buscar aluno…" value={q} onChange={(e) => setQ(e.target.value)} className="min-w-[160px] flex-1 sm:max-w-xs" />
+            <Button type="button" variant="secondary" size="sm" className="shrink-0" onClick={onExport}>
+              Exportar XLSX
+            </Button>
           </div>
-          <div ref={scrollRef} className="table-scroll -mx-3 px-3 sm:mx-0 sm:px-0">
-          <table className="min-w-full table-grid">
-              <thead>
-                <tr>
-                  <th className="text-left table-sticky-col">Aluno</th>
+          <TableContainer ref={containerRef}>
+            <Table className="min-w-max">
+              <TableHeader>
+                <TableRow>
+                  <TablePinHead>Aluno</TablePinHead>
                   {visibleDates.map((d) => {
-                    const dKey = toISODate(d);
+                    const dKey = attendanceDayKey(d);
                     const isToday = dKey === todayKey;
                     return (
-                    <th
-                      key={dKey}
-                      data-today={isToday ? "true" : undefined}
-                      className={`whitespace-nowrap text-xs table-date-col ${isToday ? "font-normal" : ""}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {d.toLocaleDateString()}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            className="h-8 w-8 p-0 hidden md:inline-flex items-center justify-center bg-muted/60 hover:bg-muted"
-                            aria-label="Ações da data"
-                          >
-                            ⋮
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => enrollments?.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }))}>
-                              Marcar todos Presente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => excludeDate.mutate({ date: d })} className="text-destructive">
-                              Remover dia da lista
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </th>
+                      <TableHead
+                        key={dKey}
+                        data-today={isToday ? "true" : undefined}
+                        className={cn("text-center", isToday && "bg-primary/10")}
+                      >
+                        <div className="flex items-center justify-center gap-1.5">
+                          {d.toLocaleDateString()}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="hidden shrink-0 bg-muted/15 hover:bg-muted/25 md:inline-flex"
+                                  aria-label="Ações da data"
+                                />
+                              }
+                            >
+                              <MoreVertical className="size-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  enrollments.forEach((en) =>
+                                    attendance.markPresent({ date: d, enrollmentId: en.id })
+                                  )
+                                }
+                              >
+                                Marcar todos Presente
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => excludeDate.mutate({ date: d })} className="text-destructive">
+                                Remover dia da lista
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableHead>
                     );
                   })}
-                </tr>
-              </thead>
-              <tbody>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {list.map((e) => (
-                  <tr key={e.id}>
-                    <td className="whitespace-nowrap table-sticky-col">
+                  <TableRow key={e.id}>
+                    <TablePinCell>
                       <div className="flex items-center gap-2">
-                        <span>{e.student.name}</span>
-                        <button
-                          className="btn-icon-xs hidden md:inline-flex"
+                        <span className="truncate">{e.student.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="hidden shrink-0 md:inline-flex"
                           title="Marcar semana toda Presente"
                           onClick={() => {
-                            visibleDates.forEach((d) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }));
+                            visibleDates.forEach((d) =>
+                              attendance.markPresent({ date: d, enrollmentId: e.id })
+                            );
                           }}
-                          type="button"
                         >
                           ✅
-                        </button>
+                        </Button>
                       </div>
-                    </td>
+                    </TablePinCell>
                     {visibleDates.map((d) => {
-                      const dKey = toISODate(d);
+                      const dKey = attendanceDayKey(d);
                       const current = recMap.get(`${e.id}|${dKey}`);
                       const isToday = dKey === todayKey;
                       return (
-                        <td key={dKey} data-today={isToday ? "true" : undefined} className="table-date-col">
+                        <TableCell
+                          key={dKey}
+                          data-today={isToday ? "true" : undefined}
+                          className={cn("text-center px-1", isToday && "bg-primary/10")}
+                        >
                           <button
                             type="button"
-                            className="cell-btn min-w-[104px]"
-                            onClick={() => {
-                              const order: (Status | null)[] = ["PRESENT","ABSENT","LATE",null];
-                              const idx = order.indexOf((current ?? null) as any);
-                              const next = order[(idx + 1) % order.length];
-                              if (next === null) {
-                                clearMut.mutate({ date: d, enrollmentId: e.id });
-                              } else {
-                                mark.mutate({ date: d, enrollmentId: e.id, status: next });
-                              }
-                            }}
+                            className={cn(
+                              "mx-auto flex h-11 w-full min-w-[104px] items-center justify-center text-sm font-normal transition-colors",
+                              current ? STATUS_CLASS[current] : "hover:bg-muted/40"
+                            )}
+                            onClick={() => attendance.cycle(current, { date: d, enrollmentId: e.id })}
                           >
-                            {current ? LABELS[current] : "—"}
+                            {current ? STATUS_LABEL[current] : "—"}
                           </button>
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
         </>
       )}
     </div>

@@ -2,6 +2,7 @@
 
 import { useCreateAndEnrollMutation, useEnrollmentsQuery, useUnenrollStudentMutation } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,17 +30,17 @@ export function StudentsPanel({ classId }: { classId: string }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="surface-form">
+      <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <h3 className="font-normal">Adicionar aluno à turma</h3>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-end">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3">
           <div>
             <label className="block text-sm font-medium">Nome</label>
-            <input className="input" placeholder="Ex.: Maria Silva" {...register("name")} />
+            <Input placeholder="Ex.: Maria Silva" {...register("name")} />
             {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium">Email (opcional)</label>
-            <input className="input" placeholder="maria@email.com" {...register("email")} />
+            <Input placeholder="maria@email.com" {...register("email")} />
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div className="flex gap-2">
@@ -51,26 +52,28 @@ export function StudentsPanel({ classId }: { classId: string }) {
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
-        <div className="surface">
-          <div className="grid grid-cols-3 surface-header">
+        <div className="bg-muted/25">
+          <div className="grid grid-cols-3 bg-muted/50 px-4 py-2 font-normal">
             <div>Nome</div>
             <div>Email</div>
             <div className="text-right">Ações</div>
           </div>
           {data?.map((e) => (
-            <div key={e.id} className="grid grid-cols-3 surface-row items-center">
+            <div key={e.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
               <div>{e.student.name}</div>
               <div className="truncate">{e.student.email || "—"}</div>
               <div className="text-right">
-                <button
-                  className="btn-icon-xs"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   title="Remover aluno desta turma"
                   onClick={() => {
                     if (confirm("Remover aluno desta turma?")) unenroll.mutate(e.id);
                   }}
                 >
                   🗑️
-                </button>
+                </Button>
               </div>
             </div>
           ))}

@@ -129,68 +129,11 @@
   }
 }
 
-/* Fix calendar icon visibility in dark mode (WebKit) */
 @layer components {
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"] { color-scheme: light dark; }
   .dark input[type="date"]::-webkit-calendar-picker-indicator,
   .dark input[type="time"]::-webkit-calendar-picker-indicator,
-  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(1.1); opacity: .9; }
-
-  .scroll-area {
-    -webkit-overflow-scrolling: touch;
-  }
-  .table-grid th {
-    @apply px-3 py-2 text-xs sm:text-sm font-normal bg-muted sticky top-0 z-30;
-  }
-  .table-grid td {
-    @apply px-3 py-2 text-xs sm:text-sm;
-  }
-  .table-grid tbody tr:nth-child(even) {
-    @apply bg-muted/25;
-  }
-  .table-grid tbody tr:hover {
-    @apply bg-muted/40;
-  }
-  .input {
-    @apply w-full bg-muted/40 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50;
-  }
-  .select {
-    @apply bg-muted/40 text-sm focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50;
-  }
-  .select-xs { @apply text-xs px-1.5 py-1; }
-  .select-lg { @apply text-sm px-2 py-1 h-10; }
-  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-muted; }
-  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center bg-muted/60 hover:bg-muted; }
-  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center bg-muted/30 hover:bg-muted/60 text-xs sm:text-sm; }
-  .surface { @apply bg-muted/25; }
-  .surface-header { @apply bg-muted/50 px-4 py-2 font-normal; }
-  .surface-row { @apply px-4 py-2 hover:bg-muted/40 transition-colors; }
-  .surface-form { @apply bg-muted/25 p-3 sm:p-4 space-y-3 sm:space-y-4; }
-  .scroll-snap-x { scroll-snap-type: x mandatory; }
-  .snap-start { scroll-snap-align: start; }
-  .table-scroll {
-    @apply overflow-auto scroll-area;
-    scroll-padding-inline-start: 7.5rem;
-  }
-  .table-sticky-col {
-    @apply sticky left-0 z-20 min-w-[7.5rem] max-w-[40vw] sm:max-w-[12rem];
-    box-shadow: 6px 0 8px -6px color-mix(in oklch, var(--foreground) 14%, transparent);
-  }
-  .table-grid thead .table-sticky-col {
-    @apply z-30 bg-muted;
-  }
-  .table-grid tbody .table-sticky-col {
-    @apply bg-background;
-  }
-  .table-grid tbody tr:nth-child(even) .table-sticky-col {
-    @apply bg-muted/25;
-  }
-  .table-grid tbody tr:hover .table-sticky-col {
-    @apply bg-muted/40;
-  }
-  .table-date-col[data-today="true"] {
-    @apply bg-primary/10;
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.1);
+    opacity: 0.9;
   }
 }

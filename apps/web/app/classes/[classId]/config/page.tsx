@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const schema = z.object({
   daysOfWeek: z.array(z.number().int().min(0).max(6)).default([]),
@@ -106,21 +107,11 @@ export default function ClassConfigPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="startDate" className="block text-sm font-medium">Início</label>
-            <input
-              id="startDate"
-              type="date"
-              className="input h-12 sm:h-10"
-              {...register("startDate")}
-            />
+            <Input id="startDate" type="date" className="h-12 sm:h-10" {...register("startDate")} />
           </div>
           <div>
             <label htmlFor="endDate" className="block text-sm font-medium">Fim</label>
-            <input
-              id="endDate"
-              type="date"
-              className="input h-12 sm:h-10"
-              {...register("endDate")}
-            />
+            <Input id="endDate" type="date" className="h-12 sm:h-10" {...register("endDate")} />
           </div>
         </div>
 
