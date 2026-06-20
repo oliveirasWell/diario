@@ -105,12 +105,22 @@ export default function ClassConfigPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium">Início</label>
-            <input type="date" className="input" {...register("startDate")} />
+            <label htmlFor="startDate" className="block text-sm font-medium">Início</label>
+            <input
+              id="startDate"
+              type="date"
+              className="w-full border rounded px-3 py-2 h-12 sm:h-10 bg-background"
+              {...register("startDate")}
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium">Fim</label>
-            <input type="date" className="input" {...register("endDate")} />
+            <label htmlFor="endDate" className="block text-sm font-medium">Fim</label>
+            <input
+              id="endDate"
+              type="date"
+              className="w-full border rounded px-3 py-2 h-12 sm:h-10 bg-background"
+              {...register("endDate")}
+            />
           </div>
         </div>
 
