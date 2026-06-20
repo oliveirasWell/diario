@@ -42,6 +42,8 @@ apps/**/node_modules/
 apps/**/.env
 apps/**/.env.local
 apps/**/.env.*.local
+apps/**/pnpm-lock.yaml
+apps/**/pnpm-workspace.yaml
 
 # Prisma (keep schema, ignore generated if any)
 packages/**/prisma/dev.db

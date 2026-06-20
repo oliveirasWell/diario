@@ -3,12 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 
-export type Class = {
-  id: string;
-  name: string;
-  year: number;
-  ownerId: string;
-};
+import type { Class } from "@/src/gql/schema-types";
 
 export function useClassesQuery() {
   return useQuery({

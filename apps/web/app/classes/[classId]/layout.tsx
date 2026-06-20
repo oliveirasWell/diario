@@ -26,6 +26,7 @@ export default async function ClassLayout({
     { href: `/classes/${classId}/evaluations`, label: "Avaliações" },
     { href: `/classes/${classId}/grades`, label: "Notas" },
     { href: `/classes/${classId}/attendance`, label: "Presenças" },
+    { href: `/classes/${classId}/config`, label: "Config" },
   ];
 
   return (

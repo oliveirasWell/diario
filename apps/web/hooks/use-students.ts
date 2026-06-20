@@ -3,16 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 
-export type Student = {
-  id: string;
-  name: string;
-  email?: string | null;
-};
-
-export type EnrollmentRow = {
-  id: string;
-  student: Student;
-};
+import type { Student, Enrollment as EnrollmentRow } from "@/src/gql/schema-types";
 
 export function useEnrollmentsQuery(classId: string) {
   return useQuery({

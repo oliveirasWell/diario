@@ -28,15 +28,19 @@ const yoga = createYoga<{ req: NextRequest }>({
         students(classId: ID!): [Student!]!
         enrollments(classId: ID!): [Enrollment!]!
         evaluations(classId: ID!): [Evaluation!]!
+        attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
+        attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
       }
 
       type Mutation {
-        createClass(name: String!, year: Int!): Class!
+        createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+        updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
         createStudent(name: String!, email: String): Student!
         enrollStudent(classId: ID!, studentId: ID!): Enrollment!
         createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
         unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
+        markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
       }
 
       type User {
@@ -51,6 +55,9 @@ const yoga = createYoga<{ req: NextRequest }>({
         name: String!
         year: Int!
         ownerId: ID!
+        daysOfWeek: [Int!]!
+        startDate: DateTime
+        endDate: DateTime
         createdAt: DateTime!
         updatedAt: DateTime!
       }
@@ -80,8 +87,13 @@ const yoga = createYoga<{ req: NextRequest }>({
         maxScore: Float!
         createdAt: DateTime!
       }
+
+      enum AttendanceStatus { PRESENT ABSENT LATE }
+      type AttendanceSession { id: ID!, classId: ID!, date: DateTime!, notes: String }
+      type AttendanceRecord { id: ID!, sessionId: ID!, enrollmentId: ID!, status: AttendanceStatus!, session: AttendanceSession! }
     `,
     resolvers: {
+      Class: { daysOfWeek: (p: any) => p.daysOfWeek ?? [] },
       Query: {
         health: () => "ok",
         me: async (_: unknown, __: unknown, ctx: any) => ctx.user,
@@ -125,14 +137,55 @@ const yoga = createYoga<{ req: NextRequest }>({
             where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
           });
         },
+        attendanceDates: async (_: unknown, { classId, from, to }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) return [];
+          const days: number[] = c.daysOfWeek ?? [];
+          const start = from ? new Date(from) : c.startDate ? new Date(c.startDate) : null;
+          const end = to ? new Date(to) : c.endDate ? new Date(c.endDate) : null;
+          if (!start || !end || !days.length) return [];
+          const out: Date[] = [];
+          for (let d = new Date(start); d <= end; d = new Date(d.getTime() + 24*60*60*1000)) {
+            if (days.includes(d.getDay())) out.push(new Date(d));
+          }
+          return out;
+        },
+        attendanceRecords: async (_: unknown, { classId, from, to }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
+          const prisma = await getPrisma();
+          const where: any = { classId: classId as string };
+          if (from || to) {
+            where.date = {};
+            if (from) where.date.gte = new Date(from);
+            if (to) where.date.lte = new Date(to);
+          }
+          const sessions = await prisma.attendanceSession.findMany({ where, include: { records: true } });
+          return sessions.flatMap((s: any) => s.records.map((r: any) => ({ ...r, session: { id: s.id, date: s.date } })));
+        },
       },
       Mutation: {
-        createClass: async (_: unknown, { name, year }: any, ctx: any) => {
+        createClass: async (_: unknown, { name, year, daysOfWeek, startDate, endDate }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           const ownerId = ownerIds[0];
           if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          return prisma.class.create({ data: { name, year, ownerId } });
+          const sd = startDate ? new Date(startDate) : null;
+          const ed = endDate ? new Date(endDate) : null;
+          return prisma.class.create({ data: { name, year, ownerId, daysOfWeek: daysOfWeek ?? [], startDate: sd, endDate: ed } });
+        },
+        updateClassSchedule: async (_: unknown, { id, daysOfWeek, startDate, endDate }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const sd = startDate ? new Date(startDate) : null;
+          const ed = endDate ? new Date(endDate) : null;
+          return prisma.class.update({ where: { id: id as string }, data: { daysOfWeek: daysOfWeek ?? c.daysOfWeek ?? [], startDate: sd, endDate: ed } });
         },
         createStudent: async (_: unknown, { name, email }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
@@ -176,6 +229,20 @@ const yoga = createYoga<{ req: NextRequest }>({
           const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
           if (!c) throw new Error("Not found");
           return prisma.evaluation.create({ data: { classId, title, weight: weight ?? 1, maxScore } });
+        },
+        markAttendance: async (_: unknown, { classId, date, enrollmentId, status }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const d = new Date(date);
+          let session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d } });
+          if (!session) session = await prisma.attendanceSession.create({ data: { classId, date: d } });
+          const existing = await prisma.attendanceRecord.findFirst({ where: { sessionId: session.id, enrollmentId: enrollmentId as string } });
+          if (existing) await prisma.attendanceRecord.update({ where: { id: existing.id }, data: { status } });
+          else await prisma.attendanceRecord.create({ data: { sessionId: session.id, enrollmentId, status } });
+          return true;
         },
       },
     },

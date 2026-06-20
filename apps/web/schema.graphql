@@ -1,0 +1,86 @@
+scalar DateTime
+
+type Query {
+  health: String!
+  me: User
+  classes: [Class!]!
+  class(id: ID!): Class
+  students(classId: ID!): [Student!]!
+  enrollments(classId: ID!): [Enrollment!]!
+  evaluations(classId: ID!): [Evaluation!]!
+  attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
+  attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
+}
+
+type Mutation {
+  createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+  updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+  createStudent(name: String!, email: String): Student!
+  enrollStudent(classId: ID!, studentId: ID!): Enrollment!
+  createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
+  unenrollStudent(enrollmentId: ID!): Boolean!
+  createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
+  markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
+}
+
+type User {
+  id: ID!
+  email: String!
+  name: String
+  image: String
+}
+
+type Class {
+  id: ID!
+  name: String!
+  year: Int!
+  ownerId: ID!
+  daysOfWeek: [Int!]!
+  startDate: DateTime
+  endDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Student {
+  id: ID!
+  name: String!
+  email: String
+  externalId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Enrollment {
+  id: ID!
+  classId: ID!
+  studentId: ID!
+  status: String!
+  student: Student!
+}
+
+type Evaluation {
+  id: ID!
+  classId: ID!
+  title: String!
+  weight: Float
+  maxScore: Float!
+  createdAt: DateTime!
+}
+
+enum AttendanceStatus { PRESENT ABSENT LATE }
+
+type AttendanceSession {
+  id: ID!
+  classId: ID!
+  date: DateTime!
+  notes: String
+}
+
+type AttendanceRecord {
+  id: ID!
+  sessionId: ID!
+  enrollmentId: ID!
+  status: AttendanceStatus!
+  session: AttendanceSession!
+}
