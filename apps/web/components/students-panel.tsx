@@ -1,6 +1,6 @@
 "use client";
 
-import { useCreateStudentMutation, useEnrollStudentMutation, useStudentsQuery } from "@/hooks/use-students";
+import { useCreateAndEnrollMutation, useEnrollmentsQuery, useUnenrollStudentMutation } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -14,17 +14,16 @@ const NewStudentSchema = z.object({
 type NewStudentInput = z.infer<typeof NewStudentSchema>;
 
 export function StudentsPanel({ classId }: { classId: string }) {
-  const { data, isLoading } = useStudentsQuery(classId);
-  const createStudent = useCreateStudentMutation();
-  const enroll = useEnrollStudentMutation(classId);
+  const { data, isLoading } = useEnrollmentsQuery(classId);
+  const createAndEnroll = useCreateAndEnrollMutation(classId);
+  const unenroll = useUnenrollStudentMutation(classId);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewStudentInput>({
     resolver: zodResolver(NewStudentSchema),
   });
 
   const onSubmit = async (values: NewStudentInput) => {
-    const student = await createStudent.mutateAsync({ name: values.name, email: values.email || undefined });
-    await enroll.mutateAsync(student.id);
+    await createAndEnroll.mutateAsync({ name: values.name, email: values.email || undefined });
     reset({ name: "", email: "" });
   };
 
@@ -33,23 +32,6 @@ export function StudentsPanel({ classId }: { classId: string }) {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Alunos</h2>
       </div>
-
-      {isLoading ? (
-        <div>Carregando...</div>
-      ) : (
-        <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-2 font-medium px-4 py-2 bg-muted/40">
-            <div>Nome</div>
-            <div>Email</div>
-          </div>
-          {data?.map((s) => (
-            <div key={s.id} className="grid grid-cols-2 px-4 py-2">
-              <div>{s.name}</div>
-              <div className="truncate">{s.email || "—"}</div>
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="border rounded-lg p-4 space-y-4">
         <h3 className="font-medium">Adicionar aluno à turma</h3>
@@ -65,10 +47,38 @@ export function StudentsPanel({ classId }: { classId: string }) {
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={isSubmitting || enroll.isPending}>Adicionar</Button>
+            <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>Adicionar</Button>
           </div>
         </form>
       </div>
+
+      {isLoading ? (
+        <div>Carregando...</div>
+      ) : (
+        <div className="border rounded-lg divide-y">
+          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
+            <div>Nome</div>
+            <div>Email</div>
+            <div className="text-right">Ações</div>
+          </div>
+          {data?.map((e) => (
+            <div key={e.id} className="grid grid-cols-3 px-4 py-2 items-center">
+              <div>{e.student.name}</div>
+              <div className="truncate">{e.student.email || "—"}</div>
+              <div className="text-right">
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (confirm("Remover aluno desta turma?")) unenroll.mutate(e.id);
+                  }}
+                >
+                  Remover
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

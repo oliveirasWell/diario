@@ -17,12 +17,15 @@ model User {
 }
 
 model Class {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  year      Int
-  ownerId   String   @db.ObjectId
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  year        Int
+  ownerId     String   @db.ObjectId
+  daysOfWeek  Int[]    @default([])
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   enrollments Enrollment[]
   evaluations Evaluation[]
@@ -32,7 +35,7 @@ model Class {
 model Student {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   name       String
-  email      String?  @unique
+  email      String?
   externalId String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

@@ -6,6 +6,15 @@ async function getPrisma() {
   return prisma;
 }
 
+function ownerIdsFrom(ctx: any): string[] {
+  const ids = [] as string[];
+  const u = ctx?.user as any;
+  if (u?.prismaUserId) ids.push(u.prismaUserId as string);
+  if (u?.id) ids.push(u.id as string);
+  // dedupe
+  return Array.from(new Set(ids));
+}
+
 const yoga = createYoga<{ req: NextRequest }>({
   schema: createSchema({
     typeDefs: /* GraphQL */ `
@@ -17,6 +26,7 @@ const yoga = createYoga<{ req: NextRequest }>({
         classes: [Class!]!
         class(id: ID!): Class
         students(classId: ID!): [Student!]!
+        enrollments(classId: ID!): [Enrollment!]!
         evaluations(classId: ID!): [Evaluation!]!
       }
 
@@ -24,6 +34,8 @@ const yoga = createYoga<{ req: NextRequest }>({
         createClass(name: String!, year: Int!): Class!
         createStudent(name: String!, email: String): Student!
         enrollStudent(classId: ID!, studentId: ID!): Enrollment!
+        createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
+        unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
       }
 
@@ -57,6 +69,7 @@ const yoga = createYoga<{ req: NextRequest }>({
         classId: ID!
         studentId: ID!
         status: String!
+        student: Student!
       }
 
       type Evaluation {
@@ -73,64 +86,94 @@ const yoga = createYoga<{ req: NextRequest }>({
         health: () => "ok",
         me: async (_: unknown, __: unknown, ctx: any) => ctx.user,
         classes: async (_: unknown, __: unknown, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
           const prisma = await getPrisma();
-          return prisma.class.findMany({ where: { ownerId } });
+          return prisma.class.findMany({ where: { ownerId: { in: ownerIds } } });
         },
         class: async (_: unknown, { id }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return null;
           const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId } });
+          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: { in: ownerIds } } });
           return c;
         },
         students: async (_: unknown, { classId }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
           const prisma = await getPrisma();
           const enrollments = await prisma.enrollment.findMany({
-            where: { classId: classId as string, class: { ownerId } },
+            where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
             select: { student: true },
           });
           return enrollments.map((e: any) => e.student);
         },
+        enrollments: async (_: unknown, { classId }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
+          const prisma = await getPrisma();
+          return prisma.enrollment.findMany({
+            where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
+            include: { student: true },
+          });
+        },
         evaluations: async (_: unknown, { classId }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) return [];
           const prisma = await getPrisma();
           return prisma.evaluation.findMany({
-            where: { classId: classId as string, class: { ownerId } },
+            where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
           });
         },
       },
       Mutation: {
         createClass: async (_: unknown, { name, year }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          const ownerIds = ownerIdsFrom(ctx);
+          const ownerId = ownerIds[0];
           if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           return prisma.class.create({ data: { name, year, ownerId } });
         },
         createStudent: async (_: unknown, { name, email }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           return prisma.student.create({ data: { name, email: email || null } });
         },
         enrollStudent: async (_: unknown, { classId, studentId }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          // ensure class belongs to user
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId } });
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
           if (!c) throw new Error("Not found");
           return prisma.enrollment.create({ data: { classId, studentId, status: "ACTIVE" } });
         },
-        createEvaluation: async (_: unknown, { classId, title, weight, maxScore }: any, ctx: any) => {
-          const ownerId = ctx.user?.prismaUserId as string | undefined;
-          if (!ownerId) throw new Error("Unauthorized");
+        createAndEnroll: async (_: unknown, { classId, name, email }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId } });
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const data: any = { name };
+          const normalized = typeof email === "string" ? email.trim() : undefined;
+          if (normalized) data.email = normalized.toLowerCase();
+          const student = await prisma.student.create({ data });
+          return prisma.enrollment.create({ data: { classId, studentId: student.id, status: "ACTIVE" } });
+        },
+        unenrollStudent: async (_: unknown, { enrollmentId }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const found = await prisma.enrollment.findFirst({ where: { id: enrollmentId as string, class: { ownerId: { in: ownerIds } } } });
+          if (!found) throw new Error("Not found");
+          await prisma.enrollment.delete({ where: { id: enrollmentId as string } });
+          return true;
+        },
+        createEvaluation: async (_: unknown, { classId, title, weight, maxScore }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
           if (!c) throw new Error("Not found");
           return prisma.evaluation.create({ data: { classId, title, weight: weight ?? 1, maxScore } });
         },

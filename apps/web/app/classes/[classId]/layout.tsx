@@ -1,13 +1,26 @@
 import Link from "next/link";
 
-export default function ClassLayout({
+export default async function ClassLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { classId: string };
+  params: Promise<{ classId: string }>;
 }) {
-  const { classId } = params;
+  const { classId } = await params;
+  // Fetch class name server-side using Prisma
+  const [{ prisma }, { getServerSession }, { authOptions }] = await Promise.all([
+    import("@diario/db"),
+    import("next-auth/next"),
+    import("@/app/api/auth/[...nextauth]/route"),
+  ]);
+  const session = await getServerSession(authOptions as any);
+  let className: string | null = null;
+  if (session?.user?.prismaUserId) {
+    const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: session.user.prismaUserId as string } });
+    className = c?.name ?? null;
+  }
+
   const tabs = [
     { href: `/classes/${classId}`, label: "Alunos" },
     { href: `/classes/${classId}/evaluations`, label: "Avaliações" },
@@ -20,7 +33,7 @@ export default function ClassLayout({
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/classes" className="underline">Turmas</Link>
         <span>/</span>
-        <span className="text-foreground">{classId}</span>
+        <span className="text-foreground">{className || classId}</span>
       </div>
       <div className="border-b">
         <nav className="-mb-px flex gap-4">
@@ -33,6 +46,7 @@ export default function ClassLayout({
               {t.label}
             </Link>
           ))}
+        </nav>
       </div>
       <div>{children}</div>
     </div>
