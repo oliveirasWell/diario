@@ -395,16 +395,9 @@ const { handleRequest } = createYoga({
 
 async function callYoga(request: Request): Promise<Response> {
   try {
-    const res = await handleRequest(request);
-    // Some environments minify/rename; ensure we return a proper Response
-    if (!(res instanceof Response)) {
-      console.error("[GraphQL] Yoga returned non-Response:", res);
-      return new Response(JSON.stringify({ error: "Handler returned non-Response" }), {
-        status: 500,
-        headers: { "content-type": "application/json" },
-      });
-    }
-    return res;
+    // Return Yoga's Response directly. In certain runtimes, Response comes
+    // from a different realm, so instanceof checks can fail even when valid.
+    return await handleRequest(request);
   } catch (err: any) {
     console.error("[GraphQL] Uncaught route error:", err?.stack || err);
     return new Response(JSON.stringify({ error: "GraphQL handler error", message: err?.message || String(err) }), {
