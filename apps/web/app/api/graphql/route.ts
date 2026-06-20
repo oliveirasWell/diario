@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const yoga = createYoga({
+const { handleRequest } = createYoga({
   schema: createSchema({
     typeDefs: /* GraphQL */ `
       scalar DateTime
@@ -393,7 +393,4 @@ const yoga = createYoga({
   maskedErrors: false,
 });
 
-// Use a compatible request handler function for Next.js Route Handlers
-// Ensures a Web Response object is always returned
-const handleRequest = (request: Request) => yoga.fetch(request);
 export { handleRequest as GET, handleRequest as POST, handleRequest as OPTIONS };
