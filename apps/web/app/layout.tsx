@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Roboto, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/session-provider";
 import { Header } from "@/components/header";
 import { QueryProvider } from "@/components/query-provider";
+import { AppToaster } from "@/components/toaster";
 
-const inter = Inter({
+const roboto = Roboto({
+  weight: ["100", "300", "400", "500"],
   variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
@@ -30,13 +32,14 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${roboto.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <AuthSessionProvider>
           <QueryProvider>
             <Header />
-            <main className="flex-1 mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">{children}</main>
+            <main className="flex-1 w-full mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">{children}</main>
+            <AppToaster />
           </QueryProvider>
         </AuthSessionProvider>
       </body>

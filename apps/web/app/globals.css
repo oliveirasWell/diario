@@ -122,7 +122,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground text-[15px] sm:text-[16px] leading-6 tracking-tight;
+    @apply bg-background text-foreground font-light text-[15px] sm:text-[16px] leading-6 tracking-normal;
   }
   html {
     @apply font-sans;
