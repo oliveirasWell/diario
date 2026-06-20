@@ -393,7 +393,7 @@ const yoga = createYoga({
   maskedErrors: false,
 });
 
-// Export Yoga handler directly for Next.js Route Handlers
-// Types are ignored at build; runtime returns proper Response
-// @ts-ignore
-export { yoga as GET, yoga as POST, yoga as OPTIONS };
+// Use a compatible request handler function for Next.js Route Handlers
+// Ensures a Web Response object is always returned
+const handleRequest = (request: Request) => yoga.fetch(request);
+export { handleRequest as GET, handleRequest as POST, handleRequest as OPTIONS };

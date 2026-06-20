@@ -37,7 +37,23 @@ export function useCreateEvaluationMutation(classId: string) {
       return data.createEvaluation;
     },
     onSuccess: () => {
+      useQueryClient().invalidateQueries({ queryKey: ["evaluations", classId] });
+    },
+  });
+}
+
+export function useDeleteEvaluationMutation(classId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const data = await gqlRequest<{ deleteEvaluation: boolean }>(/* GraphQL */ `
+        mutation DelEval($id: ID!) { deleteEvaluation(id: $id) }
+      `, { id });
+      return data.deleteEvaluation;
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["evaluations", classId] });
+      qc.invalidateQueries({ queryKey: ["grades", classId] });
     },
   });
 }

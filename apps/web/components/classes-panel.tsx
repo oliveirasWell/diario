@@ -1,6 +1,6 @@
 "use client";
 
-import { useClassesQuery, useCreateClassMutation } from "@/hooks/use-classes";
+import { useClassesQuery, useCreateClassMutation, useDeleteClassMutation } from "@/hooks/use-classes";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,7 @@ type NewClassInput = z.infer<typeof NewClassSchema>;
 export function ClassesPanel() {
   const { data, isLoading } = useClassesQuery();
   const createClass = useCreateClassMutation();
+  const deleteClass = useDeleteClassMutation();
   const [open, setOpen] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewClassInput>({
@@ -54,10 +55,8 @@ export function ClassesPanel() {
                 <button
                   className="btn-icon-xs"
                   title="Remover turma"
-                  onClick={async () => {
-                    if (!confirm("Remover esta turma e todos os dados relacionados?")) return;
-                    await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation DelClass($id: ID!) { deleteClass(id: $id) }`, variables: { id: c.id } }) });
-                    location.reload();
+                  onClick={() => {
+                    if (confirm("Remover esta turma e todos os dados relacionados?")) deleteClass.mutate(c.id);
                   }}
                 >
                   🗑️

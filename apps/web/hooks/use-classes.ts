@@ -35,3 +35,18 @@ export function useCreateClassMutation() {
     },
   });
 }
+
+export function useDeleteClassMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const data = await gqlRequest<{ deleteClass: boolean }>(/* GraphQL */ `
+        mutation DelClass($id: ID!) { deleteClass(id: $id) }
+      `, { id });
+      return data.deleteClass;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["classes"] });
+    },
+  });
+}

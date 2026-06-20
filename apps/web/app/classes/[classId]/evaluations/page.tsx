@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvaluationsQuery, useCreateEvaluationMutation } from "@/hooks/use-evaluations";
+import { useEvaluationsQuery, useCreateEvaluationMutation, useDeleteEvaluationMutation } from "@/hooks/use-evaluations";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +17,7 @@ export default function EvaluationsPage() {
   const classId = params?.classId as string;
   const { data, isLoading } = useEvaluationsQuery(classId);
   const createEval = useCreateEvaluationMutation(classId);
+  const deleteEval = useDeleteEvaluationMutation(classId);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -61,10 +62,8 @@ export default function EvaluationsPage() {
                     <button
                       className="btn-icon-xs"
                       title="Remover avaliação"
-                      onClick={async () => {
-                        if (!confirm("Remover esta avaliação e suas notas?")) return;
-                        await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation DelEval($id: ID!) { deleteEvaluation(id: $id) }`, variables: { id: ev.id } }) });
-                        location.reload();
+                      onClick={() => {
+                        if (confirm("Remover esta avaliação e suas notas?")) deleteEval.mutate(ev.id);
                       }}
                     >
                       🗑️

@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { useDeleteAttendanceSession } from "@/hooks/use-attendance-admin";
+i
+import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
 
 const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
 
@@ -34,7 +34,7 @@ export default function AttendancePage() {
   const { data: records } = useAttendanceRecords(classId);
   const mark = useMarkAttendance(classId);
   const clearMut = useClearAttendance(classId);
-  const deleteSess = useDeleteAttendanceSession(classId);
+  const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
   const [q, setQ] = useState("");
 
@@ -110,11 +110,7 @@ export default function AttendancePage() {
                             <DropdownMenuItem onClick={() => enrollments?.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }))}>
                               Marcar todos Presente
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={async () => {
-                              // remove só da lista (excluir da agenda visível)
-                              await fetch('/api/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: `mutation Ex($classId: ID!, $date: DateTime!) { excludeAttendanceDate(classId: $classId, date: $date) }`, variables: { classId, date: d } }) });
-                              location.reload();
-                            }} className="text-destructive">
+                            <DropdownMenuItem onClick={() => excludeDate.mutate({ date: d })} className="text-destructive">
                               Remover dia da lista
                             </DropdownMenuItem>
                           </DropdownMenuContent>
