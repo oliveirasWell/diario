@@ -14,6 +14,10 @@ function ownerIdsFrom(ctx: any): string[] {
   return Array.from(new Set(ids));
 }
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const yoga = createYoga({
   schema: createSchema({
     typeDefs: /* GraphQL */ `
@@ -389,10 +393,7 @@ const yoga = createYoga({
   maskedErrors: false,
 });
 
-export async function GET(request: Request) {
-  return yoga.fetch(request);
-}
-
-export async function POST(request: Request) {
-  return yoga.fetch(request);
-}
+// Export Yoga handler directly for Next.js Route Handlers
+// Types are ignored at build; runtime returns proper Response
+// @ts-ignore
+export { yoga as GET, yoga as POST, yoga as OPTIONS };
