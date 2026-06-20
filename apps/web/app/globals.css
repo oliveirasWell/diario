@@ -72,7 +72,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -151,16 +151,16 @@
     @apply bg-muted/20;
   }
   .input {
-    @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+    @apply w-full border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
   }
   .select {
-    @apply rounded-md border border-input bg-background text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+    @apply border border-input bg-background text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
   }
   .select-xs { @apply text-xs px-1.5 py-1; }
   .select-lg { @apply text-sm px-2 py-1 h-10; }
-  .badge { @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-background; }
-  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted; }
-  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted text-xs sm:text-sm; }
+  .badge { @apply inline-flex items-center gap-1 border px-2 py-0.5 text-xs bg-background; }
+  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center border bg-background hover:bg-muted; }
+  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center border bg-background hover:bg-muted text-xs sm:text-sm; }
   .scroll-snap-x { scroll-snap-type: x mandatory; }
   .snap-start { scroll-snap-align: start; }
 }
