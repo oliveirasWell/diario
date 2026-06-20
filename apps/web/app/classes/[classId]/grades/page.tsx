@@ -36,7 +36,7 @@ export default function GradesPage() {
         <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
         <button
           type="button"
-          className="px-2 py-1 border rounded text-sm ml-auto"
+          className="px-2 py-1 text-sm bg-muted/60 hover:bg-muted ml-auto"
           onClick={() => {
             if (!evals || !enrolls) return;
             exportGradesToXlsx({
@@ -55,7 +55,7 @@ export default function GradesPage() {
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
         <div className="overflow-auto scroll-area scroll-snap-x">
-          <table className="min-w-full border rounded table-grid">
+          <table className="min-w-full table-grid">
             <thead>
               <tr>
                 <th className="text-left sticky left-0 bg-background z-20">Aluno</th>

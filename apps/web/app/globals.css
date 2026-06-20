@@ -142,25 +142,32 @@
     -webkit-overflow-scrolling: touch;
   }
   .table-grid th {
-    @apply px-2 py-1.5 text-xs sm:text-sm bg-background border sticky top-0 z-30 shadow-sm;
+    @apply px-3 py-2 text-xs sm:text-sm font-normal bg-muted sticky top-0 z-30;
   }
   .table-grid td {
-    @apply px-2 py-1.5 text-xs sm:text-sm border;
+    @apply px-3 py-2 text-xs sm:text-sm;
   }
   .table-grid tbody tr:nth-child(even) {
-    @apply bg-muted/20;
+    @apply bg-muted/25;
+  }
+  .table-grid tbody tr:hover {
+    @apply bg-muted/40;
   }
   .input {
-    @apply w-full border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+    @apply w-full bg-muted/40 px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50;
   }
   .select {
-    @apply border border-input bg-background text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+    @apply bg-muted/40 text-sm focus-visible:outline-none focus-visible:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-50;
   }
   .select-xs { @apply text-xs px-1.5 py-1; }
   .select-lg { @apply text-sm px-2 py-1 h-10; }
-  .badge { @apply inline-flex items-center gap-1 border px-2 py-0.5 text-xs bg-background; }
-  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center border bg-background hover:bg-muted; }
-  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center border bg-background hover:bg-muted text-xs sm:text-sm; }
+  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-muted; }
+  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center bg-muted/60 hover:bg-muted; }
+  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center bg-muted/30 hover:bg-muted/60 text-xs sm:text-sm; }
+  .surface { @apply bg-muted/25; }
+  .surface-header { @apply bg-muted/50 px-4 py-2 font-normal; }
+  .surface-row { @apply px-4 py-2 hover:bg-muted/40 transition-colors; }
+  .surface-form { @apply bg-muted/25 p-3 sm:p-4 space-y-3 sm:space-y-4; }
   .scroll-snap-x { scroll-snap-type: x mandatory; }
   .snap-start { scroll-snap-align: start; }
 }

@@ -29,8 +29,8 @@ export function StudentsPanel({ classId }: { classId: string }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="border rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
-        <h3 className="font-medium">Adicionar aluno à turma</h3>
+      <div className="surface-form">
+        <h3 className="font-normal">Adicionar aluno à turma</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-end">
           <div>
             <label className="block text-sm font-medium">Nome</label>
@@ -51,14 +51,14 @@ export function StudentsPanel({ classId }: { classId: string }) {
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
-        <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
+        <div className="surface">
+          <div className="grid grid-cols-3 surface-header">
             <div>Nome</div>
             <div>Email</div>
             <div className="text-right">Ações</div>
           </div>
           {data?.map((e) => (
-            <div key={e.id} className="grid grid-cols-3 px-4 py-2 items-center">
+            <div key={e.id} className="grid grid-cols-3 surface-row items-center">
               <div>{e.student.name}</div>
               <div className="truncate">{e.student.email || "—"}</div>
               <div className="text-right">

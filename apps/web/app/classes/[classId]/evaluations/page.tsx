@@ -30,7 +30,7 @@ export default function EvaluationsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="border rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className="surface-form">
         <form onSubmit={handleSubmit(onSubmit)} className="flex gap-2 items-end">
           <div className="flex-1 min-w-0">
             <label className="block text-sm font-medium">Nova avaliação</label>
@@ -45,7 +45,7 @@ export default function EvaluationsPage() {
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
         <div className="overflow-auto scroll-area">
-          <table className="min-w-full border rounded table-grid">
+          <table className="min-w-full table-grid">
             <thead>
               <tr>
                 <th className="text-left">Título</th>

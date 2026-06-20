@@ -95,7 +95,7 @@ export default function ClassConfigPage() {
                 type="button"
                 key={d.value}
                 onClick={() => onToggleDay(d.value)}
-                className={`px-3 py-1 border ${watch("daysOfWeek")?.includes(d.value) ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                className={`px-3 py-1 ${watch("daysOfWeek")?.includes(d.value) ? "bg-primary text-primary-foreground" : "bg-muted/40 hover:bg-muted/60"}`}
               >
                 {d.label}
               </button>
@@ -109,7 +109,7 @@ export default function ClassConfigPage() {
             <input
               id="startDate"
               type="date"
-              className="w-full border px-3 py-2 h-12 sm:h-10 bg-background"
+              className="input h-12 sm:h-10"
               {...register("startDate")}
             />
           </div>
@@ -118,7 +118,7 @@ export default function ClassConfigPage() {
             <input
               id="endDate"
               type="date"
-              className="w-full border px-3 py-2 h-12 sm:h-10 bg-background"
+              className="input h-12 sm:h-10"
               {...register("endDate")}
             />
           </div>

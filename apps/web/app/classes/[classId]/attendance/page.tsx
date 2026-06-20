@@ -88,10 +88,10 @@ export default function AttendancePage() {
               <span className="badge">⏰ Atraso</span>
             </div>
             <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px] ml-auto" />
-            <button className="px-2 py-1 border rounded text-sm" onClick={onExport} type="button">Exportar XLSX</button>
+            <button className="px-2 py-1 text-sm bg-muted/60 hover:bg-muted" onClick={onExport} type="button">Exportar XLSX</button>
           </div>
           <div className="overflow-auto scroll-area scroll-snap-x">
-            <table className="min-w-full border rounded table-grid">
+          <table className="min-w-full table-grid">
               <thead>
                 <tr>
                   <th className="text-left sticky left-0 bg-background z-20">Aluno</th>
@@ -101,7 +101,7 @@ export default function AttendancePage() {
                         {d.toLocaleDateString()}
                         <DropdownMenu>
                           <DropdownMenuTrigger
-                            className="h-8 w-8 p-0 hidden md:inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted"
+                            className="h-8 w-8 p-0 hidden md:inline-flex items-center justify-center bg-muted/60 hover:bg-muted"
                             aria-label="Ações da data"
                           >
                             ⋮

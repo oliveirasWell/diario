@@ -34,21 +34,21 @@ export function ClassesPanel() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Turmas</h2>
+        <h2 className="text-xl font-normal">Turmas</h2>
         <Button onClick={() => setOpen(true)}>Nova turma</Button>
       </div>
 
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
-        <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
+        <div className="surface">
+          <div className="grid grid-cols-3 surface-header">
             <div>Nome</div>
             <div>Ano</div>
             <div className="text-right">Ações</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-3 px-4 py-2 items-center hover:bg-muted/50 transition-colors">
+            <div key={c.id} className="grid grid-cols-3 surface-row items-center">
               <a href={`/classes/${c.id}`} className="underline-offset-2 hover:underline">{c.name}</a>
               <div>{c.year}</div>
               <div className="text-right">
@@ -69,8 +69,8 @@ export function ClassesPanel() {
 
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg shadow w-full max-w-md p-3 sm:p-6 space-y-3 sm:space-y-4">
-            <h3 className="text-lg font-semibold">Nova Turma</h3>
+          <div className="bg-background shadow-lg w-full max-w-md p-3 sm:p-6 space-y-3 sm:space-y-4">
+            <h3 className="text-lg font-normal">Nova Turma</h3>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Nome</label>

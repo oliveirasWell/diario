@@ -15,8 +15,8 @@ export function Header() {
   if (pathname === "/login") return null;
 
   return (
-    <header className="w-full border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-      <div className="mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6 h-14 flex items-center justify-between">
+    <header className="w-full bg-muted/30 sticky top-0 z-30">
+      <div className="mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6 h-16 flex items-center justify-between">
         <HeaderTitle />
         <div className="flex items-center gap-1.5">
           <ThemeToggle />

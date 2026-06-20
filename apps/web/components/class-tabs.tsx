@@ -13,15 +13,15 @@ export function ClassTabs({ classId }: { classId: string }) {
     { href: `/classes/${classId}/config`, label: "Config" },
   ];
   return (
-    <div className="border-b overflow-x-auto scroll-area">
-      <nav className="-mb-px flex gap-4 whitespace-nowrap pr-2">
+    <div className="overflow-x-auto scroll-area">
+      <nav className="flex gap-1 whitespace-nowrap">
         {tabs.map((t) => {
           const active = pathname === t.href;
           return (
             <Link
               key={t.href}
               href={t.href}
-              className={`px-2 py-2 border-b-2 ${active ? "border-foreground font-semibold" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+              className={`px-3 py-2 ${active ? "bg-muted text-foreground font-normal" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"}`}
             >
               {t.label}
             </Link>
