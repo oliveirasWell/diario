@@ -6,6 +6,7 @@ import { useEnrollments } from "@/hooks/use-attendance";
 import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
 import { Input } from "@/components/ui/input";
 import { useMemo, useState } from "react";
+import { exportGradesToXlsx } from "@/lib/export-grades";
 
 export default function GradesPage() {
   const params = useParams();
@@ -33,6 +34,21 @@ export default function GradesPage() {
     <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-2">
         <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
+        <button
+          type="button"
+          className="px-2 py-1 border rounded text-sm ml-auto"
+          onClick={() => {
+            if (!evals || !enrolls) return;
+            exportGradesToXlsx({
+              className: String(classId),
+              evaluations: evals.map(ev => ({ id: ev.id, title: ev.title, maxScore: ev.maxScore ?? 10 })),
+              enrollments: (list ?? []).map(e => ({ id: e.id, student: { id: e.student.id, name: e.student.name }, concept: (e as any).concept ?? null })),
+              grades: (grades ?? []).map(g => ({ enrollmentId: g.enrollmentId, evaluationId: g.evaluationId, score: g.score })),
+            });
+          }}
+        >
+          Exportar XLSX
+        </button>
       </div>
 
       {loadingE || loadingEn ? (
