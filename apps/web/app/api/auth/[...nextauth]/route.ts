@@ -17,10 +17,38 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
+    async jwt({ token, user }) {
+      // Ensure prisma user exists and attach prismaUserId on token
+      try {
+        const email = user?.email ?? token?.email;
+        if (email) {
+          const { prisma } = await import("@diario/db");
+          const dbUser = await prisma.user.upsert({
+            where: { email },
+            update: {
+              name: user?.name ?? undefined,
+              image: (user as any)?.image ?? undefined,
+            },
+            create: {
+              email,
+              name: user?.name ?? null,
+              image: (user as any)?.image ?? null,
+            },
+          });
+          // @ts-ignore
+          token.prismaUserId = dbUser.id;
+        }
+      } catch (e) {
+        // swallow to not block auth; GraphQL layer can handle absence
+      }
+      return token;
+    },
     async session({ session, token }) {
-      if (session?.user && token?.sub) {
-        // @ts-ignore
-        session.user.id = token.sub;
+      if (session?.user && token) {
+        // @ts-ignore next-auth adapter id
+        if (token.sub) session.user.id = token.sub;
+        // @ts-ignore custom field from jwt
+        if (token.prismaUserId) session.user.prismaUserId = token.prismaUserId as string;
       }
       return session;
     },

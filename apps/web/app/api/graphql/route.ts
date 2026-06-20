@@ -73,56 +73,64 @@ const yoga = createYoga<{ req: NextRequest }>({
         health: () => "ok",
         me: async (_: unknown, __: unknown, ctx: any) => ctx.user,
         classes: async (_: unknown, __: unknown, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          return prisma.class.findMany({ where: { ownerId: ctx.user.id as string } });
+          return prisma.class.findMany({ where: { ownerId } });
         },
         class: async (_: unknown, { id }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: ctx.user.id as string } });
+          const c = await prisma.class.findFirst({ where: { id: id as string, ownerId } });
           return c;
         },
         students: async (_: unknown, { classId }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           const enrollments = await prisma.enrollment.findMany({
-            where: { classId: classId as string, class: { ownerId: ctx.user.id as string } },
+            where: { classId: classId as string, class: { ownerId } },
             select: { student: true },
           });
           return enrollments.map((e: any) => e.student);
         },
         evaluations: async (_: unknown, { classId }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           return prisma.evaluation.findMany({
-            where: { classId: classId as string, class: { ownerId: ctx.user.id as string } },
+            where: { classId: classId as string, class: { ownerId } },
           });
         },
       },
       Mutation: {
         createClass: async (_: unknown, { name, year }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          return prisma.class.create({ data: { name, year, ownerId: ctx.user.id as string } });
+          return prisma.class.create({ data: { name, year, ownerId } });
         },
         createStudent: async (_: unknown, { name, email }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           return prisma.student.create({ data: { name, email: email || null } });
         },
         enrollStudent: async (_: unknown, { classId, studentId }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           // ensure class belongs to user
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: ctx.user.id as string } });
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId } });
           if (!c) throw new Error("Not found");
           return prisma.enrollment.create({ data: { classId, studentId, status: "ACTIVE" } });
         },
         createEvaluation: async (_: unknown, { classId, title, weight, maxScore }: any, ctx: any) => {
-          if (!ctx.user?.id) throw new Error("Unauthorized");
+          const ownerId = ctx.user?.prismaUserId as string | undefined;
+          if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: ctx.user.id as string } });
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId } });
           if (!c) throw new Error("Not found");
           return prisma.evaluation.create({ data: { classId, title, weight: weight ?? 1, maxScore } });
         },
