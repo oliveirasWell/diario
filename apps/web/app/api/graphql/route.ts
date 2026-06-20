@@ -407,14 +407,35 @@ async function callYoga(request: Request): Promise<Response> {
   }
 }
 
+async function toGlobalResponse(res: Response): Promise<Response> {
+  const text = await res.text();
+  const headers = new Headers();
+  // copy headers into same-realm Headers
+  res.headers.forEach((v, k) => headers.set(k, v));
+  return new Response(text, { status: res.status, headers });
+}
+
+async function proxyYoga(request: Request): Promise<Response> {
+  try {
+    const res = await handleRequest(request);
+    return await toGlobalResponse(res as unknown as Response);
+  } catch (err: any) {
+    console.error("[GraphQL] Uncaught route error:", err?.stack || err);
+    return new Response(JSON.stringify({ error: "GraphQL handler error", message: err?.message || String(err) }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+}
+
 export async function GET(request: Request) {
-  return callYoga(request);
+  return proxyYoga(request);
 }
 
 export async function POST(request: Request) {
-  return callYoga(request);
+  return proxyYoga(request);
 }
 
 export async function OPTIONS(request: Request) {
-  return callYoga(request);
+  return proxyYoga(request);
 }
