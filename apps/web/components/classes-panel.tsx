@@ -41,16 +41,14 @@ export function ClassesPanel() {
         <div>Carregando...</div>
       ) : (
         <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
+          <div className="grid grid-cols-2 font-medium px-4 py-2 bg-muted/40">
             <div>Nome</div>
             <div>Ano</div>
-            <div>Dono</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-3 px-4 py-2">
+            <div key={c.id} className="grid grid-cols-2 px-4 py-2">
               <div>{c.name}</div>
               <div>{c.year}</div>
-              <div className="truncate">{c.ownerId}</div>
             </div>
           ))}
         </div>
