@@ -15,6 +15,8 @@
     "db:push": "pnpm --filter @diario/db run db:push",
     "db:push:auto": "bash scripts/db-push.sh",
     "approve:prisma": "pnpm approve-builds prisma @prisma/client @prisma/engines",
+    "env:sync": "bash scripts/env-sync.sh",
+    "env:push:web": "cp apps/web/.env.local .env.local",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
     "lint": "turbo run lint",
