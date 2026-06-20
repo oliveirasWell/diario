@@ -46,10 +46,10 @@ export function ClassesPanel() {
             <div>Ano</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-2 px-4 py-2">
-              <div>{c.name}</div>
+            <a key={c.id} href={`/classes/${c.id}`} className="grid grid-cols-2 px-4 py-2 hover:bg-muted/50 transition-colors">
+              <div className="underline-offset-2 hover:underline">{c.name}</div>
               <div>{c.year}</div>
-            </div>
+            </a>
           ))}
         </div>
       )}
