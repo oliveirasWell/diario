@@ -40,6 +40,7 @@ const yoga = createYoga({
         unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
         markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus!): Boolean!
+        clearAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!): Boolean!
       }
 
       type User {
@@ -243,11 +244,25 @@ const yoga = createYoga({
           else await prisma.attendanceRecord.create({ data: { sessionId: session.id, enrollmentId, status } });
           return true;
         },
+        clearAttendance: async (_: unknown, { classId, date, enrollmentId }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+          const d = new Date(date);
+          const session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d } });
+          if (!session) return true; // nothing to clear
+          const existing = await prisma.attendanceRecord.findFirst({ where: { sessionId: session.id, enrollmentId: enrollmentId as string } });
+          if (!existing) return true;
+          await prisma.attendanceRecord.delete({ where: { id: existing.id } });
+          return true;
+        },
       },
     },
   }),
   graphqlEndpoint: "/api/graphql",
-  context: async ({ req }) => {
+  context: async () => {
     const { getServerSession } = await import("next-auth/next");
     const { authOptions } = await import("@/app/api/auth/[...nextauth]/route");
     const session = await getServerSession(authOptions as any);

@@ -1,18 +1,22 @@
 "use client";
 
 import { useAttendanceDates, useAttendanceRecords, useEnrollments, useMarkAttendance } from "@/hooks/use-attendance";
+import { useClearAttendance } from "@/hooks/use-clear-attendance";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { exportAttendanceToXlsx } from "@/lib/export-attendance";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
 
 type Status = typeof statuses[number];
 
 const LABELS: Record<Status, string> = {
-  PRESENT: "✅ Presente",
-  ABSENT: "❌ Falta",
-  LATE: "⏰ Atraso",
+  PRESENT: "✅ P",
+  ABSENT: "❌ F",
+  LATE: "⏰ A",
 };
 
 function toISODate(d: Date) {
@@ -22,11 +26,13 @@ function toISODate(d: Date) {
 export default function AttendancePage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data: dates } = useAttendanceDates(classId);
-  const { data: enrollments } = useEnrollments(classId);
+  const { data: dates, isLoading: isLoadingDates } = useAttendanceDates(classId);
+  const { data: enrollments, isLoading: isLoadingEnroll } = useEnrollments(classId);
   const { data: records } = useAttendanceRecords(classId);
   const mark = useMarkAttendance(classId);
+  const clearMut = useClearAttendance(classId);
   const [hidePast, setHidePast] = useState(false);
+  const [q, setQ] = useState("");
 
   const todayKey = toISODate(new Date());
   const visibleDates = useMemo(() => {
@@ -42,6 +48,12 @@ export default function AttendancePage() {
     return m;
   }, [records]);
 
+  const list = useMemo(() => {
+    const base = enrollments ?? [];
+    const filtered = q ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase())) : base;
+    return filtered.slice().sort((a,b)=>a.student.name.localeCompare(b.student.name));
+  }, [enrollments, q]);
+
   const onExport = () => {
     if (!dates || !enrollments) return;
     exportAttendanceToXlsx({
@@ -54,54 +66,89 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Presenças</h2>
-      {!dates?.length ? (
+      {isLoadingDates || isLoadingEnroll ? (
+        <div className="text-sm text-muted-foreground">Carregando presenças…</div>
+      ) : !dates?.length ? (
         <p className="text-sm text-muted-foreground">Configure os dias da semana e datas de início/fim da turma para gerar as colunas.</p>
       ) : null}
-      {dates && enrollments && (
+      {dates && dates.length > 0 && enrollments && (
         <>
           <div className="flex items-center gap-3 mb-2">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={hidePast} onChange={(e) => setHidePast(e.target.checked)} />
-              Ocultar datas passadas
-            </label>
+            <div className="flex items-center gap-2 text-sm">
+              <Checkbox id="hidePast" checked={hidePast} onCheckedChange={(v)=>setHidePast(Boolean(v))} />
+              <Label htmlFor="hidePast">Ocultar datas passadas</Label>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 text-xs">
+              <span className="badge">✅ Presente</span>
+              <span className="badge">❌ Falta</span>
+              <span className="badge">⏰ Atraso</span>
+            </div>
+            <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px] ml-auto" />
             <button className="px-2 py-1 border rounded text-sm" onClick={onExport} type="button">Exportar XLSX</button>
           </div>
-          <div className="overflow-auto">
-            <table className="min-w-full border rounded">
+          <div className="overflow-auto scroll-area scroll-snap-x">
+            <table className="min-w-full border rounded table-grid">
               <thead>
                 <tr>
-                  <th className="px-2 py-1 text-left border sticky left-0 bg-background z-20">Aluno</th>
+                  <th className="text-left sticky left-0 bg-background z-20">Aluno</th>
                   {visibleDates.map((d) => (
-                    <th key={toISODate(d)} className="px-2 py-1 border whitespace-nowrap text-xs">
-                      {d.toLocaleDateString()}
+                    <th key={toISODate(d)} className="whitespace-nowrap text-xs snap-start">
+                      <div className="flex items-center gap-2">
+                        {d.toLocaleDateString()}
+                        <button
+                          className="btn-icon-xs hidden md:inline-flex"
+                          title="Marcar todos Presente"
+                          onClick={() => {
+                            enrollments.forEach((e) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }));
+                          }}
+                          type="button"
+                        >
+                          ✅
+                        </button>
+                      </div>
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {enrollments.map((e) => (
+                {list.map((e) => (
                   <tr key={e.id}>
-                    <td className="px-2 py-1 border whitespace-nowrap sticky left-0 bg-background z-10">{e.student.name}</td>
+                    <td className="whitespace-nowrap sticky left-0 bg-background z-10">
+                      <div className="flex items-center gap-2">
+                        <span>{e.student.name}</span>
+                        <button
+                          className="btn-icon-xs hidden md:inline-flex"
+                          title="Marcar semana toda Presente"
+                          onClick={() => {
+                            visibleDates.forEach((d) => mark.mutate({ date: d, enrollmentId: e.id, status: "PRESENT" }));
+                          }}
+                          type="button"
+                        >
+                          ✅
+                        </button>
+                      </div>
+                    </td>
                     {visibleDates.map((d) => {
                       const dKey = toISODate(d);
                       const current = recMap.get(`${e.id}|${dKey}`);
                       return (
-                        <td key={dKey} className="px-2 py-1 border">
-                          <select
-                            className="border rounded px-1 py-0.5 text-xs bg-background"
-                            value={current || ""}
-                            onChange={(ev) => {
-                              const val = ev.target.value as Status | "";
-                              if (!val) return;
-                              mark.mutate({ date: d, enrollmentId: e.id, status: val });
+                        <td key={dKey}>
+                          <button
+                            type="button"
+                            className="cell-btn min-w-[104px]"
+                            onClick={() => {
+                              const order: (Status | null)[] = ["PRESENT","ABSENT","LATE",null];
+                              const idx = order.indexOf((current ?? null) as any);
+                              const next = order[(idx + 1) % order.length];
+                              if (next === null) {
+                                clearMut.mutate({ date: d, enrollmentId: e.id });
+                              } else {
+                                mark.mutate({ date: d, enrollmentId: e.id, status: next });
+                              }
                             }}
                           >
-                            <option value="">—</option>
-                            {statuses.map((s) => (
-                              <option key={s} value={s}>{LABELS[s]}</option>
-                            ))}
-                          </select>
+                            {current ? LABELS[current] : "—"}
+                          </button>
                         </td>
                       );
                     })}

@@ -28,22 +28,18 @@ export function StudentsPanel({ classId }: { classId: string }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Alunos</h2>
-      </div>
-
-      <div className="border rounded-lg p-4 space-y-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="border rounded-lg p-3 sm:p-4 space-y-3 sm:space-y-4">
         <h3 className="font-medium">Adicionar aluno à turma</h3>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-3 items-end">
           <div>
             <label className="block text-sm font-medium">Nome</label>
-            <input className="w-full border rounded px-3 py-2 bg-background" placeholder="Ex.: Maria Silva" {...register("name")} />
+            <input className="input" placeholder="Ex.: Maria Silva" {...register("name")} />
             {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium">Email (opcional)</label>
-            <input className="w-full border rounded px-3 py-2 bg-background" placeholder="maria@email.com" {...register("email")} />
+            <input className="input" placeholder="maria@email.com" {...register("email")} />
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div className="flex gap-2">

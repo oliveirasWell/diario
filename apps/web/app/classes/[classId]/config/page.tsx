@@ -86,8 +86,6 @@ export default function ClassConfigPage() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Configurar agenda</h2>
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Dias da semana</label>
@@ -108,11 +106,11 @@ export default function ClassConfigPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium">Início</label>
-            <input type="date" className="w-full border rounded px-3 py-2 bg-background" {...register("startDate")} />
+            <input type="date" className="input" {...register("startDate")} />
           </div>
           <div>
             <label className="block text-sm font-medium">Fim</label>
-            <input type="date" className="w-full border rounded px-3 py-2 bg-background" {...register("endDate")} />
+            <input type="date" className="input" {...register("endDate")} />
           </div>
         </div>
 

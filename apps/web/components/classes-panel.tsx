@@ -31,7 +31,7 @@ export function ClassesPanel() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Turmas</h2>
         <Button onClick={() => setOpen(true)}>Nova turma</Button>
@@ -56,17 +56,17 @@ export function ClassesPanel() {
 
       {open && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg shadow w-full max-w-md p-6 space-y-4">
+          <div className="bg-background rounded-lg shadow w-full max-w-md p-3 sm:p-6 space-y-3 sm:space-y-4">
             <h3 className="text-lg font-semibold">Nova Turma</h3>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Nome</label>
-                <input className="w-full border rounded px-3 py-2 bg-background" placeholder="Ex.: 1ºA" {...register("name")} />
+                <input className="input" placeholder="Ex.: 1ºA" {...register("name")} />
                 {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium">Ano</label>
-                <input type="number" className="w-full border rounded px-3 py-2 bg-background" {...register("year", { valueAsNumber: true })} />
+                <input type="number" className="input" {...register("year", { valueAsNumber: true })} />
                 {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
               </div>
               <div className="flex justify-end gap-2">

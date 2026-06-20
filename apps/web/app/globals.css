@@ -122,9 +122,37 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-[15px] sm:text-[16px] leading-6 tracking-tight;
   }
   html {
     @apply font-sans;
   }
+}
+
+@layer components {
+  .scroll-area {
+    -webkit-overflow-scrolling: touch;
+  }
+  .table-grid th {
+    @apply px-2 py-1.5 text-xs sm:text-sm bg-background border sticky top-0 z-30 shadow-sm;
+  }
+  .table-grid td {
+    @apply px-2 py-1.5 text-xs sm:text-sm border;
+  }
+  .table-grid tbody tr:nth-child(even) {
+    @apply bg-muted/20;
+  }
+  .input {
+    @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+  }
+  .select {
+    @apply rounded-md border border-input bg-background text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
+  }
+  .select-xs { @apply text-xs px-1.5 py-1; }
+  .select-lg { @apply text-sm px-2 py-1 h-10; }
+  .badge { @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-background; }
+  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted; }
+  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted text-xs sm:text-sm; }
+  .scroll-snap-x { scroll-snap-type: x mandatory; }
+  .snap-start { scroll-snap-align: start; }
 }
