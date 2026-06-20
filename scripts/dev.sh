@@ -8,7 +8,7 @@ cd "$ROOT_DIR"
 pnpm install
 
 # Try to generate Prisma client if approved; ignore failure (Mongo/NextAuth don't need Prisma to run dev)
-if pnpm --filter @diario/db prisma generate; then
+if pnpm --filter @diario/db run generate; then
   echo "Prisma client generated"
 else
   echo "Skipping prisma generate (approve builds later with: pnpm approve-builds prisma @prisma/client @prisma/engines)"

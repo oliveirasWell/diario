@@ -10,9 +10,10 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "dev:web": "pnpm --filter web dev",
-    "setup": "pnpm install && pnpm --filter @diario/db prisma generate || true",
-    "db:generate": "pnpm --filter @diario/db prisma generate",
-    "db:push": "pnpm --filter @diario/db prisma db push",
+    "setup": "pnpm install && pnpm --filter @diario/db run generate || true",
+    "db:generate": "pnpm --filter @diario/db run generate",
+    "db:push": "pnpm --filter @diario/db run db:push",
+    "approve:prisma": "pnpm approve-builds prisma @prisma/client @prisma/engines",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
     "lint": "turbo run lint",
