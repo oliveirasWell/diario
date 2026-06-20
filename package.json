@@ -17,6 +17,8 @@
     "approve:prisma": "pnpm approve-builds prisma @prisma/client @prisma/engines",
     "env:sync": "bash scripts/env-sync.sh",
     "env:push:web": "cp apps/web/.env.local .env.local",
+    "setup:all": "pnpm env:sync && pnpm approve:prisma && pnpm db:generate && pnpm db:push:auto",
+    "dev:local": "bash scripts/dev.sh",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
     "lint": "turbo run lint",
