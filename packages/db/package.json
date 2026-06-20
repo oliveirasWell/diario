@@ -1,0 +1,17 @@
+{
+  "name": "@diario/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "node scripts/seed.cjs"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.15.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.15.1"
+  }
+}

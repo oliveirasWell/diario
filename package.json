@@ -1,0 +1,24 @@
+{
+  "name": "diario",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.3",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:web": "pnpm --filter web dev",
+    "setup": "pnpm install && pnpm --filter @diario/db prisma generate || true",
+    "db:generate": "pnpm --filter @diario/db prisma generate",
+    "db:push": "pnpm --filter @diario/db prisma db push",
+    "build": "turbo run build",
+    "start": "pnpm --filter web start",
+    "lint": "turbo run lint",
+    "codegen": "turbo run codegen"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.6"
+  }
+}

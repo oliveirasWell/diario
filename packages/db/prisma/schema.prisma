@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  year      Int
+  ownerId   String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  enrollments Enrollment[]
+  evaluations Evaluation[]
+  sessions    AttendanceSession[]
+}
+
+model Student {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  name       String
+  email      String?  @unique
+  externalId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  classId    String  @db.ObjectId
+  studentId  String  @db.ObjectId
+  status     String  @default("ACTIVE")
+
+  class      Class   @relation(fields: [classId], references: [id])
+  student    Student @relation(fields: [studentId], references: [id])
+  grades     Grade[]
+  attendance AttendanceRecord[]
+}
+
+model Evaluation {
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String  @db.ObjectId
+  title     String
+  weight    Float?  @default(1)
+  maxScore  Float   @default(10)
+  createdAt DateTime @default(now())
+
+  class     Class   @relation(fields: [classId], references: [id])
+  grades    Grade[]
+}
+
+model Grade {
+  id            String  @id @default(auto()) @map("_id") @db.ObjectId
+  enrollmentId  String  @db.ObjectId
+  evaluationId  String  @db.ObjectId
+  score         Float
+
+  enrollment    Enrollment @relation(fields: [enrollmentId], references: [id])
+  evaluation    Evaluation @relation(fields: [evaluationId], references: [id])
+
+  @@unique([enrollmentId, evaluationId])
+}
+
+model AttendanceSession {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  classId   String   @db.ObjectId
+  date      DateTime
+  notes     String?
+
+  class     Class @relation(fields: [classId], references: [id])
+  records   AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId    String   @db.ObjectId
+  enrollmentId String   @db.ObjectId
+  status       AttendanceStatus
+
+  session      AttendanceSession @relation(fields: [sessionId], references: [id])
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+
+  @@unique([sessionId, enrollmentId])
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
