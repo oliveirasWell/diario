@@ -1,5 +1,4 @@
 import { createYoga, createSchema } from "graphql-yoga";
-import type { NextRequest } from "next/server";
 
 async function getPrisma() {
   const { prisma } = await import("@diario/db");
@@ -15,7 +14,7 @@ function ownerIdsFrom(ctx: any): string[] {
   return Array.from(new Set(ids));
 }
 
-const yoga = createYoga<{ req: NextRequest }>({
+const yoga = createYoga({
   schema: createSchema({
     typeDefs: /* GraphQL */ `
       scalar DateTime
@@ -257,4 +256,10 @@ const yoga = createYoga<{ req: NextRequest }>({
   maskedErrors: false,
 });
 
-export { yoga as GET, yoga as POST };
+export async function GET(request: Request) {
+  return yoga.fetch(request);
+}
+
+export async function POST(request: Request) {
+  return yoga.fetch(request);
+}
