@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -50,14 +51,20 @@ export default function ClassConfigPage() {
     },
   });
 
-  const { register, handleSubmit, setValue, watch } = useForm<FormValues>({
+  const { register, handleSubmit, setValue, watch, reset } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    values: {
-      daysOfWeek: data?.daysOfWeek ?? [],
-      startDate: data?.startDate ?? undefined,
-      endDate: data?.endDate ?? undefined,
-    },
+    defaultValues: { daysOfWeek: [], startDate: undefined, endDate: undefined },
   });
+
+  useEffect(() => {
+    if (!data) return;
+    const toDateOnly = (s?: string | null) => (s ? new Date(s).toISOString().slice(0, 10) : undefined);
+    reset({
+      daysOfWeek: data.daysOfWeek ?? [],
+      startDate: toDateOnly(data.startDate),
+      endDate: toDateOnly(data.endDate),
+    });
+  }, [data, reset]);
 
   const days = [
     { label: "Dom", value: 0 },
