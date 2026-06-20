@@ -20,7 +20,7 @@ export function Header() {
         <HeaderTitle />
         <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          {status === "authenticated" ? (
+          {status !== "unauthenticated" ? (
             <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => signOut({ callbackUrl: "/login" })} title="Sair" aria-label="Sair">
               <LogOut className="size-5" />
             </Button>
