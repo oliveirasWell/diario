@@ -3,7 +3,7 @@
 import { useAttendanceDates, useAttendanceRecords, useEnrollments, useMarkAttendance } from "@/hooks/use-attendance";
 import { useClearAttendance } from "@/hooks/use-clear-attendance";
 import { useParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { exportAttendanceToXlsx } from "@/lib/export-attendance";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
+
+const STICKY_COL_WIDTH = 120;
 
 const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
 
@@ -37,6 +39,7 @@ export default function AttendancePage() {
   const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
   const [q, setQ] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const todayKey = toISODate(new Date());
   const visibleDates = useMemo(() => {
@@ -57,6 +60,16 @@ export default function AttendancePage() {
     const filtered = q ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase())) : base;
     return filtered.slice().sort((a,b)=>a.student.name.localeCompare(b.student.name));
   }, [enrollments, q]);
+
+  useEffect(() => {
+    const container = scrollRef.current;
+    if (!container) return;
+    const todayCol = container.querySelector<HTMLElement>('[data-today="true"]');
+    if (!todayCol) return;
+    requestAnimationFrame(() => {
+      container.scrollLeft = Math.max(0, todayCol.offsetLeft - STICKY_COL_WIDTH);
+    });
+  }, [visibleDates, todayKey]);
 
   const onExport = () => {
     if (!dates || !enrollments) return;
@@ -90,13 +103,20 @@ export default function AttendancePage() {
             <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px] ml-auto" />
             <button className="px-2 py-1 text-sm bg-muted/60 hover:bg-muted" onClick={onExport} type="button">Exportar XLSX</button>
           </div>
-          <div className="overflow-auto scroll-area scroll-snap-x">
+          <div ref={scrollRef} className="table-scroll -mx-3 px-3 sm:mx-0 sm:px-0">
           <table className="min-w-full table-grid">
               <thead>
                 <tr>
-                  <th className="text-left sticky left-0 bg-background z-20">Aluno</th>
-                  {visibleDates.map((d) => (
-                    <th key={toISODate(d)} className="whitespace-nowrap text-xs snap-start">
+                  <th className="text-left table-sticky-col">Aluno</th>
+                  {visibleDates.map((d) => {
+                    const dKey = toISODate(d);
+                    const isToday = dKey === todayKey;
+                    return (
+                    <th
+                      key={dKey}
+                      data-today={isToday ? "true" : undefined}
+                      className={`whitespace-nowrap text-xs table-date-col ${isToday ? "font-normal" : ""}`}
+                    >
                       <div className="flex items-center gap-2">
                         {d.toLocaleDateString()}
                         <DropdownMenu>
@@ -117,13 +137,14 @@ export default function AttendancePage() {
                         </DropdownMenu>
                       </div>
                     </th>
-                  ))}
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {list.map((e) => (
                   <tr key={e.id}>
-                    <td className="whitespace-nowrap sticky left-0 bg-background z-10">
+                    <td className="whitespace-nowrap table-sticky-col">
                       <div className="flex items-center gap-2">
                         <span>{e.student.name}</span>
                         <button
@@ -141,8 +162,9 @@ export default function AttendancePage() {
                     {visibleDates.map((d) => {
                       const dKey = toISODate(d);
                       const current = recMap.get(`${e.id}|${dKey}`);
+                      const isToday = dKey === todayKey;
                       return (
-                        <td key={dKey}>
+                        <td key={dKey} data-today={isToday ? "true" : undefined} className="table-date-col">
                           <button
                             type="button"
                             className="cell-btn min-w-[104px]"

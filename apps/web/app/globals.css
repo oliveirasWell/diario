@@ -170,4 +170,27 @@
   .surface-form { @apply bg-muted/25 p-3 sm:p-4 space-y-3 sm:space-y-4; }
   .scroll-snap-x { scroll-snap-type: x mandatory; }
   .snap-start { scroll-snap-align: start; }
+  .table-scroll {
+    @apply overflow-auto scroll-area;
+    scroll-padding-inline-start: 7.5rem;
+  }
+  .table-sticky-col {
+    @apply sticky left-0 z-20 min-w-[7.5rem] max-w-[40vw] sm:max-w-[12rem];
+    box-shadow: 6px 0 8px -6px color-mix(in oklch, var(--foreground) 14%, transparent);
+  }
+  .table-grid thead .table-sticky-col {
+    @apply z-30 bg-muted;
+  }
+  .table-grid tbody .table-sticky-col {
+    @apply bg-background;
+  }
+  .table-grid tbody tr:nth-child(even) .table-sticky-col {
+    @apply bg-muted/25;
+  }
+  .table-grid tbody tr:hover .table-sticky-col {
+    @apply bg-muted/40;
+  }
+  .table-date-col[data-today="true"] {
+    @apply bg-primary/10;
+  }
 }
