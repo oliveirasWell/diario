@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-i
+
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
 
 const statuses = ["PRESENT", "ABSENT", "LATE"] as const;
