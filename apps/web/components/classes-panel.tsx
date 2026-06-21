@@ -1,6 +1,6 @@
 "use client";
 
-import { useClassesQuery, useCreateClassMutation, useDeleteClassMutation } from "@/hooks/use-classes";
+import { useClassesQuery, useCreateClassMutation, useDeleteClassMutation, useRenameClassMutation } from "@/hooks/use-classes";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { EditNameDialog } from "@/components/edit-name-dialog";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatGraphqlError } from "@/lib/graphql-error";
@@ -28,13 +29,17 @@ type NewClassInput = z.infer<typeof NewClassSchema>;
 
 type DeleteTarget = { id: string; name: string };
 
+type EditTarget = { id: string; name: string };
+
 export function ClassesPanel() {
   const qc = useQueryClient();
   const { data, isLoading, isError, error } = useClassesQuery();
   const createClass = useCreateClassMutation();
   const deleteClass = useDeleteClassMutation();
+  const renameClass = useRenameClassMutation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewClassInput>({
     resolver: zodResolver(NewClassSchema),
@@ -56,6 +61,16 @@ export function ClassesPanel() {
     try {
       await deleteClass.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onRename = async (name: string) => {
+    if (!editTarget) return;
+    try {
+      await renameClass.mutateAsync({ id: editTarget.id, name });
+      setEditTarget(null);
     } catch {
       // errorMessage shown inline
     }
@@ -95,7 +110,16 @@ export function ClassesPanel() {
                 {c.name}
               </a>
               <div>{c.year}</div>
-              <div className="text-right">
+              <div className="flex justify-end gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  title="Editar turma"
+                  onClick={() => setEditTarget({ id: c.id, name: c.name })}
+                >
+                  ✏️
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -145,6 +169,22 @@ export function ClassesPanel() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <EditNameDialog
+        key={editTarget?.id ?? "closed"}
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditTarget(null);
+            renameClass.clearError();
+          }
+        }}
+        title="Editar turma"
+        initialName={editTarget?.name ?? ""}
+        onSave={onRename}
+        isPending={renameClass.isPending}
+        errorMessage={renameClass.errorMessage}
+      />
 
       <ConfirmDeleteDialog
         open={deleteTarget !== null}

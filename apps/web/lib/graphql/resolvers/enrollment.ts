@@ -3,6 +3,7 @@ import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
 import { getPrisma } from "../prisma";
 import type {
   MutationCreateAndEnrollArgs,
+  MutationRenameStudentArgs,
   MutationSetEnrollmentConceptArgs,
   MutationUnenrollStudentArgs,
   QueryEnrollmentsArgs,
@@ -46,6 +47,25 @@ export const enrollmentMutationResolvers = {
     if (!found) throw new Error("Not found");
     await prisma.enrollment.delete({ where: { id: enrollmentId } });
     return true;
+  },
+
+  renameStudent: async (_: unknown, args: MutationRenameStudentArgs, ctx: GraphQLContext) => {
+    const ownerIds = requireOwnerIds(ctx);
+    const name = args.name.trim();
+    if (!name) throw new Error("Nome é obrigatório");
+    const prisma = await getPrisma();
+    const found = await prisma.enrollment.findFirst({
+      where: { id: args.enrollmentId, class: { ownerId: { in: ownerIds } } },
+    });
+    if (!found) throw new Error("Not found");
+    await prisma.student.update({
+      where: { id: found.studentId },
+      data: { name },
+    });
+    return prisma.enrollment.findUniqueOrThrow({
+      where: { id: args.enrollmentId },
+      include: { student: true },
+    });
   },
 
   setEnrollmentConcept: async (

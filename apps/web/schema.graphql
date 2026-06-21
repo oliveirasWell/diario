@@ -14,8 +14,10 @@ type Mutation {
   createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
   updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
   deleteClass(id: ID!): Boolean!
+  renameClass(id: ID!, name: String!): Class!
   createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
   unenrollStudent(enrollmentId: ID!): Boolean!
+  renameStudent(enrollmentId: ID!, name: String!): Enrollment!
   createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
   deleteEvaluation(id: ID!): Boolean!
   upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!

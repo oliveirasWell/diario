@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { classesQueryOptions, queryKeys } from "@/lib/query-options";
-import { CreateClassDocument, DelClassDocument } from "@/src/gql/graphql";
+import { CreateClassDocument, DelClassDocument, RenameClassDocument } from "@/src/gql/graphql";
 
 export function useClassesQuery() {
   return useQuery(classesQueryOptions());
@@ -32,6 +32,20 @@ export function useDeleteClassMutation() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.classes() });
+    },
+  });
+}
+
+export function useRenameClassMutation() {
+  const qc = useQueryClient();
+  return useAppMutation({
+    mutationFn: async (input: { id: string; name: string }) => {
+      const data = await gqlRequest(RenameClassDocument, input);
+      return data.renameClass;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.classes() });
+      qc.invalidateQueries({ queryKey: queryKeys.class(vars.id) });
     },
   });
 }

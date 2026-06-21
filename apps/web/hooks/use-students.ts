@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { enrollmentsQueryOptions, queryKeys } from "@/lib/query-options";
-import { CreateAndEnrollDocument, UnenrollDocument } from "@/src/gql/graphql";
+import { CreateAndEnrollDocument, RenameStudentDocument, UnenrollDocument } from "@/src/gql/graphql";
 
 export function useEnrollmentsQuery(classId: string) {
   return useQuery(enrollmentsQueryOptions(classId));
@@ -32,6 +32,20 @@ export function useUnenrollStudentMutation(classId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+    },
+  });
+}
+
+export function useRenameStudentMutation(classId: string) {
+  const qc = useQueryClient();
+  return useAppMutation({
+    mutationFn: async (input: { enrollmentId: string; name: string }) => {
+      const data = await gqlRequest(RenameStudentDocument, input);
+      return data.renameStudent;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 }

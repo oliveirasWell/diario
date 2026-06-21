@@ -4,6 +4,7 @@ import { getPrisma } from "../prisma";
 import type {
   MutationCreateClassArgs,
   MutationDeleteClassArgs,
+  MutationRenameClassArgs,
   MutationUpdateClassScheduleArgs,
   QueryClassArgs,
 } from "@/src/gql/schema";
@@ -58,6 +59,18 @@ export const classMutationResolvers = {
         startDate: args.startDate ? new Date(args.startDate) : null,
         endDate: args.endDate ? new Date(args.endDate) : null,
       },
+    });
+  },
+
+  renameClass: async (_: unknown, args: MutationRenameClassArgs, ctx: GraphQLContext) => {
+    const ownerIds = requireOwnerIds(ctx);
+    await requireOwnedClass(args.id, ownerIds);
+    const name = args.name.trim();
+    if (!name) throw new Error("Nome é obrigatório");
+    const prisma = await getPrisma();
+    return prisma.class.update({
+      where: { id: args.id },
+      data: { name },
     });
   },
 

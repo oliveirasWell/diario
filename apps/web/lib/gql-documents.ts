@@ -110,6 +110,16 @@ export const DeleteClassDocument = graphql(`
   }
 `);
 
+export const RenameClassDocument = graphql(`
+  mutation RenameClass($id: ID!, $name: String!) {
+    renameClass(id: $id, name: $name) {
+      id
+      name
+      year
+    }
+  }
+`);
+
 export const CreateAndEnrollDocument = graphql(`
   mutation CreateAndEnroll($classId: ID!, $name: String!, $email: String) {
     createAndEnroll(classId: $classId, name: $name, email: $email) {
@@ -121,6 +131,19 @@ export const CreateAndEnrollDocument = graphql(`
 export const UnenrollStudentDocument = graphql(`
   mutation Unenroll($enrollmentId: ID!) {
     unenrollStudent(enrollmentId: $enrollmentId)
+  }
+`);
+
+export const RenameStudentDocument = graphql(`
+  mutation RenameStudent($enrollmentId: ID!, $name: String!) {
+    renameStudent(enrollmentId: $enrollmentId, name: $name) {
+      id
+      student {
+        id
+        name
+        email
+      }
+    }
   }
 `);
 

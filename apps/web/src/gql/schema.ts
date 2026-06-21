@@ -89,6 +89,8 @@ export type Mutation = {
   excludeAttendanceDate: Scalars['Boolean']['output'];
   markAllPresent: Scalars['Boolean']['output'];
   markAttendance: Scalars['Boolean']['output'];
+  renameClass: Class;
+  renameStudent: Enrollment;
   setEnrollmentConcept: Enrollment;
   unenrollStudent: Scalars['Boolean']['output'];
   updateClassSchedule: Class;
@@ -147,6 +149,18 @@ export type MutationMarkAttendanceArgs = {
   date: Scalars['DateTime']['input'];
   enrollmentId: Scalars['ID']['input'];
   status?: InputMaybe<AttendanceStatus>;
+};
+
+
+export type MutationRenameClassArgs = {
+  id: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
+};
+
+
+export type MutationRenameStudentArgs = {
+  enrollmentId: Scalars['ID']['input'];
+  name: Scalars['String']['input'];
 };
 
 
