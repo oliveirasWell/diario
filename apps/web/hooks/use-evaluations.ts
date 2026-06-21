@@ -8,7 +8,7 @@ import {
   CreateEvaluationDocument,
   DelEvalDocument,
 } from "@/src/gql/graphql";
-import type { Evaluation } from "@/src/gql/graphql";
+import type { Evaluation } from "@/src/gql/schema";
 
 export type { Evaluation };
 

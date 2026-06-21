@@ -1,15 +1,15 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
 import { getPrisma } from "../prisma";
-
-type CreateAndEnrollArgs = {
-  classId: string;
-  name: string;
-  email?: string | null;
-};
+import type {
+  MutationCreateAndEnrollArgs,
+  MutationSetEnrollmentConceptArgs,
+  MutationUnenrollStudentArgs,
+  QueryEnrollmentsArgs,
+} from "@/src/gql/schema";
 
 export const enrollmentQueryResolvers = {
-  enrollments: async (_: unknown, { classId }: { classId: string }, ctx: GraphQLContext) => {
+  enrollments: async (_: unknown, { classId }: QueryEnrollmentsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return [];
     const prisma = await getPrisma();
@@ -21,7 +21,7 @@ export const enrollmentQueryResolvers = {
 };
 
 export const enrollmentMutationResolvers = {
-  createAndEnroll: async (_: unknown, args: CreateAndEnrollArgs, ctx: GraphQLContext) => {
+  createAndEnroll: async (_: unknown, args: MutationCreateAndEnrollArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(args.classId, ownerIds);
     const data: { name: string; email?: string } = { name: args.name };
@@ -37,7 +37,7 @@ export const enrollmentMutationResolvers = {
     });
   },
 
-  unenrollStudent: async (_: unknown, { enrollmentId }: { enrollmentId: string }, ctx: GraphQLContext) => {
+  unenrollStudent: async (_: unknown, { enrollmentId }: MutationUnenrollStudentArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
@@ -50,7 +50,7 @@ export const enrollmentMutationResolvers = {
 
   setEnrollmentConcept: async (
     _: unknown,
-    { enrollmentId, concept }: { enrollmentId: string; concept?: string | null },
+    { enrollmentId, concept }: MutationSetEnrollmentConceptArgs,
     ctx: GraphQLContext
   ) => {
     const ownerIds = requireOwnerIds(ctx);

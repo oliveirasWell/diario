@@ -1,15 +1,10 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds } from "../auth";
 import { getPrisma } from "../prisma";
-
-type UpsertGradeArgs = {
-  enrollmentId: string;
-  evaluationId: string;
-  score: number;
-};
+import type { MutationUpsertGradeArgs, QueryGradesByClassArgs } from "@/src/gql/schema";
 
 export const gradeQueryResolvers = {
-  gradesByClass: async (_: unknown, { classId }: { classId: string }, ctx: GraphQLContext) => {
+  gradesByClass: async (_: unknown, { classId }: QueryGradesByClassArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return [];
     const prisma = await getPrisma();
@@ -24,7 +19,7 @@ export const gradeQueryResolvers = {
 };
 
 export const gradeMutationResolvers = {
-  upsertGrade: async (_: unknown, args: UpsertGradeArgs, ctx: GraphQLContext) => {
+  upsertGrade: async (_: unknown, args: MutationUpsertGradeArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const enr = await prisma.enrollment.findFirst({

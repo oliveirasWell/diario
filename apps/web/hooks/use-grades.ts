@@ -5,7 +5,7 @@ import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { gradesQueryOptions, queryKeys } from "@/lib/query-options";
 import { SetConceptDocument, UpsertGradeDocument } from "@/src/gql/graphql";
-import type { Grade } from "@/src/gql/graphql";
+import type { Grade } from "@/src/gql/schema";
 
 export type { Grade };
 

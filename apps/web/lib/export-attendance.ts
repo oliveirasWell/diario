@@ -1,23 +1,21 @@
 import * as XLSX from "xlsx";
 import { attendanceDayKey } from "@/lib/attendance-date";
-
-type Status = "PRESENT" | "ABSENT" | "LATE";
-
-const LABELS: Record<Status, string> = {
-  PRESENT: "Presente",
-  ABSENT: "Falta",
-  LATE: "Atraso",
+import { AttendanceStatus } from "@/src/gql/schema";
+const LABELS: Record<AttendanceStatus, string> = {
+  [AttendanceStatus.Present]: "Presente",
+  [AttendanceStatus.Absent]: "Falta",
+  [AttendanceStatus.Late]: "Atraso",
 };
 
 export function exportAttendanceToXlsx(opts: {
   className: string;
   dates: Date[];
   enrollments: { id: string; student: { id: string; name: string } }[];
-  records: { enrollmentId: string; status: Status; session: { date: string } }[];
+  records: { enrollmentId: string; status: AttendanceStatus; session: { date: string } }[];
 }) {
   const { className, dates, enrollments, records } = opts;
 
-  const recMap = new Map<string, Status>();
+  const recMap = new Map<string, AttendanceStatus>();
   for (const r of records) recMap.set(`${r.enrollmentId}|${attendanceDayKey(r.session.date)}`, r.status);
 
   const header = ["Aluno", ...dates.map((d) => attendanceDayKey(d))];

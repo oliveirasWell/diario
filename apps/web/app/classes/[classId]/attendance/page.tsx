@@ -31,18 +31,18 @@ import {
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { cn } from "@/lib/utils";
-import type { AttendanceStatus } from "@/hooks/use-attendance";
+import { AttendanceStatus } from "@/src/gql/schema";
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
-  PRESENT: "✅ P",
-  ABSENT: "❌ F",
-  LATE: "⏰ A",
+  [AttendanceStatus.Present]: "✅ P",
+  [AttendanceStatus.Absent]: "❌ F",
+  [AttendanceStatus.Late]: "⏰ A",
 };
 
 const STATUS_CLASS: Record<AttendanceStatus, string> = {
-  PRESENT: "bg-green-500/15 hover:bg-green-500/25",
-  ABSENT: "bg-red-500/15 hover:bg-red-500/25",
-  LATE: "bg-orange-500/15 hover:bg-orange-500/25",
+  [AttendanceStatus.Present]: "bg-green-500/15 hover:bg-green-500/25",
+  [AttendanceStatus.Absent]: "bg-red-500/15 hover:bg-red-500/25",
+  [AttendanceStatus.Late]: "bg-orange-500/15 hover:bg-orange-500/25",
 };
 
 export default function AttendancePage() {

@@ -1,16 +1,14 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
 import { getPrisma } from "../prisma";
-
-type CreateEvaluationArgs = {
-  classId: string;
-  title: string;
-  weight?: number | null;
-  maxScore: number;
-};
+import type {
+  MutationCreateEvaluationArgs,
+  MutationDeleteEvaluationArgs,
+  QueryEvaluationsArgs,
+} from "@/src/gql/schema";
 
 export const evaluationQueryResolvers = {
-  evaluations: async (_: unknown, { classId }: { classId: string }, ctx: GraphQLContext) => {
+  evaluations: async (_: unknown, { classId }: QueryEvaluationsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return [];
     const prisma = await getPrisma();
@@ -21,7 +19,7 @@ export const evaluationQueryResolvers = {
 };
 
 export const evaluationMutationResolvers = {
-  createEvaluation: async (_: unknown, args: CreateEvaluationArgs, ctx: GraphQLContext) => {
+  createEvaluation: async (_: unknown, args: MutationCreateEvaluationArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(args.classId, ownerIds);
     const prisma = await getPrisma();
@@ -35,7 +33,7 @@ export const evaluationMutationResolvers = {
     });
   },
 
-  deleteEvaluation: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
+  deleteEvaluation: async (_: unknown, { id }: MutationDeleteEvaluationArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const ev = await prisma.evaluation.findFirst({

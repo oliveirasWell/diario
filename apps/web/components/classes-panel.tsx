@@ -9,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatGraphqlError } from "@/lib/graphql-error";
@@ -21,7 +21,7 @@ import { enrollmentsQueryOptions } from "@/lib/query-options";
 
 const NewClassSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  year: z.coerce.number().int().min(1900).max(3000),
+  year: z.number().int().min(1900).max(3000),
 });
 
 type NewClassInput = z.infer<typeof NewClassSchema>;
@@ -146,7 +146,7 @@ export function ClassesPanel() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <ConfirmDeleteDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => {
           if (!open) {
@@ -154,29 +154,16 @@ export function ClassesPanel() {
             deleteClass.clearError();
           }
         }}
-      >
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>Remover turma?</DialogTitle>
-            <DialogDescription>
-              {deleteTarget
-                ? `A turma "${deleteTarget.name}" e todos os dados relacionados (alunos, presenças, notas) serão removidos permanentemente.`
-                : null}
-            </DialogDescription>
-          </DialogHeader>
-          {deleteClass.errorMessage && (
-            <p className="text-sm text-destructive" role="alert">{deleteClass.errorMessage}</p>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteClass.isPending}>
-              Cancelar
-            </Button>
-            <Button type="button" variant="destructive" onClick={onDelete} disabled={deleteClass.isPending}>
-              {deleteClass.isPending ? "Removendo…" : "Remover"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        title="Remover turma?"
+        description={
+          deleteTarget
+            ? `A turma "${deleteTarget.name}" e todos os dados relacionados (alunos, presenças, notas) serão removidos permanentemente.`
+            : undefined
+        }
+        onConfirm={onDelete}
+        isPending={deleteClass.isPending}
+        errorMessage={deleteClass.errorMessage}
+      />
     </div>
   );
 }

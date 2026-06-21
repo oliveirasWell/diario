@@ -23,7 +23,7 @@ async function toGlobalResponse(res: Response): Promise<Response> {
 
 async function proxyYoga(request: Request): Promise<Response> {
   try {
-    const res = await handleRequest(request);
+    const res = await handleRequest(request, {});
     return await toGlobalResponse(res as unknown as Response);
   } catch (err: unknown) {
     log.error("graphql.route_uncaught", { route: "/api/graphql" }, err);

@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "codegen": "graphql-codegen",
     "graphql-codegen": "graphql-codegen"
   },
   "dependencies": {
     "@base-ui/react": "1.6.0",
     "@diario/db": "workspace:*",
+    "@graphql-typed-document-node/core": "^3.2.0",
     "@hookform/resolvers": "5.4.0",
     "@next-auth/mongodb-adapter": "1.1.3",
     "@sentry/nextjs": "^10.59.0",

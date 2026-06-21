@@ -11,11 +11,8 @@ import {
   queryKeys,
   type AttendanceRecord,
 } from "@/lib/query-options";
-import {
-  AttendanceStatus,
-  MarkAllPresentDocument,
-  MarkAttendanceDocument,
-} from "@/src/gql/graphql";
+import { AttendanceStatus } from "@/src/gql/schema";
+import { MarkAllPresentDocument, MarkAttendanceDocument } from "@/src/gql/graphql";
 
 export type { AttendanceRecord };
 export { AttendanceStatus };
@@ -80,7 +77,7 @@ export function useAttendanceMutation(classId: string) {
     mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
       const data = await gqlRequest(MarkAttendanceDocument, {
         classId,
-        date: normalizeAttendanceDate(date),
+        date: normalizeAttendanceDate(date).toISOString(),
         enrollmentId,
         status,
       });
@@ -101,7 +98,7 @@ export function useAttendanceMutation(classId: string) {
     mutationFn: async ({ date }: { date: Date }) => {
       const data = await gqlRequest(MarkAllPresentDocument, {
         classId,
-        date: normalizeAttendanceDate(date),
+        date: normalizeAttendanceDate(date).toISOString(),
       });
       return data.markAllPresent;
     },

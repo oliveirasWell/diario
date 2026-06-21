@@ -14,9 +14,21 @@ function getGqlEndpoint() {
   return "http://localhost:3000/api/graphql";
 }
 
-export async function gqlRequest<TResult, TVariables>(
+type GqlRequestFn = <TResult, TVariables extends object>(
   document: TypedDocumentNode<TResult, TVariables>,
-  ...[variables]: TVariables extends Record<string, never> ? [] : [TVariables]
+  variables?: TVariables,
+) => Promise<TResult>;
+
+export async function gqlRequest<TResult>(
+  document: TypedDocumentNode<TResult, Record<string, never>>,
+): Promise<TResult>;
+export async function gqlRequest<TResult, TVariables extends object>(
+  document: TypedDocumentNode<TResult, TVariables>,
+  variables: TVariables,
+): Promise<TResult>;
+export async function gqlRequest<TResult, TVariables extends object>(
+  document: TypedDocumentNode<TResult, TVariables>,
+  variables?: TVariables,
 ): Promise<TResult> {
   const client = new GraphQLClient(getGqlEndpoint(), {
     credentials: "include",
@@ -24,5 +36,6 @@ export async function gqlRequest<TResult, TVariables>(
       "Content-Type": "application/json",
     },
   });
-  return client.request(document, variables);
+  const request = client.request.bind(client) as GqlRequestFn;
+  return request(document, variables);
 }

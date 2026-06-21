@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { normalizeAttendanceDate } from "@/lib/attendance-date";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { queryKeys } from "@/lib/query-options";
@@ -10,7 +11,10 @@ export function useExcludeAttendanceDate(classId: string) {
   const qc = useQueryClient();
   return useAppMutation({
     mutationFn: async (vars: { date: Date }) => {
-      const data = await gqlRequest(ExDocument, { classId, date: vars.date });
+      const data = await gqlRequest(ExDocument, {
+        classId,
+        date: normalizeAttendanceDate(vars.date).toISOString(),
+      });
       return data.excludeAttendanceDate;
     },
     onSuccess: () => {

@@ -1,21 +1,12 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
 import { getPrisma } from "../prisma";
-
-type ClassScheduleArgs = {
-  id: string;
-  daysOfWeek?: number[];
-  startDate?: string;
-  endDate?: string;
-};
-
-type CreateClassArgs = {
-  name: string;
-  year: number;
-  daysOfWeek?: number[];
-  startDate?: string;
-  endDate?: string;
-};
+import type {
+  MutationCreateClassArgs,
+  MutationDeleteClassArgs,
+  MutationUpdateClassScheduleArgs,
+  QueryClassArgs,
+} from "@/src/gql/schema";
 
 export const classFieldResolvers = {
   Class: {
@@ -31,7 +22,7 @@ export const classQueryResolvers = {
     return prisma.class.findMany({ where: { ownerId: { in: ownerIds } } });
   },
 
-  class: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
+  class: async (_: unknown, { id }: QueryClassArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return null;
     const prisma = await getPrisma();
@@ -40,7 +31,7 @@ export const classQueryResolvers = {
 };
 
 export const classMutationResolvers = {
-  createClass: async (_: unknown, args: CreateClassArgs, ctx: GraphQLContext) => {
+  createClass: async (_: unknown, args: MutationCreateClassArgs, ctx: GraphQLContext) => {
     const ownerId = ctx.user?.prismaUserId;
     if (!ownerId) throw new Error("Unauthorized");
     const prisma = await getPrisma();
@@ -56,7 +47,7 @@ export const classMutationResolvers = {
     });
   },
 
-  updateClassSchedule: async (_: unknown, args: ClassScheduleArgs, ctx: GraphQLContext) => {
+  updateClassSchedule: async (_: unknown, args: MutationUpdateClassScheduleArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const c = await requireOwnedClass(args.id, ownerIds);
@@ -70,7 +61,7 @@ export const classMutationResolvers = {
     });
   },
 
-  deleteClass: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
+  deleteClass: async (_: unknown, { id }: MutationDeleteClassArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(id, ownerIds);
     const prisma = await getPrisma();

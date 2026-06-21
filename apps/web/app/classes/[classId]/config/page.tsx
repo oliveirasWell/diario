@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const schema = z.object({
-  daysOfWeek: z.array(z.number().int().min(0).max(6)).default([]),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });

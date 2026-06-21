@@ -1,28 +1,18 @@
 import { normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
+import { toPrismaAttendanceStatus, PrismaAttendanceStatus } from "@/lib/graphql/db-bridge";
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
 import { getPrisma } from "../prisma";
-
-type DateRangeArgs = {
-  classId: string;
-  from?: string;
-  to?: string;
-};
-
-type MarkAttendanceArgs = {
-  classId: string;
-  date: string;
-  enrollmentId: string;
-  status?: "PRESENT" | "ABSENT" | "LATE" | null;
-};
-
-type ClassDateArgs = {
-  classId: string;
-  date: string;
-};
+import type {
+  MutationExcludeAttendanceDateArgs,
+  MutationMarkAllPresentArgs,
+  MutationMarkAttendanceArgs,
+  QueryAttendanceDatesArgs,
+  QueryAttendanceRecordsArgs,
+} from "@/src/gql/schema";
 
 export const attendanceQueryResolvers = {
-  attendanceDates: async (_: unknown, args: DateRangeArgs, ctx: GraphQLContext) => {
+  attendanceDates: async (_: unknown, args: QueryAttendanceDatesArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return [];
     const prisma = await getPrisma();
@@ -45,7 +35,7 @@ export const attendanceQueryResolvers = {
     return out;
   },
 
-  attendanceRecords: async (_: unknown, args: DateRangeArgs, ctx: GraphQLContext) => {
+  attendanceRecords: async (_: unknown, args: QueryAttendanceRecordsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
     if (!ownerIds.length) return [];
     const prisma = await getPrisma();
@@ -67,7 +57,7 @@ export const attendanceQueryResolvers = {
 };
 
 export const attendanceMutationResolvers = {
-  markAttendance: async (_: unknown, args: MarkAttendanceArgs, ctx: GraphQLContext) => {
+  markAttendance: async (_: unknown, args: MutationMarkAttendanceArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(args.classId, ownerIds);
     const prisma = await getPrisma();
@@ -86,6 +76,7 @@ export const attendanceMutationResolvers = {
       return true;
     }
 
+    const prismaStatus = toPrismaAttendanceStatus(args.status);
     let activeSession = session;
     if (!activeSession) {
       activeSession = await prisma.attendanceSession.create({
@@ -99,21 +90,21 @@ export const attendanceMutationResolvers = {
     if (existing) {
       await prisma.attendanceRecord.update({
         where: { id: existing.id },
-        data: { status: args.status },
+        data: { status: prismaStatus },
       });
     } else {
       await prisma.attendanceRecord.create({
         data: {
           sessionId: activeSession.id,
           enrollmentId: args.enrollmentId,
-          status: args.status,
+          status: prismaStatus,
         },
       });
     }
     return true;
   },
 
-  markAllPresent: async (_: unknown, args: ClassDateArgs, ctx: GraphQLContext) => {
+  markAllPresent: async (_: unknown, args: MutationMarkAllPresentArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(args.classId, ownerIds);
     const prisma = await getPrisma();
@@ -137,11 +128,15 @@ export const attendanceMutationResolvers = {
         if (existing) {
           await tx.attendanceRecord.update({
             where: { id: existing.id },
-            data: { status: "PRESENT" },
+            data: { status: PrismaAttendanceStatus.PRESENT },
           });
         } else {
           await tx.attendanceRecord.create({
-            data: { sessionId: session.id, enrollmentId: en.id, status: "PRESENT" },
+            data: {
+              sessionId: session.id,
+              enrollmentId: en.id,
+              status: PrismaAttendanceStatus.PRESENT,
+            },
           });
         }
       }
@@ -150,7 +145,7 @@ export const attendanceMutationResolvers = {
     return true;
   },
 
-  excludeAttendanceDate: async (_: unknown, args: ClassDateArgs, ctx: GraphQLContext) => {
+  excludeAttendanceDate: async (_: unknown, args: MutationExcludeAttendanceDateArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const c = await requireOwnedClass(args.classId, ownerIds);
     const prisma = await getPrisma();

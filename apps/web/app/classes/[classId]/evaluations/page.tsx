@@ -8,6 +8,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { useState } from "react";
 import {
   Table,
   TableBody,
@@ -21,6 +23,7 @@ import {
 const schema = z.object({ title: z.string().min(1, "Informe um título") });
 
 type FormValues = z.infer<typeof schema>;
+type DeleteTarget = { id: string; title: string };
 
 export default function EvaluationsPage() {
   const params = useParams();
@@ -28,6 +31,7 @@ export default function EvaluationsPage() {
   const { data, isLoading, isError, error } = useEvaluationsQuery(classId);
   const createEval = useCreateEvaluationMutation(classId);
   const deleteEval = useDeleteEvaluationMutation(classId);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -37,6 +41,16 @@ export default function EvaluationsPage() {
     try {
       await createEval.mutateAsync({ title: vals.title });
       reset({ title: "" });
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteEval.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
     } catch {
       // errorMessage shown inline
     }
@@ -62,10 +76,6 @@ export default function EvaluationsPage() {
         )}
       </div>
 
-      {deleteEval.errorMessage && (
-        <p className="text-sm text-destructive" role="alert">{deleteEval.errorMessage}</p>
-      )}
-
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
@@ -89,14 +99,7 @@ export default function EvaluationsPage() {
                       variant="ghost"
                       size="icon"
                       title="Remover avaliação"
-                      onClick={async () => {
-                        if (!confirm("Remover esta avaliação e suas notas?")) return;
-                        try {
-                          await deleteEval.mutateAsync(ev.id);
-                        } catch {
-                          // errorMessage shown inline
-                        }
-                      }}
+                      onClick={() => setDeleteTarget({ id: ev.id, title: ev.title })}
                     >
                       🗑️
                     </Button>
@@ -107,6 +110,25 @@ export default function EvaluationsPage() {
           </Table>
         </TableContainer>
       )}
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            deleteEval.clearError();
+          }
+        }}
+        title="Remover avaliação?"
+        description={
+          deleteTarget
+            ? `A avaliação "${deleteTarget.title}" e todas as notas associadas serão removidas permanentemente.`
+            : undefined
+        }
+        onConfirm={onDelete}
+        isPending={deleteEval.isPending}
+        errorMessage={deleteEval.errorMessage}
+      />
     </div>
   );
 }

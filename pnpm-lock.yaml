@@ -20,6 +20,9 @@ importers:
       '@diario/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@graphql-typed-document-node/core':
+        specifier: ^3.2.0
+        version: 3.2.0(graphql@16.14.2)
       '@hookform/resolvers':
         specifier: 5.4.0
         version: 5.4.0(react-hook-form@7.80.0(react@19.2.4))
