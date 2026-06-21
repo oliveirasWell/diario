@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
-import type { Enrollment } from "@/lib/graphql-types";
+import type { Enrollment } from "@/src/gql/schema-types";
 
 export function useEnrollmentsQuery(classId: string) {
   return useQuery({

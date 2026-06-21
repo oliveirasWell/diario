@@ -89,11 +89,37 @@ export function useAttendanceMutation(classId: string) {
     },
   });
 
+  const markAllMutation = useMutation({
+    mutationFn: async ({ date }: { date: Date }) => {
+      const data = await gqlRequest<{ markAllPresent: boolean }>(/* GraphQL */ `
+        mutation MarkAllPresent($classId: ID!, $date: DateTime!) {
+          markAllPresent(classId: $classId, date: $date)
+        }
+      `, { classId, date: normalizeAttendanceDate(date) });
+      return data.markAllPresent;
+    },
+    onMutate: async ({ date }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
+      const enrollments = qc.getQueryData<{ id: string }[]>(["enrollments", classId]) ?? [];
+      let next = prev;
+      for (const en of enrollments) {
+        next = patchAttendanceRecords(next, en.id, date, "PRESENT");
+      }
+      qc.setQueryData(key, next);
+      return { prev, key } satisfies MutationCtx;
+    },
+    onError: (_err, _vars, ctx?: MutationCtx) => {
+      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
+    },
+  });
+
   return {
     cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
       mutation.mutate({ ...vars, status: nextStatus(current) }),
     markPresent: (vars: CellVars) =>
       mutation.mutate({ ...vars, status: "PRESENT" }),
+    markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
   };
 }
 

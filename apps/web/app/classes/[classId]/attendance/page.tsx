@@ -154,13 +154,7 @@ export default function AttendancePage() {
                               <MoreVertical className="size-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  enrollments.forEach((en) =>
-                                    attendance.markPresent({ date: d, enrollmentId: en.id })
-                                  )
-                                }
-                              >
+                              <DropdownMenuItem onClick={() => attendance.markAllPresent(d)}>
                                 Marcar todos Presente
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => excludeDate.mutate({ date: d })} className="text-destructive">

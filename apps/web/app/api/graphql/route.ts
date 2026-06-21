@@ -1,5 +1,9 @@
 import { createYoga, createSchema } from "graphql-yoga";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
+
+const typeDefs = readFileSync(join(process.cwd(), "schema.graphql"), "utf8");
 
 async function getPrisma() {
   const { prisma } = await import("@diario/db");
@@ -21,83 +25,7 @@ export const revalidate = 0;
 
 const { handleRequest } = createYoga({
   schema: createSchema({
-    typeDefs: /* GraphQL */ `
-      scalar DateTime
-
-      type Query {
-        classes: [Class!]!
-        class(id: ID!): Class
-        enrollments(classId: ID!): [Enrollment!]!
-        evaluations(classId: ID!): [Evaluation!]!
-        gradesByClass(classId: ID!): [Grade!]!
-        attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
-        attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
-      }
-
-      type Mutation {
-        createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
-        updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
-        deleteClass(id: ID!): Boolean!
-        createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
-        unenrollStudent(enrollmentId: ID!): Boolean!
-        createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
-        deleteEvaluation(id: ID!): Boolean!
-        upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
-        setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
-        markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus): Boolean!
-        excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
-      }
-
-      type Class {
-        id: ID!
-        name: String!
-        year: Int!
-        ownerId: ID!
-        daysOfWeek: [Int!]!
-        startDate: DateTime
-        endDate: DateTime
-        createdAt: DateTime!
-        updatedAt: DateTime!
-      }
-
-      type Student {
-        id: ID!
-        name: String!
-        email: String
-        externalId: String
-        createdAt: DateTime!
-        updatedAt: DateTime!
-      }
-
-      type Enrollment {
-        id: ID!
-        classId: ID!
-        studentId: ID!
-        status: String!
-        concept: String
-        student: Student!
-      }
-
-      type Evaluation {
-        id: ID!
-        classId: ID!
-        title: String!
-        weight: Float
-        maxScore: Float!
-        createdAt: DateTime!
-      }
-
-      type Grade {
-        id: ID!
-        enrollmentId: ID!
-        evaluationId: ID!
-        score: Float!
-      }
-
-      enum AttendanceStatus { PRESENT ABSENT LATE }
-      type AttendanceSession { id: ID!, classId: ID!, date: DateTime!, notes: String }
-      type AttendanceRecord { id: ID!, sessionId: ID!, enrollmentId: ID!, status: AttendanceStatus!, session: AttendanceSession! }
-    `,
+    typeDefs,
     resolvers: {
       Class: { daysOfWeek: (p: any) => p.daysOfWeek ?? [] },
       Query: {
@@ -163,6 +91,8 @@ const { handleRequest } = createYoga({
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) return [];
           const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) return [];
           const where: any = { classId: classId as string };
           if (from || to) {
             where.date = {};
@@ -175,8 +105,7 @@ const { handleRequest } = createYoga({
       },
       Mutation: {
         createClass: async (_: unknown, { name, year, daysOfWeek, startDate, endDate }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          const ownerId = ownerIds[0];
+          const ownerId = ctx?.user?.prismaUserId as string | undefined;
           if (!ownerId) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           const sd = startDate ? new Date(startDate) : null;
@@ -202,8 +131,13 @@ const { handleRequest } = createYoga({
           const data: any = { name };
           const normalized = typeof email === "string" ? email.trim() : undefined;
           if (normalized) data.email = normalized.toLowerCase();
-          const student = await prisma.student.create({ data });
-          return prisma.enrollment.create({ data: { classId, studentId: student.id, status: "ACTIVE" } });
+          return prisma.$transaction(async (tx) => {
+            const student = await tx.student.create({ data });
+            return tx.enrollment.create({
+              data: { classId, studentId: student.id, status: "ACTIVE" },
+              include: { student: true },
+            });
+          });
         },
         unenrollStudent: async (_: unknown, { enrollmentId }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
@@ -296,22 +230,61 @@ const { handleRequest } = createYoga({
           }
           return true;
         },
+        markAllPresent: async (_: unknown, { classId, date }: any, ctx: any) => {
+          const ownerIds = ownerIdsFrom(ctx);
+          if (!ownerIds.length) throw new Error("Unauthorized");
+          const prisma = await getPrisma();
+          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
+          if (!c) throw new Error("Not found");
+
+          const bounds = sessionDayBounds(date);
+          const normalizedDate = normalizeAttendanceDate(date);
+
+          await prisma.$transaction(async (tx) => {
+            let session = await tx.attendanceSession.findFirst({
+              where: { classId: classId as string, date: bounds },
+            });
+            if (!session) {
+              session = await tx.attendanceSession.create({
+                data: { classId, date: normalizedDate },
+              });
+            }
+
+            const enrollments = await tx.enrollment.findMany({ where: { classId: classId as string } });
+            for (const en of enrollments) {
+              const existing = await tx.attendanceRecord.findFirst({
+                where: { sessionId: session.id, enrollmentId: en.id },
+              });
+              if (existing) {
+                await tx.attendanceRecord.update({ where: { id: existing.id }, data: { status: "PRESENT" } });
+              } else {
+                await tx.attendanceRecord.create({
+                  data: { sessionId: session.id, enrollmentId: en.id, status: "PRESENT" },
+                });
+              }
+            }
+          });
+
+          return true;
+        },
         deleteClass: async (_: unknown, { id }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) throw new Error("Unauthorized");
           const prisma = await getPrisma();
           const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: { in: ownerIds } } });
           if (!c) throw new Error("Not found");
-          // cascade deletes
+
           const classId = id as string;
-          const sessions = await prisma.attendanceSession.findMany({ where: { classId } });
-          await prisma.attendanceRecord.deleteMany({ where: { sessionId: { in: sessions.map(s=>s.id) } } });
-          await prisma.attendanceSession.deleteMany({ where: { classId } });
-          const evals = await prisma.evaluation.findMany({ where: { classId } });
-          await prisma.grade.deleteMany({ where: { evaluationId: { in: evals.map(e=>e.id) } } });
-          await prisma.evaluation.deleteMany({ where: { classId } });
-          await prisma.enrollment.deleteMany({ where: { classId } });
-          await prisma.class.delete({ where: { id: classId } });
+          await prisma.$transaction(async (tx) => {
+            const sessions = await tx.attendanceSession.findMany({ where: { classId } });
+            await tx.attendanceRecord.deleteMany({ where: { sessionId: { in: sessions.map((s) => s.id) } } });
+            await tx.attendanceSession.deleteMany({ where: { classId } });
+            const evals = await tx.evaluation.findMany({ where: { classId } });
+            await tx.grade.deleteMany({ where: { evaluationId: { in: evals.map((e) => e.id) } } });
+            await tx.evaluation.deleteMany({ where: { classId } });
+            await tx.enrollment.deleteMany({ where: { classId } });
+            await tx.class.delete({ where: { id: classId } });
+          });
           return true;
         },
         excludeAttendanceDate: async (_: unknown, { classId, date }: any, ctx: any) => {

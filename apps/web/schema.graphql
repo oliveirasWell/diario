@@ -1,0 +1,93 @@
+scalar DateTime
+
+type Query {
+  classes: [Class!]!
+  class(id: ID!): Class
+  enrollments(classId: ID!): [Enrollment!]!
+  evaluations(classId: ID!): [Evaluation!]!
+  gradesByClass(classId: ID!): [Grade!]!
+  attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
+  attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
+}
+
+type Mutation {
+  createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+  updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+  deleteClass(id: ID!): Boolean!
+  createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
+  unenrollStudent(enrollmentId: ID!): Boolean!
+  createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
+  deleteEvaluation(id: ID!): Boolean!
+  upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
+  setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
+  markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus): Boolean!
+  markAllPresent(classId: ID!, date: DateTime!): Boolean!
+  excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
+}
+
+type Class {
+  id: ID!
+  name: String!
+  year: Int!
+  ownerId: ID!
+  daysOfWeek: [Int!]!
+  startDate: DateTime
+  endDate: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Student {
+  id: ID!
+  name: String!
+  email: String
+  externalId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type Enrollment {
+  id: ID!
+  classId: ID!
+  studentId: ID!
+  status: String!
+  concept: String
+  student: Student!
+}
+
+type Evaluation {
+  id: ID!
+  classId: ID!
+  title: String!
+  weight: Float
+  maxScore: Float!
+  createdAt: DateTime!
+}
+
+type Grade {
+  id: ID!
+  enrollmentId: ID!
+  evaluationId: ID!
+  score: Float!
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+type AttendanceSession {
+  id: ID!
+  classId: ID!
+  date: DateTime!
+  notes: String
+}
+
+type AttendanceRecord {
+  id: ID!
+  sessionId: ID!
+  enrollmentId: ID!
+  status: AttendanceStatus!
+  session: AttendanceSession!
+}
