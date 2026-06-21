@@ -45,6 +45,11 @@ apps/**/.env.*.local
 apps/**/pnpm-lock.yaml
 apps/**/pnpm-workspace.yaml
 
+# Packages env
+packages/**/.env
+packages/**/.env.local
+packages/**/.env.*.local
+
 # Prisma (keep schema, ignore generated if any)
 packages/**/prisma/dev.db
 packages/**/prisma/*.db
