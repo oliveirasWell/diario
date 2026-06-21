@@ -5,7 +5,7 @@ type Query {
   class(id: ID!): Class
   enrollments(classId: ID!): [Enrollment!]!
   evaluations(classId: ID!): [Evaluation!]!
-  gradesByClass(classId: ID!): [Grade!]!
+  gradesByClass(classId: ID!): ClassGrades!
   attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
   attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
 }
@@ -69,6 +69,18 @@ type Grade {
   enrollmentId: ID!
   evaluationId: ID!
   score: Float!
+}
+
+type ClassGrades {
+  evaluations: [Evaluation!]!
+  rows: [ClassGradeRow!]!
+}
+
+type ClassGradeRow {
+  enrollmentId: ID!
+  concept: String
+  student: Student!
+  grades: [Grade!]!
 }
 
 enum AttendanceStatus {
