@@ -1,5 +1,7 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import type { JWT } from "next-auth/jwt";
+import type { Session, User } from "next-auth";
 import getClientPromise from "@/lib/mongodb";
 import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
 
@@ -21,38 +23,34 @@ export const authOptions: NextAuthOptions = {
   },
   adapter: MongoDBAdapter(getClientPromise()),
   callbacks: {
-    async jwt({ token, user }) {
-      // Ensure prisma user exists and attach prismaUserId on token
+    async jwt({ token, user }: { token: JWT; user?: User }) {
       try {
-        const email = user?.email ?? token?.email;
+        const email = user?.email ?? token.email;
         if (email) {
           const { prisma } = await import("@diario/db");
           const dbUser = await prisma.user.upsert({
             where: { email },
             update: {
               name: user?.name ?? undefined,
-              image: (user as any)?.image ?? undefined,
+              image: user?.image ?? undefined,
             },
             create: {
               email,
               name: user?.name ?? null,
-              image: (user as any)?.image ?? null,
+              image: user?.image ?? null,
             },
           });
-          // @ts-ignore
           token.prismaUserId = dbUser.id;
         }
-      } catch (e) {
+      } catch {
         // swallow to not block auth; GraphQL layer can handle absence
       }
       return token;
     },
-    async session({ session, token }) {
-      if (session?.user && token) {
-        // @ts-ignore next-auth adapter id
+    async session({ session, token }: { session: Session; token: JWT }) {
+      if (session.user) {
         if (token.sub) session.user.id = token.sub;
-        // @ts-ignore custom field from jwt
-        if (token.prismaUserId) session.user.prismaUserId = token.prismaUserId as string;
+        if (token.prismaUserId) session.user.prismaUserId = token.prismaUserId;
       }
       return session;
     },

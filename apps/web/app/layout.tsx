@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthSessionProvider } from "@/components/session-provider";
 import { Header } from "@/components/header";
 import { QueryProvider } from "@/components/query-provider";
+import { SentryInit } from "@/components/sentry-init";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500"],
@@ -34,6 +35,7 @@ export default function RootLayout({
       className={`${roboto.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <SentryInit />
         <AuthSessionProvider>
           <QueryProvider>
             <Header />

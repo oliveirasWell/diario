@@ -29,27 +29,28 @@ import {
 } from "@/components/ui/table";
 
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
+import { formatGraphqlError } from "@/lib/graphql-error";
 import { cn } from "@/lib/utils";
-import type { AttendanceStatus } from "@/hooks/use-attendance";
+import { AttendanceStatus } from "@/src/gql/schema";
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
-  PRESENT: "✅ P",
-  ABSENT: "❌ F",
-  LATE: "⏰ A",
+  [AttendanceStatus.Present]: "✅ P",
+  [AttendanceStatus.Absent]: "❌ F",
+  [AttendanceStatus.Late]: "⏰ A",
 };
 
 const STATUS_CLASS: Record<AttendanceStatus, string> = {
-  PRESENT: "bg-green-500/15 hover:bg-green-500/25",
-  ABSENT: "bg-red-500/15 hover:bg-red-500/25",
-  LATE: "bg-orange-500/15 hover:bg-orange-500/25",
+  [AttendanceStatus.Present]: "bg-green-500/15 hover:bg-green-500/25",
+  [AttendanceStatus.Absent]: "bg-red-500/15 hover:bg-red-500/25",
+  [AttendanceStatus.Late]: "bg-orange-500/15 hover:bg-orange-500/25",
 };
 
 export default function AttendancePage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data: dates, isLoading: isLoadingDates } = useAttendanceDates(classId);
-  const { data: enrollments, isLoading: isLoadingEnroll } = useEnrollments(classId);
-  const { data: records } = useAttendanceRecords(classId);
+  const { data: dates, isLoading: isLoadingDates, isError: errorDates, error: errDates } = useAttendanceDates(classId);
+  const { data: enrollments, isLoading: isLoadingEnroll, isError: errorEnroll, error: errEnroll } = useEnrollments(classId);
+  const { data: records, isError: errorRecords, error: errRecords } = useAttendanceRecords(classId);
   const attendance = useAttendanceMutation(classId);
   const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
@@ -99,8 +100,17 @@ export default function AttendancePage() {
     });
   };
 
+  const queryError = errorDates ? errDates : errorEnroll ? errEnroll : errorRecords ? errRecords : null;
+  const mutationError = attendance.errorMessage ?? excludeDate.errorMessage;
+
   return (
     <div className="space-y-4">
+      {queryError && (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
+      )}
+      {mutationError && (
+        <p className="text-sm text-destructive" role="alert">{mutationError}</p>
+      )}
       {isLoadingDates || isLoadingEnroll ? (
         <div className="text-sm text-muted-foreground">Carregando presenças…</div>
       ) : !dates?.length ? (

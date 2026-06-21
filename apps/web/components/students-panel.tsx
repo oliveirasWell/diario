@@ -3,9 +3,12 @@
 import { useCreateAndEnrollMutation, useEnrollmentsQuery, useUnenrollStudentMutation } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { formatGraphqlError } from "@/lib/graphql-error";
+import { useState } from "react";
 
 const NewStudentSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -13,23 +16,42 @@ const NewStudentSchema = z.object({
 });
 
 type NewStudentInput = z.infer<typeof NewStudentSchema>;
+type DeleteTarget = { id: string; name: string };
 
 export function StudentsPanel({ classId }: { classId: string }) {
-  const { data, isLoading } = useEnrollmentsQuery(classId);
+  const { data, isLoading, isError, error } = useEnrollmentsQuery(classId);
   const createAndEnroll = useCreateAndEnrollMutation(classId);
   const unenroll = useUnenrollStudentMutation(classId);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewStudentInput>({
     resolver: zodResolver(NewStudentSchema),
   });
 
   const onSubmit = async (values: NewStudentInput) => {
-    await createAndEnroll.mutateAsync({ name: values.name, email: values.email || undefined });
-    reset({ name: "", email: "" });
+    try {
+      await createAndEnroll.mutateAsync({ name: values.name, email: values.email || undefined });
+      reset({ name: "", email: "" });
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await unenroll.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {isError && (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      )}
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <h3 className="font-normal">Adicionar aluno à turma</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3">
@@ -47,6 +69,9 @@ export function StudentsPanel({ classId }: { classId: string }) {
             <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>Adicionar</Button>
           </div>
         </form>
+        {createAndEnroll.errorMessage && (
+          <p className="text-sm text-destructive" role="alert">{createAndEnroll.errorMessage}</p>
+        )}
       </div>
 
       {isLoading ? (
@@ -68,9 +93,7 @@ export function StudentsPanel({ classId }: { classId: string }) {
                   variant="ghost"
                   size="icon"
                   title="Remover aluno desta turma"
-                  onClick={() => {
-                    if (confirm("Remover aluno desta turma?")) unenroll.mutate(e.id);
-                  }}
+                  onClick={() => setDeleteTarget({ id: e.id, name: e.student.name })}
                 >
                   🗑️
                 </Button>
@@ -79,6 +102,25 @@ export function StudentsPanel({ classId }: { classId: string }) {
           ))}
         </div>
       )}
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            unenroll.clearError();
+          }
+        }}
+        title="Remover aluno desta turma?"
+        description={
+          deleteTarget
+            ? `O aluno "${deleteTarget.name}" será removido desta turma. Presenças e notas dele nesta turma também serão excluídas.`
+            : undefined
+        }
+        onConfirm={onDelete}
+        isPending={unenroll.isPending}
+        errorMessage={unenroll.errorMessage}
+      />
     </div>
   );
 }

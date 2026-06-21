@@ -1,22 +1,25 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { normalizeAttendanceDate } from "@/lib/attendance-date";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
+import { queryKeys } from "@/lib/query-options";
+import { ExDocument } from "@/src/gql/graphql";
 
 export function useExcludeAttendanceDate(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (vars: { date: Date }) => {
-      const data = await gqlRequest<{ excludeAttendanceDate: boolean }>(/* GraphQL */ `
-        mutation Ex($classId: ID!, $date: DateTime!) {
-          excludeAttendanceDate(classId: $classId, date: $date)
-        }
-      `, { classId, date: vars.date });
+      const data = await gqlRequest(ExDocument, {
+        classId,
+        date: normalizeAttendanceDate(vars.date).toISOString(),
+      });
       return data.excludeAttendanceDate;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["attendanceDates", classId] });
-      qc.invalidateQueries({ queryKey: ["attendanceRecords", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceRecords(classId) });
     },
   });
 }
