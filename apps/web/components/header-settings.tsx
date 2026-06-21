@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useThemeMode, type ThemeMode } from "@/hooks/use-theme";
+import pkg from "../package.json";
 
 export function HeaderSettings() {
   const { data: session } = useSession();
@@ -53,6 +54,9 @@ export function HeaderSettings() {
           </DropdownMenuRadioItem>
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
+        <DropdownMenuItem disabled className="text-muted-foreground">
+          Versão {pkg.version}
+        </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"
           onClick={() => signOut({ callbackUrl: "/login" })}
