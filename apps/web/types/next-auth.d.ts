@@ -1,13 +1,17 @@
-import NextAuth from "next-auth";
+import type { DefaultSession } from "next-auth";
+import "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session {
     user?: {
-      id?: string; // NextAuth adapter user id
-      prismaUserId?: string; // Our domain user id (Prisma)
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-    };
+      id?: string;
+      prismaUserId?: string;
+    } & DefaultSession["user"];
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    prismaUserId?: string;
   }
 }

@@ -1,31 +1,21 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { HeaderTitle } from "@/components/header-title";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { LogOut } from "lucide-react";
+import { HeaderSettings } from "@/components/header-settings";
 
 export function Header() {
   const { status } = useSession();
   const pathname = usePathname();
 
-  // Hide on login page
   if (pathname === "/login") return null;
 
   return (
-    <header className="w-full border-b bg-background/60 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30">
-      <div className="mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6 h-14 flex items-center justify-between">
+    <header className="sticky top-0 z-30 w-full bg-muted/30">
+      <div className="mx-auto flex h-16 max-w-full items-center justify-between px-3 sm:max-w-6xl sm:px-6">
         <HeaderTitle />
-        <div className="flex items-center gap-1.5">
-          <ThemeToggle />
-          {status !== "unauthenticated" ? (
-            <Button variant="ghost" className="h-8 w-8 p-0" onClick={() => signOut({ callbackUrl: "/login" })} title="Sair" aria-label="Sair">
-              <LogOut className="size-5" />
-            </Button>
-          ) : null}
-        </div>
+        {status !== "unauthenticated" ? <HeaderSettings /> : null}
       </div>
     </header>
   );

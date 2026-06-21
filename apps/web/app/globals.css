@@ -9,20 +9,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -67,20 +53,7 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 0;
 }
 
 .dark {
@@ -102,19 +75,6 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -122,45 +82,18 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground text-[15px] sm:text-[16px] leading-6 tracking-tight;
+    @apply bg-background text-foreground font-light text-[15px] sm:text-[16px] leading-6 tracking-normal;
   }
   html {
     @apply font-sans;
   }
 }
 
-/* Fix calendar icon visibility in dark mode (WebKit) */
 @layer components {
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"] { color-scheme: light dark; }
   .dark input[type="date"]::-webkit-calendar-picker-indicator,
   .dark input[type="time"]::-webkit-calendar-picker-indicator,
-  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(1) brightness(1.1); opacity: .9; }
-
-  .scroll-area {
-    -webkit-overflow-scrolling: touch;
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1) brightness(1.1);
+    opacity: 0.9;
   }
-  .table-grid th {
-    @apply px-2 py-1.5 text-xs sm:text-sm bg-background border sticky top-0 z-30 shadow-sm;
-  }
-  .table-grid td {
-    @apply px-2 py-1.5 text-xs sm:text-sm border;
-  }
-  .table-grid tbody tr:nth-child(even) {
-    @apply bg-muted/20;
-  }
-  .input {
-    @apply w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
-  }
-  .select {
-    @apply rounded-md border border-input bg-background text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-50;
-  }
-  .select-xs { @apply text-xs px-1.5 py-1; }
-  .select-lg { @apply text-sm px-2 py-1 h-10; }
-  .badge { @apply inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs bg-background; }
-  .btn-icon-xs { @apply h-9 w-9 p-0 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted; }
-  .cell-btn { @apply w-full h-12 sm:h-11 inline-flex items-center justify-center rounded-md border bg-background hover:bg-muted text-xs sm:text-sm; }
-  .scroll-snap-x { scroll-snap-type: x mandatory; }
-  .snap-start { scroll-snap-align: start; }
 }

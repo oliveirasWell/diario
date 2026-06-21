@@ -1,8 +1,8 @@
 import * as XLSX from "xlsx";
 
 export type ExportGradeEval = { id: string; title: string; maxScore: number };
-export type ExportEnrollment = { id: string; student: { id: string; name: string }; concept?: string | null };
-export type ExportGrade = { enrollmentId: string; evaluationId: string; score: number };
+type ExportEnrollment = { id: string; student: { id: string; name: string }; concept?: string | null };
+type ExportGrade = { enrollmentId: string; evaluationId: string; score: number };
 
 export function exportGradesToXlsx(opts: {
   className: string;

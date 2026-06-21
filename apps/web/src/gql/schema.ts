@@ -1,5 +1,5 @@
-export type Maybe<T> = T | null | undefined;
-export type InputMaybe<T> = T | null | undefined;
+export type Maybe<T> = T | null;
+export type InputMaybe<T> = Maybe<T>;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 export type MakeOptional<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]?: Maybe<T[SubKey]> };
 export type MakeMaybe<T, K extends keyof T> = Omit<T, K> & { [SubKey in K]: Maybe<T[SubKey]> };
@@ -54,6 +54,7 @@ export type Class = {
 export type Enrollment = {
   __typename?: 'Enrollment';
   classId: Scalars['ID']['output'];
+  concept?: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   status: Scalars['String']['output'];
   student: Student;
@@ -70,16 +71,28 @@ export type Evaluation = {
   weight?: Maybe<Scalars['Float']['output']>;
 };
 
+export type Grade = {
+  __typename?: 'Grade';
+  enrollmentId: Scalars['ID']['output'];
+  evaluationId: Scalars['ID']['output'];
+  id: Scalars['ID']['output'];
+  score: Scalars['Float']['output'];
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   createAndEnroll: Enrollment;
   createClass: Class;
   createEvaluation: Evaluation;
-  createStudent: Student;
-  enrollStudent: Enrollment;
+  deleteClass: Scalars['Boolean']['output'];
+  deleteEvaluation: Scalars['Boolean']['output'];
+  excludeAttendanceDate: Scalars['Boolean']['output'];
+  markAllPresent: Scalars['Boolean']['output'];
   markAttendance: Scalars['Boolean']['output'];
+  setEnrollmentConcept: Enrollment;
   unenrollStudent: Scalars['Boolean']['output'];
   updateClassSchedule: Class;
+  upsertGrade: Grade;
 };
 
 
@@ -107,15 +120,25 @@ export type MutationCreateEvaluationArgs = {
 };
 
 
-export type MutationCreateStudentArgs = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  name: Scalars['String']['input'];
+export type MutationDeleteClassArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
-export type MutationEnrollStudentArgs = {
+export type MutationDeleteEvaluationArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
+export type MutationExcludeAttendanceDateArgs = {
   classId: Scalars['ID']['input'];
-  studentId: Scalars['ID']['input'];
+  date: Scalars['DateTime']['input'];
+};
+
+
+export type MutationMarkAllPresentArgs = {
+  classId: Scalars['ID']['input'];
+  date: Scalars['DateTime']['input'];
 };
 
 
@@ -123,7 +146,13 @@ export type MutationMarkAttendanceArgs = {
   classId: Scalars['ID']['input'];
   date: Scalars['DateTime']['input'];
   enrollmentId: Scalars['ID']['input'];
-  status: AttendanceStatus;
+  status?: InputMaybe<AttendanceStatus>;
+};
+
+
+export type MutationSetEnrollmentConceptArgs = {
+  concept?: InputMaybe<Scalars['String']['input']>;
+  enrollmentId: Scalars['ID']['input'];
 };
 
 
@@ -139,6 +168,13 @@ export type MutationUpdateClassScheduleArgs = {
   startDate?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
+
+export type MutationUpsertGradeArgs = {
+  enrollmentId: Scalars['ID']['input'];
+  evaluationId: Scalars['ID']['input'];
+  score: Scalars['Float']['input'];
+};
+
 export type Query = {
   __typename?: 'Query';
   attendanceDates: Array<Scalars['DateTime']['output']>;
@@ -147,9 +183,7 @@ export type Query = {
   classes: Array<Class>;
   enrollments: Array<Enrollment>;
   evaluations: Array<Evaluation>;
-  health: Scalars['String']['output'];
-  me?: Maybe<User>;
-  students: Array<Student>;
+  gradesByClass: Array<Grade>;
 };
 
 
@@ -182,7 +216,7 @@ export type QueryEvaluationsArgs = {
 };
 
 
-export type QueryStudentsArgs = {
+export type QueryGradesByClassArgs = {
   classId: Scalars['ID']['input'];
 };
 
@@ -194,12 +228,4 @@ export type Student = {
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
-};
-
-export type User = {
-  __typename?: 'User';
-  email: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  image?: Maybe<Scalars['String']['output']>;
-  name?: Maybe<Scalars['String']['output']>;
 };

@@ -1,88 +1,145 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
+import { attendanceDayKey, normalizeAttendanceDate } from "@/lib/attendance-date";
+import {
+  attendanceDatesQueryOptions,
+  attendanceRecordsQueryOptions,
+  enrollmentsQueryOptions,
+  queryKeys,
+  type AttendanceRecord,
+} from "@/lib/query-options";
+import { AttendanceStatus } from "@/src/gql/schema";
+import { MarkAllPresentDocument, MarkAttendanceDocument } from "@/src/gql/graphql";
 
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
+export type { AttendanceRecord };
+export { AttendanceStatus };
 
-export function useAttendanceDates(classId: string, from?: string, to?: string) {
-  return useQuery({
-    queryKey: ["attendanceDates", classId, from, to],
-    queryFn: async () => {
-      const data = await gqlRequest<{ attendanceDates: string[] }>(/* GraphQL */ `
-        query AttendanceDates($classId: ID!, $from: DateTime, $to: DateTime) {
-          attendanceDates(classId: $classId, from: $from, to: $to)
-        }
-      `, { classId, from, to });
-      return data.attendanceDates.map((d) => new Date(d));
-    },
-    enabled: !!classId,
-  });
+export function attendanceRecordsKey(classId: string) {
+  return queryKeys.attendanceRecords(classId);
 }
 
-export function useEnrollments(classId: string) {
-  return useQuery({
-    queryKey: ["enrollments", classId],
-    queryFn: async () => {
-      const data = await gqlRequest<{ enrollments: { id: string; concept?: string | null; student: { id: string; name: string } }[] }>(/* GraphQL */ `
-        query Enrollments($classId: ID!) {
-          enrollments(classId: $classId) { id concept student { id name } }
-        }
-      `, { classId });
-      return data.enrollments;
-    },
-    enabled: !!classId,
-    staleTime: 30_000,
-  });
+const CYCLE: (AttendanceStatus | null)[] = [
+  AttendanceStatus.Present,
+  AttendanceStatus.Absent,
+  AttendanceStatus.Late,
+  null,
+];
+
+function nextStatus(current?: AttendanceStatus | null) {
+  const idx = CYCLE.indexOf(current ?? null);
+  return CYCLE[(idx + 1) % CYCLE.length];
 }
 
-export function useAttendanceRecords(classId: string, from?: string, to?: string) {
-  return useQuery({
-    queryKey: ["attendanceRecords", classId, from, to],
-    queryFn: async () => {
-      const data = await gqlRequest<{ attendanceRecords: { id: string; enrollmentId: string; status: AttendanceStatus; session: { id: string; date: string } }[] }>(/* GraphQL */ `
-        query AttendanceRecords($classId: ID!, $from: DateTime, $to: DateTime) {
-          attendanceRecords(classId: $classId, from: $from, to: $to) {
-            id enrollmentId status session { id date }
-          }
-        }
-      `, { classId, from, to });
-      return data.attendanceRecords;
+function patchAttendanceRecords(
+  records: AttendanceRecord[],
+  enrollmentId: string,
+  date: Date,
+  status: AttendanceStatus | null
+): AttendanceRecord[] {
+  const dK = attendanceDayKey(date);
+  const sessionDate = normalizeAttendanceDate(date).toISOString();
+  if (status === null) {
+    return records.filter(
+      (r) => !(r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK)
+    );
+  }
+  const idx = records.findIndex(
+    (r) => r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK
+  );
+  if (idx >= 0) {
+    const next = records.slice();
+    next[idx] = { ...next[idx], status };
+    return next;
+  }
+  return [
+    ...records,
+    {
+      id: `optimistic-${enrollmentId}-${dK}`,
+      enrollmentId,
+      status,
+      session: { id: `optimistic-session-${dK}`, date: sessionDate },
     },
-    enabled: !!classId,
-  });
+  ];
 }
 
-const dayKey = (d: Date | string) => new Date(d).toISOString().slice(0, 10);
+type CellVars = { date: Date; enrollmentId: string };
+type MutationVars = CellVars & { status: AttendanceStatus | null };
+type MutationCtx = { prev: AttendanceRecord[]; key: ReturnType<typeof attendanceRecordsKey> };
 
-export function useMarkAttendance(classId: string) {
+export function useAttendanceMutation(classId: string) {
   const qc = useQueryClient();
-  const key = ["attendanceRecords", classId, undefined, undefined] as const;
-  return useMutation({
-    mutationFn: async (vars: { date: Date; enrollmentId: string; status: AttendanceStatus }) => {
-      const data = await gqlRequest<{ markAttendance: boolean }>(/* GraphQL */ `
-        mutation MarkAttendance($classId: ID!, $date: DateTime!, $enrollmentId: ID!, $status: AttendanceStatus!) {
-          markAttendance(classId: $classId, date: $date, enrollmentId: $enrollmentId, status: $status)
-        }
-      `, { classId, date: vars.date, enrollmentId: vars.enrollmentId, status: vars.status });
+  const key = attendanceRecordsKey(classId);
+
+  const mutation = useAppMutation({
+    mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
+      const data = await gqlRequest(MarkAttendanceDocument, {
+        classId,
+        date: normalizeAttendanceDate(date).toISOString(),
+        enrollmentId,
+        status,
+      });
       return data.markAttendance;
     },
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<typeof key extends any ? any[] : never>(key) as any[] | undefined;
-      const next = (prev ?? []).slice();
-      const dK = dayKey(vars.date);
-      const idx = next.findIndex((r) => r.enrollmentId === vars.enrollmentId && dayKey(r.session.date) === dK);
-      if (idx >= 0) next[idx] = { ...next[idx], status: vars.status };
-      else next.push({ id: `optimistic-${vars.enrollmentId}-${dK}`, enrollmentId: vars.enrollmentId, status: vars.status, session: { id: `optimistic-session-${dK}`, date: new Date(vars.date).toISOString() } });
-      qc.setQueryData(key, next);
-      return { prev };
+      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
+      qc.setQueryData(key, patchAttendanceRecords(prev, vars.enrollmentId, vars.date, vars.status));
+      return { prev, key } satisfies MutationCtx;
     },
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) qc.setQueryData(key, ctx.prev);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: key });
+    onError: (_err, _vars, ctx?: MutationCtx) => {
+      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
     },
   });
+
+  const markAllMutation = useAppMutation({
+    mutationFn: async ({ date }: { date: Date }) => {
+      const data = await gqlRequest(MarkAllPresentDocument, {
+        classId,
+        date: normalizeAttendanceDate(date).toISOString(),
+      });
+      return data.markAllPresent;
+    },
+    onMutate: async ({ date }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
+      const enrollments = qc.getQueryData<{ id: string }[]>(queryKeys.enrollments(classId)) ?? [];
+      let next = prev;
+      for (const en of enrollments) {
+        next = patchAttendanceRecords(next, en.id, date, AttendanceStatus.Present);
+      }
+      qc.setQueryData(key, next);
+      return { prev, key } satisfies MutationCtx;
+    },
+    onError: (_err, _vars, ctx?: MutationCtx) => {
+      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
+    },
+  });
+
+  return {
+    cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
+      mutation.mutate({ ...vars, status: nextStatus(current) }),
+    markPresent: (vars: CellVars) =>
+      mutation.mutate({ ...vars, status: AttendanceStatus.Present }),
+    markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
+    errorMessage: mutation.errorMessage ?? markAllMutation.errorMessage,
+    clearError: () => {
+      mutation.clearError();
+      markAllMutation.clearError();
+    },
+  };
+}
+
+export function useAttendanceDates(classId: string, from?: string, to?: string) {
+  return useQuery(attendanceDatesQueryOptions(classId, from, to));
+}
+
+export function useEnrollments(classId: string) {
+  return useQuery(enrollmentsQueryOptions(classId));
+}
+
+export function useAttendanceRecords(classId: string, from?: string, to?: string) {
+  return useQuery(attendanceRecordsQueryOptions(classId, from, to));
 }

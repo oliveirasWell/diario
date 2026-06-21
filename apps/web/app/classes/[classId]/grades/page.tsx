@@ -4,18 +4,70 @@ import { useParams } from "next/navigation";
 import { useEvaluationsQuery } from "@/hooks/use-evaluations";
 import { useEnrollments } from "@/hooks/use-attendance";
 import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
+import { formatGraphqlError } from "@/lib/graphql-error";
 import { Input } from "@/components/ui/input";
-import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableHeader,
+  TablePinCell,
+  TablePinHead,
+  TableRow,
+} from "@/components/ui/table";
+import { useMemo, useState, useEffect } from "react";
 import { exportGradesToXlsx } from "@/lib/export-grades";
+
+function GradeInput({
+  score,
+  maxScore,
+  onSave,
+}: {
+  score: number | undefined;
+  maxScore: number;
+  onSave: (score: number) => void;
+}) {
+  const [value, setValue] = useState(() => (score != null ? String(score) : ""));
+
+  useEffect(() => {
+    setValue(score != null ? String(score) : "");
+  }, [score]);
+
+  return (
+    <Input
+      type="number"
+      inputMode="decimal"
+      step="0.1"
+      min={0}
+      max={maxScore}
+      className="h-10 min-w-[84px]"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={() => {
+        const v = value.trim();
+        if (v === "") return;
+        const num = Number(v);
+        if (Number.isNaN(num)) return;
+        onSave(num);
+      }}
+    />
+  );
+}
 
 export default function GradesPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data: evals, isLoading: loadingE } = useEvaluationsQuery(classId);
-  const { data: enrolls, isLoading: loadingEn } = useEnrollments(classId);
-  const { data: grades } = useGradesByClass(classId);
+  const { data: evals, isLoading: loadingE, isError: errorE, error: errE } = useEvaluationsQuery(classId);
+  const { data: enrolls, isLoading: loadingEn, isError: errorEn, error: errEn } = useEnrollments(classId);
+  const { data: grades, isError: errorG, error: errG } = useGradesByClass(classId);
   const upsert = useUpsertGrade();
   const setConcept = useSetConcept();
+
+  const queryError = errorE ? errE : errorEn ? errEn : errorG ? errG : null;
+  const mutationError = upsert.errorMessage ?? setConcept.errorMessage;
 
   const [q, setQ] = useState("");
   const list = useMemo(() => {
@@ -32,11 +84,19 @@ export default function GradesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {queryError && (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
+      )}
+      {mutationError && (
+        <p className="text-sm text-destructive" role="alert">{mutationError}</p>
+      )}
       <div className="flex items-center gap-2">
         <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
-        <button
+        <Button
           type="button"
-          className="px-2 py-1 border rounded text-sm ml-auto"
+          variant="secondary"
+          size="sm"
+          className="ml-auto"
           onClick={() => {
             if (!evals || !enrolls) return;
             exportGradesToXlsx({
@@ -48,49 +108,45 @@ export default function GradesPage() {
           }}
         >
           Exportar XLSX
-        </button>
+        </Button>
       </div>
 
       {loadingE || loadingEn ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
-        <div className="overflow-auto scroll-area scroll-snap-x">
-          <table className="min-w-full border rounded table-grid">
-            <thead>
-              <tr>
-                <th className="text-left sticky left-0 bg-background z-20">Aluno</th>
+        <TableContainer>
+          <Table className="min-w-max">
+            <TableHeader>
+              <TableRow>
+                <TablePinHead>Aluno</TablePinHead>
                 {evals?.map((ev) => (
-                  <th key={ev.id} className="whitespace-nowrap text-xs snap-start">{ev.title}</th>
+                  <TableHead key={ev.id}>{ev.title}</TableHead>
                 ))}
-                <th className="whitespace-nowrap text-xs">Média</th>
-                <th className="whitespace-nowrap text-xs">Conceito</th>
-              </tr>
-            </thead>
-            <tbody>
+                <TableHead>Média</TableHead>
+                <TableHead>Conceito</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {list?.map((e) => (
-                <tr key={e.id}>
-                  <td className="whitespace-nowrap sticky left-0 bg-background z-10">{e.student.name}</td>
+                <TableRow key={e.id}>
+                  <TablePinCell>{e.student.name}</TablePinCell>
                   {evals?.map((ev) => (
-                    <td key={ev.id}>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.1"
-                        min={0}
-                        max={ev.maxScore ?? 10}
-                        className="input h-10 min-w-[84px]"
-                        defaultValue={gradeIndex.get(`${e.id}|${ev.id}`) ?? ""}
-                        onBlur={(evn) => {
-                          const v = evn.currentTarget.value.trim();
-                          if (v === "") return;
-                          const num = Number(v);
-                          if (Number.isNaN(num)) return;
-                          upsert.mutate({ classId, enrollmentId: e.id, evaluationId: ev.id, score: num });
-                        }}
+                    <TableCell key={ev.id}>
+                      <GradeInput
+                        score={gradeIndex.get(`${e.id}|${ev.id}`)}
+                        maxScore={ev.maxScore ?? 10}
+                        onSave={(num) =>
+                          upsert.mutate({
+                            classId,
+                            enrollmentId: e.id,
+                            evaluationId: ev.id,
+                            score: num,
+                          })
+                        }
                       />
-                    </td>
+                    </TableCell>
                   ))}
-                  <td>
+                  <TableCell>
                     {(() => {
                       const scores = (evals ?? []).map(ev => {
                         const s = gradeIndex.get(`${e.id}|${ev.id}`);
@@ -101,11 +157,11 @@ export default function GradesPage() {
                       const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length) : null;
                       return <div className="min-w-[64px] text-sm">{avg != null ? avg.toFixed(1) : "—"}</div>;
                     })()}
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <select
-                      className="select select-lg min-w-[96px]"
-                      defaultValue={(e as any).concept ?? ""}
+                      className="h-10 min-w-[96px] bg-muted/40 px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                      value={(e as { concept?: string | null }).concept ?? ""}
                       onChange={(evn) => setConcept.mutate({ classId, enrollmentId: e.id, concept: evn.currentTarget.value || null })}
                     >
                       <option value="">—</option>
@@ -114,12 +170,12 @@ export default function GradesPage() {
                       <option value="C">C</option>
                       <option value="D">D</option>
                     </select>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </div>
   );

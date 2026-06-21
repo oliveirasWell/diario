@@ -5,20 +5,36 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { formatGraphqlError } from "@/lib/graphql-error";
+import { enrollmentsQueryOptions } from "@/lib/query-options";
 
 const NewClassSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  year: z.coerce.number().int().min(1900).max(3000),
+  year: z.number().int().min(1900).max(3000),
 });
 
 type NewClassInput = z.infer<typeof NewClassSchema>;
 
+type DeleteTarget = { id: string; name: string };
+
 export function ClassesPanel() {
-  const { data, isLoading } = useClassesQuery();
+  const qc = useQueryClient();
+  const { data, isLoading, isError, error } = useClassesQuery();
   const createClass = useCreateClassMutation();
   const deleteClass = useDeleteClassMutation();
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewClassInput>({
     resolver: zodResolver(NewClassSchema),
@@ -26,70 +42,128 @@ export function ClassesPanel() {
   });
 
   const onSubmit = async (values: NewClassInput) => {
-    await createClass.mutateAsync(values);
-    reset({ name: "", year: new Date().getFullYear() });
-    setOpen(false);
+    try {
+      await createClass.mutateAsync(values);
+      reset({ name: "", year: new Date().getFullYear() });
+      setCreateOpen(false);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteClass.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const prefetchClass = (classId: string) => {
+    void qc.prefetchQuery(enrollmentsQueryOptions(classId));
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Turmas</h2>
-        <Button onClick={() => setOpen(true)}>Nova turma</Button>
+      <div className="flex justify-end">
+        <Button type="button" onClick={() => setCreateOpen(true)}>Nova turma</Button>
       </div>
+
+      {isError && (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      )}
 
       {isLoading ? (
         <div>Carregando...</div>
       ) : (
-        <div className="border rounded-lg divide-y">
-          <div className="grid grid-cols-3 font-medium px-4 py-2 bg-muted/40">
+        <div className="bg-muted/25">
+          <div className="grid grid-cols-3 bg-muted/50 px-4 py-2 font-normal">
             <div>Nome</div>
             <div>Ano</div>
             <div className="text-right">Ações</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-3 px-4 py-2 items-center hover:bg-muted/50 transition-colors">
-              <a href={`/classes/${c.id}`} className="underline-offset-2 hover:underline">{c.name}</a>
+            <div key={c.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
+              <a
+                href={`/classes/${c.id}`}
+                className="underline-offset-2 hover:underline"
+                onMouseEnter={() => prefetchClass(c.id)}
+                onFocus={() => prefetchClass(c.id)}
+              >
+                {c.name}
+              </a>
               <div>{c.year}</div>
               <div className="text-right">
-                <button
-                  className="btn-icon-xs"
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
                   title="Remover turma"
-                  onClick={() => {
-                    if (confirm("Remover esta turma e todos os dados relacionados?")) deleteClass.mutate(c.id);
-                  }}
+                  onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
                 >
                   🗑️
-                </button>
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <div className="bg-background rounded-lg shadow w-full max-w-md p-3 sm:p-6 space-y-3 sm:space-y-4">
-            <h3 className="text-lg font-semibold">Nova Turma</h3>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Nome</label>
-                <input className="input" placeholder="Ex.: 1ºA" {...register("name")} />
-                {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Ano</label>
-                <input type="number" className="input" {...register("year", { valueAsNumber: true })} />
-                {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>Criar</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) createClass.clearError();
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Nova turma</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" htmlFor="class-name">Nome</label>
+              <Input id="class-name" placeholder="Ex.: 1ºA" {...register("name")} />
+              {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" htmlFor="class-year">Ano</label>
+              <Input id="class-year" type="number" {...register("year", { valueAsNumber: true })} />
+              {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
+            </div>
+            {createClass.errorMessage && (
+              <p className="text-sm text-destructive" role="alert">{createClass.errorMessage}</p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isSubmitting || createClass.isPending}>
+                {createClass.isPending ? "Criando…" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            deleteClass.clearError();
+          }
+        }}
+        title="Remover turma?"
+        description={
+          deleteTarget
+            ? `A turma "${deleteTarget.name}" e todos os dados relacionados (alunos, presenças, notas) serão removidos permanentemente.`
+            : undefined
+        }
+        onConfirm={onDelete}
+        isPending={deleteClass.isPending}
+        errorMessage={deleteClass.errorMessage}
+      />
     </div>
   );
 }

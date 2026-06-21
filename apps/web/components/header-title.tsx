@@ -3,6 +3,7 @@
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import { gqlRequest } from "@/lib/graphql-client";
+import { HdrClassDocument } from "@/src/gql/graphql";
 import { useEffect, useState } from "react";
 
 export function HeaderTitle() {
@@ -17,9 +18,7 @@ export function HeaderTitle() {
     async function run() {
       if (inClassDetail) {
         try {
-          const data = await gqlRequest<{ class: { id: string; name: string } }>(/* GraphQL */`
-            query HdrClass($id: ID!) { class(id: $id) { id name } }
-          `, { id: params!.classId as string });
+          const data = await gqlRequest(HdrClassDocument, { id: params!.classId as string });
           if (!ignore) setClassName(data.class?.name ?? (params!.classId as string));
         } catch {
           if (!ignore) setClassName(params!.classId as string);
@@ -37,7 +36,7 @@ export function HeaderTitle() {
   }
   if (inClassDetail) {
     return (
-      <div className="font-medium truncate text-sm sm:text-base flex items-center gap-1">
+      <div className="font-semibold truncate text-base sm:text-lg flex items-center gap-1.5">
         <Link href="/classes" className="underline underline-offset-2">Turmas</Link>
         <span>/</span>
         <span className="truncate max-w-[60vw] sm:max-w-none">{className}</span>

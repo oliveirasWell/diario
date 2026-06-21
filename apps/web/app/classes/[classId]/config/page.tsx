@@ -1,16 +1,21 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
+import { formatGraphqlError } from "@/lib/graphql-error";
+import { classQueryOptions, queryKeys } from "@/lib/query-options";
+import { UpdateClassScheduleDocument } from "@/src/gql/graphql";
 import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const schema = z.object({
-  daysOfWeek: z.array(z.number().int().min(0).max(6)).default([]),
+  daysOfWeek: z.array(z.number().int().min(0).max(6)),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -22,32 +27,16 @@ export default function ClassConfigPage() {
   const classId = params?.classId as string;
   const qc = useQueryClient();
 
-  const { data } = useQuery({
-    queryKey: ["class", classId],
-    queryFn: async () => {
-      const res = await gqlRequest<{ class: { id: string; name: string; daysOfWeek: number[]; startDate?: string | null; endDate?: string | null } }>(
-        /* GraphQL */ `
-        query Class($id: ID!) { class(id: $id) { id name daysOfWeek startDate endDate } }
-      `,
-        { id: classId }
-      );
-      return res.class;
-    },
-    enabled: !!classId,
-  });
+  const { data, isError, error } = useQuery(classQueryOptions(classId));
 
-  const mutation = useMutation({
+  const mutation = useAppMutation({
     mutationFn: async (values: FormValues) => {
-      const res = await gqlRequest<{ updateClassSchedule: { id: string } }>(/* GraphQL */ `
-        mutation UpdateClassSchedule($id: ID!, $daysOfWeek: [Int!], $startDate: DateTime, $endDate: DateTime) {
-          updateClassSchedule(id: $id, daysOfWeek: $daysOfWeek, startDate: $startDate, endDate: $endDate) { id }
-        }
-      `, { id: classId, ...values });
+      const res = await gqlRequest(UpdateClassScheduleDocument, { id: classId, ...values });
       return res.updateClassSchedule;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["class", classId] });
-      qc.invalidateQueries({ queryKey: ["attendanceDates", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.class(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
     },
   });
 
@@ -82,10 +71,19 @@ export default function ClassConfigPage() {
     setValue("daysOfWeek", Array.from(selected).sort());
   };
 
-  const onSubmit = (vals: FormValues) => mutation.mutate(vals);
+  const onSubmit = async (vals: FormValues) => {
+    try {
+      await mutation.mutateAsync(vals);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {isError && (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Dias da semana</label>
@@ -95,7 +93,7 @@ export default function ClassConfigPage() {
                 type="button"
                 key={d.value}
                 onClick={() => onToggleDay(d.value)}
-                className={`px-3 py-1 rounded border ${watch("daysOfWeek")?.includes(d.value) ? "bg-primary text-primary-foreground" : "bg-background"}`}
+                className={`px-3 py-1 ${watch("daysOfWeek")?.includes(d.value) ? "bg-primary text-primary-foreground" : "bg-muted/40 hover:bg-muted/60"}`}
               >
                 {d.label}
               </button>
@@ -106,23 +104,17 @@ export default function ClassConfigPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="startDate" className="block text-sm font-medium">Início</label>
-            <input
-              id="startDate"
-              type="date"
-              className="w-full border rounded px-3 py-2 h-12 sm:h-10 bg-background"
-              {...register("startDate")}
-            />
+            <Input id="startDate" type="date" className="h-12 sm:h-10" {...register("startDate")} />
           </div>
           <div>
             <label htmlFor="endDate" className="block text-sm font-medium">Fim</label>
-            <input
-              id="endDate"
-              type="date"
-              className="w-full border rounded px-3 py-2 h-12 sm:h-10 bg-background"
-              {...register("endDate")}
-            />
+            <Input id="endDate" type="date" className="h-12 sm:h-10" {...register("endDate")} />
           </div>
         </div>
+
+        {mutation.errorMessage && (
+          <p className="text-sm text-destructive" role="alert">{mutation.errorMessage}</p>
+        )}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={mutation.isPending}>Salvar</Button>
