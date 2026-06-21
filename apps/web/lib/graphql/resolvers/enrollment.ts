@@ -45,7 +45,14 @@ export const enrollmentMutationResolvers = {
       where: { id: enrollmentId, class: { ownerId: { in: ownerIds } } },
     });
     if (!found) throw new Error("Not found");
-    await prisma.enrollment.delete({ where: { id: enrollmentId } });
+
+    // Delete dependent data (grades, attendance) before removing enrollment
+    await prisma.$transaction(async (tx) => {
+      await tx.grade.deleteMany({ where: { enrollmentId } });
+      await tx.attendanceRecord.deleteMany({ where: { enrollmentId } });
+      await tx.enrollment.delete({ where: { id: enrollmentId } });
+    });
+
     return true;
   },
 
