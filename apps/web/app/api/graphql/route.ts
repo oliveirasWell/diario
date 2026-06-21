@@ -1,6 +1,7 @@
 import { createYoga } from "graphql-yoga";
 import { createGraphQLContext } from "@/lib/graphql/context";
 import { createGraphQLSchema } from "@/lib/graphql/create-schema";
+import { log } from "@/lib/log";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,9 +26,8 @@ async function proxyYoga(request: Request): Promise<Response> {
     const res = await handleRequest(request);
     return await toGlobalResponse(res as unknown as Response);
   } catch (err: unknown) {
+    log.error("graphql.route_uncaught", { route: "/api/graphql" }, err);
     const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : undefined;
-    console.error("[GraphQL] Uncaught route error:", stack || err);
     return new Response(JSON.stringify({ error: "GraphQL handler error", message }), {
       status: 500,
       headers: { "content-type": "application/json" },
