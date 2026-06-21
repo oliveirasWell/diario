@@ -3,20 +3,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
+import { gradesQueryOptions, queryKeys } from "@/lib/query-options";
 
 export type Grade = { id: string; enrollmentId: string; evaluationId: string; score: number };
 
 export function useGradesByClass(classId: string) {
-  return useQuery({
-    queryKey: ["grades", classId],
-    queryFn: async () => {
-      const data = await gqlRequest<{ gradesByClass: Grade[] }>(/* GraphQL */ `
-        query GradesByClass($classId: ID!) { gradesByClass(classId: $classId) { id enrollmentId evaluationId score } }
-      `, { classId });
-      return data.gradesByClass;
-    },
-    enabled: !!classId,
-  });
+  return useQuery(gradesQueryOptions(classId));
 }
 
 export function useUpsertGrade() {
@@ -31,7 +23,7 @@ export function useUpsertGrade() {
       return data.upsertGrade;
     },
     onSuccess: (_data, vars) => {
-      qc.invalidateQueries({ queryKey: ["grades", vars.classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.grades(vars.classId) });
     },
   });
 }
@@ -48,7 +40,7 @@ export function useSetConcept() {
       return data.setEnrollmentConcept;
     },
     onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["enrollments", vars.classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.enrollments(vars.classId) });
     },
   });
 }

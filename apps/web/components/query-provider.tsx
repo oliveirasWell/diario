@@ -10,6 +10,8 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
+            staleTime: 0,
+            refetchOnWindowFocus: true,
             retry: (failureCount, error) => {
               if (isUnauthorizedError(error)) return false;
               return failureCount < 1;

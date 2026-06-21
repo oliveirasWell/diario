@@ -15,7 +15,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatGraphqlError } from "@/lib/graphql-error";
+import { enrollmentsQueryOptions } from "@/lib/query-options";
 
 const NewClassSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -27,6 +29,7 @@ type NewClassInput = z.infer<typeof NewClassSchema>;
 type DeleteTarget = { id: string; name: string };
 
 export function ClassesPanel() {
+  const qc = useQueryClient();
   const { data, isLoading, isError, error } = useClassesQuery();
   const createClass = useCreateClassMutation();
   const deleteClass = useDeleteClassMutation();
@@ -58,6 +61,10 @@ export function ClassesPanel() {
     }
   };
 
+  const prefetchClass = (classId: string) => {
+    void qc.prefetchQuery(enrollmentsQueryOptions(classId));
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex justify-end">
@@ -79,7 +86,14 @@ export function ClassesPanel() {
           </div>
           {data?.map((c) => (
             <div key={c.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
-              <a href={`/classes/${c.id}`} className="underline-offset-2 hover:underline">{c.name}</a>
+              <a
+                href={`/classes/${c.id}`}
+                className="underline-offset-2 hover:underline"
+                onMouseEnter={() => prefetchClass(c.id)}
+                onFocus={() => prefetchClass(c.id)}
+              >
+                {c.name}
+              </a>
               <div>{c.year}</div>
               <div className="text-right">
                 <Button

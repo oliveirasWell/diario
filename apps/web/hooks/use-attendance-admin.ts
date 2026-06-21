@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
+import { queryKeys } from "@/lib/query-options";
 
 export function useExcludeAttendanceDate(classId: string) {
   const qc = useQueryClient();
@@ -16,8 +17,8 @@ export function useExcludeAttendanceDate(classId: string) {
       return data.excludeAttendanceDate;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["attendanceDates", classId] });
-      qc.invalidateQueries({ queryKey: ["attendanceRecords", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceRecords(classId) });
     },
   });
 }

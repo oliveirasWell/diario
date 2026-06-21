@@ -3,21 +3,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
+import { classesQueryOptions, queryKeys } from "@/lib/query-options";
 
 import type { Class } from "@/src/gql/schema-types";
 
 export function useClassesQuery() {
-  return useQuery({
-    queryKey: ["classes"],
-    queryFn: async () => {
-      const data = await gqlRequest<{ classes: Class[] }>(/* GraphQL */ `
-        query Classes {
-          classes { id name year ownerId }
-        }
-      `);
-      return data.classes;
-    },
-  });
+  return useQuery(classesQueryOptions());
 }
 
 export function useCreateClassMutation() {
@@ -32,7 +23,7 @@ export function useCreateClassMutation() {
       return data.createClass;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["classes"] });
+      qc.invalidateQueries({ queryKey: queryKeys.classes() });
     },
   });
 }
@@ -47,7 +38,7 @@ export function useDeleteClassMutation() {
       return data.deleteClass;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["classes"] });
+      qc.invalidateQueries({ queryKey: queryKeys.classes() });
     },
   });
 }

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { formatGraphqlError } from "@/lib/graphql-error";
+import { classQueryOptions, queryKeys } from "@/lib/query-options";
 import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { z } from "zod";
@@ -25,19 +26,7 @@ export default function ClassConfigPage() {
   const classId = params?.classId as string;
   const qc = useQueryClient();
 
-  const { data, isError, error } = useQuery({
-    queryKey: ["class", classId],
-    queryFn: async () => {
-      const res = await gqlRequest<{ class: { id: string; name: string; daysOfWeek: number[]; startDate?: string | null; endDate?: string | null } }>(
-        /* GraphQL */ `
-        query Class($id: ID!) { class(id: $id) { id name daysOfWeek startDate endDate } }
-      `,
-        { id: classId }
-      );
-      return res.class;
-    },
-    enabled: !!classId,
-  });
+  const { data, isError, error } = useQuery(classQueryOptions(classId));
 
   const mutation = useAppMutation({
     mutationFn: async (values: FormValues) => {
@@ -49,8 +38,8 @@ export default function ClassConfigPage() {
       return res.updateClassSchedule;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["class", classId] });
-      qc.invalidateQueries({ queryKey: ["attendanceDates", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.class(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
     },
   });
 

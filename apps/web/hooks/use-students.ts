@@ -3,19 +3,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
-import type { Enrollment } from "@/src/gql/schema-types";
+import { enrollmentsQueryOptions, queryKeys } from "@/lib/query-options";
 
 export function useEnrollmentsQuery(classId: string) {
-  return useQuery({
-    queryKey: ["enrollments", classId],
-    queryFn: async () => {
-      const data = await gqlRequest<{ enrollments: Enrollment[] }>(/* GraphQL */ `
-        query Enrollments($classId: ID!) { enrollments(classId: $classId) { id student { id name email } } }
-      `, { classId });
-      return data.enrollments;
-    },
-    enabled: !!classId,
-  });
+  return useQuery(enrollmentsQueryOptions(classId));
 }
 
 export function useCreateAndEnrollMutation(classId: string) {
@@ -30,7 +21,7 @@ export function useCreateAndEnrollMutation(classId: string) {
       return data.createAndEnroll;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["enrollments", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
     },
   });
 }
@@ -45,7 +36,7 @@ export function useUnenrollStudentMutation(classId: string) {
       return data.unenrollStudent;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["enrollments", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
     },
   });
 }

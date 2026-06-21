@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
+import { evaluationsQueryOptions, queryKeys } from "@/lib/query-options";
 
 export type Evaluation = {
   id: string;
@@ -14,16 +15,7 @@ export type Evaluation = {
 };
 
 export function useEvaluationsQuery(classId: string) {
-  return useQuery({
-    queryKey: ["evaluations", classId],
-    queryFn: async () => {
-      const data = await gqlRequest<{ evaluations: Evaluation[] }>(/* GraphQL */ `
-        query Evaluations($classId: ID!) { evaluations(classId: $classId) { id classId title weight maxScore createdAt } }
-      `, { classId });
-      return data.evaluations;
-    },
-    enabled: !!classId,
-  });
+  return useQuery(evaluationsQueryOptions(classId));
 }
 
 export function useCreateEvaluationMutation(classId: string) {
@@ -38,7 +30,7 @@ export function useCreateEvaluationMutation(classId: string) {
       return data.createEvaluation;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["evaluations", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
     },
   });
 }
@@ -53,8 +45,8 @@ export function useDeleteEvaluationMutation(classId: string) {
       return data.deleteEvaluation;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["evaluations", classId] });
-      qc.invalidateQueries({ queryKey: ["grades", classId] });
+      qc.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 }
