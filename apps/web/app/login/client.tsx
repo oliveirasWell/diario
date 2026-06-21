@@ -10,11 +10,11 @@ export function LoginClient() {
   const router = useRouter();
   const { status } = useSession();
 
-  const callbackUrl = params.get("callbackUrl") || "/dashboard";
+  const callbackUrl = params.get("callbackUrl") || "/classes";
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/dashboard");
+      router.replace("/classes");
     }
   }, [status, router]);
 

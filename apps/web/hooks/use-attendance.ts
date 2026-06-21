@@ -13,8 +13,6 @@ export type AttendanceRecord = {
   session: { id: string; date: string };
 };
 
-export { attendanceDayKey } from "@/lib/attendance-date";
-
 export function attendanceRecordsKey(classId: string) {
   return ["attendanceRecords", classId] as const;
 }

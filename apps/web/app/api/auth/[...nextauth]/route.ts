@@ -7,13 +7,6 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const revalidate = 0;
 
-let adapterAny: any;
-try {
-  adapterAny = MongoDBAdapter(getClientPromise());
-} catch {
-  adapterAny = undefined;
-}
-
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
@@ -26,7 +19,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  adapter: adapterAny as any,
+  adapter: MongoDBAdapter(getClientPromise()),
   callbacks: {
     async jwt({ token, user }) {
       // Ensure prisma user exists and attach prismaUserId on token
@@ -64,7 +57,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  adapter: MongoDBAdapter(getClientPromise()),
 };
 
 const handler = NextAuth(authOptions);

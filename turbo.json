@@ -33,9 +33,6 @@
         "GOOGLE_CLIENT_SECRET"
       ]
     },
-    "lint": {},
-    "codegen": {
-      "outputs": ["**/src/gql/**", "**/__generated__/**"]
-    }
+    "lint": {}
   }
 }

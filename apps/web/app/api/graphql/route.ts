@@ -1,5 +1,5 @@
 import { createYoga, createSchema } from "graphql-yoga";
-import { attendanceDayKey, normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
+import { normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
 
 async function getPrisma() {
   const { prisma } = await import("@diario/db");
@@ -25,11 +25,8 @@ const { handleRequest } = createYoga({
       scalar DateTime
 
       type Query {
-        health: String!
-        me: User
         classes: [Class!]!
         class(id: ID!): Class
-        students(classId: ID!): [Student!]!
         enrollments(classId: ID!): [Enrollment!]!
         evaluations(classId: ID!): [Evaluation!]!
         gradesByClass(classId: ID!): [Grade!]!
@@ -41,8 +38,6 @@ const { handleRequest } = createYoga({
         createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
         updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
         deleteClass(id: ID!): Boolean!
-        createStudent(name: String!, email: String): Student!
-        enrollStudent(classId: ID!, studentId: ID!): Enrollment!
         createAndEnroll(classId: ID!, name: String!, email: String): Enrollment!
         unenrollStudent(enrollmentId: ID!): Boolean!
         createEvaluation(classId: ID!, title: String!, weight: Float, maxScore: Float!): Evaluation!
@@ -50,16 +45,7 @@ const { handleRequest } = createYoga({
         upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
         setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
         markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus): Boolean!
-        deleteAttendanceSession(classId: ID!, date: DateTime!): Boolean!
         excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
-        includeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
-      }
-
-      type User {
-        id: ID!
-        email: String!
-        name: String
-        image: String
       }
 
       type Class {
@@ -115,8 +101,6 @@ const { handleRequest } = createYoga({
     resolvers: {
       Class: { daysOfWeek: (p: any) => p.daysOfWeek ?? [] },
       Query: {
-        health: () => "ok",
-        me: async (_: unknown, __: unknown, ctx: any) => ctx.user,
         classes: async (_: unknown, __: unknown, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) return [];
@@ -129,16 +113,6 @@ const { handleRequest } = createYoga({
           const prisma = await getPrisma();
           const c = await prisma.class.findFirst({ where: { id: id as string, ownerId: { in: ownerIds } } });
           return c;
-        },
-        students: async (_: unknown, { classId }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) return [];
-          const prisma = await getPrisma();
-          const enrollments = await prisma.enrollment.findMany({
-            where: { classId: classId as string, class: { ownerId: { in: ownerIds } } },
-            select: { student: true },
-          });
-          return enrollments.map((e: any) => e.student);
         },
         enrollments: async (_: unknown, { classId }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
@@ -218,20 +192,6 @@ const { handleRequest } = createYoga({
           const sd = startDate ? new Date(startDate) : null;
           const ed = endDate ? new Date(endDate) : null;
           return prisma.class.update({ where: { id: id as string }, data: { daysOfWeek: daysOfWeek ?? c.daysOfWeek ?? [], startDate: sd, endDate: ed } });
-        },
-        createStudent: async (_: unknown, { name, email }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) throw new Error("Unauthorized");
-          const prisma = await getPrisma();
-          return prisma.student.create({ data: { name, email: email || null } });
-        },
-        enrollStudent: async (_: unknown, { classId, studentId }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) throw new Error("Unauthorized");
-          const prisma = await getPrisma();
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
-          if (!c) throw new Error("Not found");
-          return prisma.enrollment.create({ data: { classId, studentId, status: "ACTIVE" } });
         },
         createAndEnroll: async (_: unknown, { classId, name, email }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
@@ -354,18 +314,6 @@ const { handleRequest } = createYoga({
           await prisma.class.delete({ where: { id: classId } });
           return true;
         },
-        deleteAttendanceSession: async (_: unknown, { classId, date }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) throw new Error("Unauthorized");
-          const prisma = await getPrisma();
-          const d = new Date(date);
-          const session = await prisma.attendanceSession.findFirst({ where: { classId: classId as string, date: d, class: { ownerId: { in: ownerIds } } } });
-          if (!session) return true;
-          // Delete records then session
-          await prisma.attendanceRecord.deleteMany({ where: { sessionId: session.id } });
-          await prisma.attendanceSession.delete({ where: { id: session.id } });
-          return true;
-        },
         excludeAttendanceDate: async (_: unknown, { classId, date }: any, ctx: any) => {
           const ownerIds = ownerIdsFrom(ctx);
           if (!ownerIds.length) throw new Error("Unauthorized");
@@ -379,18 +327,6 @@ const { handleRequest } = createYoga({
             const next = [...(c.excludedDates ?? []), d];
             await prisma.class.update({ where: { id: c.id }, data: { excludedDates: next as any } });
           }
-          return true;
-        },
-        includeAttendanceDate: async (_: unknown, { classId, date }: any, ctx: any) => {
-          const ownerIds = ownerIdsFrom(ctx);
-          if (!ownerIds.length) throw new Error("Unauthorized");
-          const prisma = await getPrisma();
-          const d = new Date(date);
-          const c = await prisma.class.findFirst({ where: { id: classId as string, ownerId: { in: ownerIds } } });
-          if (!c) throw new Error("Not found");
-          const dk = d.toISOString().slice(0,10);
-          const next = (c.excludedDates ?? []).filter((x: any)=> new Date(x).toISOString().slice(0,10) !== dk);
-          await prisma.class.update({ where: { id: c.id }, data: { excludedDates: next as any } });
           return true;
         },
       },

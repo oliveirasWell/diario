@@ -21,9 +21,7 @@
     "dev:local": "bash scripts/dev.sh",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
-    "lint": "turbo run lint",
-    "codegen": "turbo run codegen",
-    "codegen:web": "pnpm --filter web graphql-codegen"
+    "lint": "turbo run lint"
   },
   "devDependencies": {
     "turbo": "^2.0.6"

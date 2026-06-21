@@ -18,10 +18,10 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // If authenticated and on home, redirect to dashboard
+  // If authenticated and on home, redirect to classes
   if (pathname === "/") {
     const url = req.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/classes";
     return NextResponse.redirect(url);
   }
 

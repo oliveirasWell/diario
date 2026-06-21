@@ -5,8 +5,8 @@ import {
   useAttendanceMutation,
   useAttendanceRecords,
   useEnrollments,
-  attendanceDayKey,
 } from "@/hooks/use-attendance";
+import { attendanceDayKey } from "@/lib/attendance-date";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { exportAttendanceToXlsx } from "@/lib/export-attendance";
