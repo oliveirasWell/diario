@@ -1,11 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 
 export function useExcludeAttendanceDate(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (vars: { date: Date }) => {
       const data = await gqlRequest<{ excludeAttendanceDate: boolean }>(/* GraphQL */ `
         mutation Ex($classId: ID!, $date: DateTime!) {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 
 export type Grade = { id: string; enrollmentId: string; evaluationId: string; score: number };
 
@@ -20,7 +21,7 @@ export function useGradesByClass(classId: string) {
 
 export function useUpsertGrade() {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (vars: { enrollmentId: string; evaluationId: string; score: number; classId: string }) => {
       const data = await gqlRequest<{ upsertGrade: Grade }>(/* GraphQL */ `
         mutation UpsertGrade($enrollmentId: ID!, $evaluationId: ID!, $score: Float!) {
@@ -37,7 +38,7 @@ export function useUpsertGrade() {
 
 export function useSetConcept() {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (vars: { enrollmentId: string; concept: string | null; classId: string }) => {
       const data = await gqlRequest<{ setEnrollmentConcept: { id: string } }>(/* GraphQL */ `
         mutation SetConcept($enrollmentId: ID!, $concept: String) {

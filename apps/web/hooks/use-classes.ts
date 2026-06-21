@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 
 import type { Class } from "@/src/gql/schema-types";
 
@@ -21,7 +22,7 @@ export function useClassesQuery() {
 
 export function useCreateClassMutation() {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (input: { name: string; year: number }) => {
       const data = await gqlRequest<{ createClass: Class }>(/* GraphQL */ `
         mutation CreateClass($name: String!, $year: Int!) {
@@ -38,7 +39,7 @@ export function useCreateClassMutation() {
 
 export function useDeleteClassMutation() {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (id: string) => {
       const data = await gqlRequest<{ deleteClass: boolean }>(/* GraphQL */ `
         mutation DelClass($id: ID!) { deleteClass(id: $id) }

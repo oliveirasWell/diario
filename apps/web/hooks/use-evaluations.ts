@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 
 export type Evaluation = {
   id: string;
@@ -27,7 +28,7 @@ export function useEvaluationsQuery(classId: string) {
 
 export function useCreateEvaluationMutation(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (input: { title: string }) => {
       const data = await gqlRequest<{ createEvaluation: Evaluation }>(/* GraphQL */ `
         mutation CreateEvaluation($classId: ID!, $title: String!) {
@@ -44,7 +45,7 @@ export function useCreateEvaluationMutation(classId: string) {
 
 export function useDeleteEvaluationMutation(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (id: string) => {
       const data = await gqlRequest<{ deleteEvaluation: boolean }>(/* GraphQL */ `
         mutation DelEval($id: ID!) { deleteEvaluation(id: $id) }

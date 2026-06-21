@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useEvaluationsQuery } from "@/hooks/use-evaluations";
 import { useEnrollments } from "@/hooks/use-attendance";
 import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
+import { formatGraphqlError } from "@/lib/graphql-error";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,11 +60,14 @@ function GradeInput({
 export default function GradesPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data: evals, isLoading: loadingE } = useEvaluationsQuery(classId);
-  const { data: enrolls, isLoading: loadingEn } = useEnrollments(classId);
-  const { data: grades } = useGradesByClass(classId);
+  const { data: evals, isLoading: loadingE, isError: errorE, error: errE } = useEvaluationsQuery(classId);
+  const { data: enrolls, isLoading: loadingEn, isError: errorEn, error: errEn } = useEnrollments(classId);
+  const { data: grades, isError: errorG, error: errG } = useGradesByClass(classId);
   const upsert = useUpsertGrade();
   const setConcept = useSetConcept();
+
+  const queryError = errorE ? errE : errorEn ? errEn : errorG ? errG : null;
+  const mutationError = upsert.errorMessage ?? setConcept.errorMessage;
 
   const [q, setQ] = useState("");
   const list = useMemo(() => {
@@ -80,6 +84,12 @@ export default function GradesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {queryError ? (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
+      ) : null}
+      {mutationError ? (
+        <p className="text-sm text-destructive" role="alert">{mutationError}</p>
+      ) : null}
       <div className="flex items-center gap-2">
         <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
         <Button

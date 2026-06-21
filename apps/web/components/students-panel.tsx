@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { formatGraphqlError } from "@/lib/graphql-error";
 
 const NewStudentSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -15,7 +16,7 @@ const NewStudentSchema = z.object({
 type NewStudentInput = z.infer<typeof NewStudentSchema>;
 
 export function StudentsPanel({ classId }: { classId: string }) {
-  const { data, isLoading } = useEnrollmentsQuery(classId);
+  const { data, isLoading, isError, error } = useEnrollmentsQuery(classId);
   const createAndEnroll = useCreateAndEnrollMutation(classId);
   const unenroll = useUnenrollStudentMutation(classId);
 
@@ -24,12 +25,19 @@ export function StudentsPanel({ classId }: { classId: string }) {
   });
 
   const onSubmit = async (values: NewStudentInput) => {
-    await createAndEnroll.mutateAsync({ name: values.name, email: values.email || undefined });
-    reset({ name: "", email: "" });
+    try {
+      await createAndEnroll.mutateAsync({ name: values.name, email: values.email || undefined });
+      reset({ name: "", email: "" });
+    } catch {
+      // errorMessage shown inline
+    }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {isError ? (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      ) : null}
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <h3 className="font-normal">Adicionar aluno à turma</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3">
@@ -47,7 +55,14 @@ export function StudentsPanel({ classId }: { classId: string }) {
             <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>Adicionar</Button>
           </div>
         </form>
+        {createAndEnroll.errorMessage ? (
+          <p className="text-sm text-destructive" role="alert">{createAndEnroll.errorMessage}</p>
+        ) : null}
       </div>
+
+      {unenroll.errorMessage ? (
+        <p className="text-sm text-destructive" role="alert">{unenroll.errorMessage}</p>
+      ) : null}
 
       {isLoading ? (
         <div>Carregando...</div>
@@ -68,8 +83,13 @@ export function StudentsPanel({ classId }: { classId: string }) {
                   variant="ghost"
                   size="icon"
                   title="Remover aluno desta turma"
-                  onClick={() => {
-                    if (confirm("Remover aluno desta turma?")) unenroll.mutate(e.id);
+                  onClick={async () => {
+                    if (!confirm("Remover aluno desta turma?")) return;
+                    try {
+                      await unenroll.mutateAsync(e.id);
+                    } catch {
+                      // errorMessage shown inline
+                    }
                   }}
                 >
                   🗑️

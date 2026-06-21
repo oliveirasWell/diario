@@ -6,7 +6,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useState } from "react";
+import { formatGraphqlError } from "@/lib/graphql-error";
 
 const NewClassSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -15,11 +24,14 @@ const NewClassSchema = z.object({
 
 type NewClassInput = z.infer<typeof NewClassSchema>;
 
+type DeleteTarget = { id: string; name: string };
+
 export function ClassesPanel() {
-  const { data, isLoading } = useClassesQuery();
+  const { data, isLoading, isError, error } = useClassesQuery();
   const createClass = useCreateClassMutation();
   const deleteClass = useDeleteClassMutation();
-  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewClassInput>({
     resolver: zodResolver(NewClassSchema),
@@ -27,16 +39,34 @@ export function ClassesPanel() {
   });
 
   const onSubmit = async (values: NewClassInput) => {
-    await createClass.mutateAsync(values);
-    reset({ name: "", year: new Date().getFullYear() });
-    setOpen(false);
+    try {
+      await createClass.mutateAsync(values);
+      reset({ name: "", year: new Date().getFullYear() });
+      setCreateOpen(false);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteClass.mutateAsync(deleteTarget.id);
+      setDeleteTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>Nova turma</Button>
+        <Button type="button" onClick={() => setCreateOpen(true)}>Nova turma</Button>
       </div>
+
+      {isError ? (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      ) : null}
 
       {isLoading ? (
         <div>Carregando...</div>
@@ -57,9 +87,7 @@ export function ClassesPanel() {
                   variant="ghost"
                   size="icon"
                   title="Remover turma"
-                  onClick={() => {
-                    if (confirm("Remover esta turma e todos os dados relacionados?")) deleteClass.mutate(c.id);
-                  }}
+                  onClick={() => setDeleteTarget({ id: c.id, name: c.name })}
                 >
                   🗑️
                 </Button>
@@ -69,29 +97,72 @@ export function ClassesPanel() {
         </div>
       )}
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-md space-y-3 bg-background p-3 shadow-lg sm:space-y-4 sm:p-6">
-            <h3 className="text-lg font-normal">Nova Turma</h3>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Nome</label>
-                <Input placeholder="Ex.: 1ºA" {...register("name")} />
-                {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Ano</label>
-                <Input type="number" {...register("year", { valueAsNumber: true })} />
-                {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isSubmitting}>Criar</Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <Dialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          setCreateOpen(open);
+          if (!open) createClass.clearError();
+        }}
+      >
+        <DialogContent showCloseButton>
+          <DialogHeader>
+            <DialogTitle>Nova turma</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" htmlFor="class-name">Nome</label>
+              <Input id="class-name" placeholder="Ex.: 1ºA" {...register("name")} />
+              {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium" htmlFor="class-year">Ano</label>
+              <Input id="class-year" type="number" {...register("year", { valueAsNumber: true })} />
+              {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
+            </div>
+            {createClass.errorMessage ? (
+              <p className="text-sm text-destructive" role="alert">{createClass.errorMessage}</p>
+            ) : null}
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button type="submit" disabled={isSubmitting || createClass.isPending}>
+                {createClass.isPending ? "Criando…" : "Criar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+            deleteClass.clearError();
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle>Remover turma?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget
+                ? `A turma "${deleteTarget.name}" e todos os dados relacionados (alunos, presenças, notas) serão removidos permanentemente.`
+                : null}
+            </DialogDescription>
+          </DialogHeader>
+          {deleteClass.errorMessage ? (
+            <p className="text-sm text-destructive" role="alert">{deleteClass.errorMessage}</p>
+          ) : null}
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteClass.isPending}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="destructive" onClick={onDelete} disabled={deleteClass.isPending}>
+              {deleteClass.isPending ? "Removendo…" : "Remover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

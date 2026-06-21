@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 import { attendanceDayKey, normalizeAttendanceDate } from "@/lib/attendance-date";
 
 export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
@@ -64,7 +65,7 @@ export function useAttendanceMutation(classId: string) {
   const qc = useQueryClient();
   const key = attendanceRecordsKey(classId);
 
-  const mutation = useMutation({
+  const mutation = useAppMutation({
     mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
       const data = await gqlRequest<{ markAttendance: boolean }>(/* GraphQL */ `
         mutation MarkAttendance($classId: ID!, $date: DateTime!, $enrollmentId: ID!, $status: AttendanceStatus) {
@@ -89,7 +90,7 @@ export function useAttendanceMutation(classId: string) {
     },
   });
 
-  const markAllMutation = useMutation({
+  const markAllMutation = useAppMutation({
     mutationFn: async ({ date }: { date: Date }) => {
       const data = await gqlRequest<{ markAllPresent: boolean }>(/* GraphQL */ `
         mutation MarkAllPresent($classId: ID!, $date: DateTime!) {
@@ -120,6 +121,11 @@ export function useAttendanceMutation(classId: string) {
     markPresent: (vars: CellVars) =>
       mutation.mutate({ ...vars, status: "PRESENT" }),
     markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
+    errorMessage: mutation.errorMessage ?? markAllMutation.errorMessage,
+    clearError: () => {
+      mutation.clearError();
+      markAllMutation.clearError();
+    },
   };
 }
 

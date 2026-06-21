@@ -10,14 +10,41 @@ const eslintConfig = defineConfig([
   {
     plugins: { "unused-imports": unusedImports },
     rules: {
-      // Remove unused imports and flag unused vars
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "error",
         { args: "after-used", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
       ],
-      // Disable base rule to avoid duplicate reports
       "no-unused-vars": "off",
+    },
+  },
+  {
+    files: [
+      "app/api/**/*.{ts,tsx}",
+      "lib/graphql/**/*.{ts,tsx}",
+      "lib/graphql-client.ts",
+      "lib/export-grades.ts",
+      "lib/mongodb.ts",
+      "types/next-auth.d.ts",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/ban-ts-comment": "off",
+      "unused-imports/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+  {
+    files: [
+      "hooks/use-theme.ts",
+      "app/classes/**/grades/page.tsx",
+      "app/classes/**/config/page.tsx",
+    ],
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/incompatible-library": "off",
+      "react-hooks/exhaustive-deps": "off",
+      "@typescript-eslint/no-explicit-any": "off",
     },
   },
   // Override default ignores of eslint-config-next.

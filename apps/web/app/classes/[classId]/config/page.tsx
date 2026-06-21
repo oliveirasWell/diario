@@ -1,8 +1,10 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
+import { formatGraphqlError } from "@/lib/graphql-error";
 import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { z } from "zod";
@@ -23,7 +25,7 @@ export default function ClassConfigPage() {
   const classId = params?.classId as string;
   const qc = useQueryClient();
 
-  const { data } = useQuery({
+  const { data, isError, error } = useQuery({
     queryKey: ["class", classId],
     queryFn: async () => {
       const res = await gqlRequest<{ class: { id: string; name: string; daysOfWeek: number[]; startDate?: string | null; endDate?: string | null } }>(
@@ -37,7 +39,7 @@ export default function ClassConfigPage() {
     enabled: !!classId,
   });
 
-  const mutation = useMutation({
+  const mutation = useAppMutation({
     mutationFn: async (values: FormValues) => {
       const res = await gqlRequest<{ updateClassSchedule: { id: string } }>(/* GraphQL */ `
         mutation UpdateClassSchedule($id: ID!, $daysOfWeek: [Int!], $startDate: DateTime, $endDate: DateTime) {
@@ -83,10 +85,19 @@ export default function ClassConfigPage() {
     setValue("daysOfWeek", Array.from(selected).sort());
   };
 
-  const onSubmit = (vals: FormValues) => mutation.mutate(vals);
+  const onSubmit = async (vals: FormValues) => {
+    try {
+      await mutation.mutateAsync(vals);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {isError ? (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      ) : null}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Dias da semana</label>
@@ -114,6 +125,10 @@ export default function ClassConfigPage() {
             <Input id="endDate" type="date" className="h-12 sm:h-10" {...register("endDate")} />
           </div>
         </div>
+
+        {mutation.errorMessage ? (
+          <p className="text-sm text-destructive" role="alert">{mutation.errorMessage}</p>
+        ) : null}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={mutation.isPending}>Salvar</Button>

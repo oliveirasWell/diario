@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEvaluationsQuery, useCreateEvaluationMutation, useDeleteEvaluationMutation } from "@/hooks/use-evaluations";
+import { formatGraphqlError } from "@/lib/graphql-error";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +25,7 @@ type FormValues = z.infer<typeof schema>;
 export default function EvaluationsPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data, isLoading } = useEvaluationsQuery(classId);
+  const { data, isLoading, isError, error } = useEvaluationsQuery(classId);
   const createEval = useCreateEvaluationMutation(classId);
   const deleteEval = useDeleteEvaluationMutation(classId);
 
@@ -33,12 +34,20 @@ export default function EvaluationsPage() {
   });
 
   const onSubmit = async (vals: FormValues) => {
-    await createEval.mutateAsync({ title: vals.title });
-    reset({ title: "" });
+    try {
+      await createEval.mutateAsync({ title: vals.title });
+      reset({ title: "" });
+    } catch {
+      // errorMessage shown inline
+    }
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {isError ? (
+        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+      ) : null}
+
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <form onSubmit={handleSubmit(onSubmit)} className="flex items-end gap-2">
           <div className="flex-1 min-w-0">
@@ -48,7 +57,14 @@ export default function EvaluationsPage() {
           </div>
           <Button type="submit" disabled={isSubmitting || createEval.isPending}>Adicionar</Button>
         </form>
+        {createEval.errorMessage ? (
+          <p className="text-sm text-destructive" role="alert">{createEval.errorMessage}</p>
+        ) : null}
       </div>
+
+      {deleteEval.errorMessage ? (
+        <p className="text-sm text-destructive" role="alert">{deleteEval.errorMessage}</p>
+      ) : null}
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
@@ -73,8 +89,13 @@ export default function EvaluationsPage() {
                       variant="ghost"
                       size="icon"
                       title="Remover avaliação"
-                      onClick={() => {
-                        if (confirm("Remover esta avaliação e suas notas?")) deleteEval.mutate(ev.id);
+                      onClick={async () => {
+                        if (!confirm("Remover esta avaliação e suas notas?")) return;
+                        try {
+                          await deleteEval.mutateAsync(ev.id);
+                        } catch {
+                          // errorMessage shown inline
+                        }
                       }}
                     >
                       🗑️

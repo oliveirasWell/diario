@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
+import { useAppMutation } from "@/hooks/use-app-mutation";
 import type { Enrollment } from "@/src/gql/schema-types";
 
 export function useEnrollmentsQuery(classId: string) {
@@ -19,7 +20,7 @@ export function useEnrollmentsQuery(classId: string) {
 
 export function useCreateAndEnrollMutation(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (input: { name: string; email?: string | null }) => {
       const data = await gqlRequest<{ createAndEnroll: { id: string } }>(/* GraphQL */ `
         mutation CreateAndEnroll($classId: ID!, $name: String!, $email: String) {
@@ -36,7 +37,7 @@ export function useCreateAndEnrollMutation(classId: string) {
 
 export function useUnenrollStudentMutation(classId: string) {
   const qc = useQueryClient();
-  return useMutation({
+  return useAppMutation({
     mutationFn: async (enrollmentId: string) => {
       const data = await gqlRequest<{ unenrollStudent: boolean }>(/* GraphQL */ `
         mutation Unenroll($enrollmentId: ID!) { unenrollStudent(enrollmentId: $enrollmentId) }
