@@ -5,6 +5,7 @@ import { AuthSessionProvider } from "@/components/session-provider";
 import { Header } from "@/components/header";
 import { QueryProvider } from "@/components/query-provider";
 import { SentryInit } from "@/components/sentry-init";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const roboto = Roboto({
   weight: ["100", "300", "400", "500"],
@@ -42,6 +43,7 @@ export default function RootLayout({
             <main className="flex-1 w-full mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">{children}</main>
           </QueryProvider>
         </AuthSessionProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
