@@ -6,6 +6,7 @@ import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { classQueryOptions, queryKeys } from "@/lib/query-options";
+import { UpdateClassScheduleDocument } from "@/src/gql/graphql";
 import { useForm } from "react-hook-form";
 import { useEffect } from "react";
 import { z } from "zod";
@@ -30,11 +31,7 @@ export default function ClassConfigPage() {
 
   const mutation = useAppMutation({
     mutationFn: async (values: FormValues) => {
-      const res = await gqlRequest<{ updateClassSchedule: { id: string } }>(/* GraphQL */ `
-        mutation UpdateClassSchedule($id: ID!, $daysOfWeek: [Int!], $startDate: DateTime, $endDate: DateTime) {
-          updateClassSchedule(id: $id, daysOfWeek: $daysOfWeek, startDate: $startDate, endDate: $endDate) { id }
-        }
-      `, { id: classId, ...values });
+      const res = await gqlRequest(UpdateClassScheduleDocument, { id: classId, ...values });
       return res.updateClassSchedule;
     },
     onSuccess: () => {
@@ -84,9 +81,9 @@ export default function ClassConfigPage() {
 
   return (
     <div className="space-y-6">
-      {isError ? (
+      {isError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
-      ) : null}
+      )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
           <label className="block text-sm font-medium">Dias da semana</label>
@@ -115,9 +112,9 @@ export default function ClassConfigPage() {
           </div>
         </div>
 
-        {mutation.errorMessage ? (
+        {mutation.errorMessage && (
           <p className="text-sm text-destructive" role="alert">{mutation.errorMessage}</p>
-        ) : null}
+        )}
 
         <div className="flex justify-end">
           <Button type="submit" disabled={mutation.isPending}>Salvar</Button>

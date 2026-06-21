@@ -71,9 +71,9 @@ export function ClassesPanel() {
         <Button type="button" onClick={() => setCreateOpen(true)}>Nova turma</Button>
       </div>
 
-      {isError ? (
+      {isError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
-      ) : null}
+      )}
 
       {isLoading ? (
         <div>Carregando...</div>
@@ -133,9 +133,9 @@ export function ClassesPanel() {
               <Input id="class-year" type="number" {...register("year", { valueAsNumber: true })} />
               {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
             </div>
-            {createClass.errorMessage ? (
+            {createClass.errorMessage && (
               <p className="text-sm text-destructive" role="alert">{createClass.errorMessage}</p>
-            ) : null}
+            )}
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
               <Button type="submit" disabled={isSubmitting || createClass.isPending}>
@@ -164,9 +164,9 @@ export function ClassesPanel() {
                 : null}
             </DialogDescription>
           </DialogHeader>
-          {deleteClass.errorMessage ? (
+          {deleteClass.errorMessage && (
             <p className="text-sm text-destructive" role="alert">{deleteClass.errorMessage}</p>
-          ) : null}
+          )}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleteClass.isPending}>
               Cancelar

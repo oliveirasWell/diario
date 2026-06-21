@@ -36,7 +36,9 @@
   },
   "devDependencies": {
     "@graphql-codegen/cli": "4.0.1",
+    "@graphql-codegen/typed-document-node": "4.0.1",
     "@graphql-codegen/typescript": "4.0.1",
+    "@graphql-codegen/typescript-operations": "^4.0.1",
     "@tailwindcss/postcss": "4.3.1",
     "@types/node": "20.19.43",
     "@types/react": "19.2.17",

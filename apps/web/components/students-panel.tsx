@@ -35,9 +35,9 @@ export function StudentsPanel({ classId }: { classId: string }) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {isError ? (
+      {isError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
-      ) : null}
+      )}
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <h3 className="font-normal">Adicionar aluno à turma</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3">
@@ -55,14 +55,14 @@ export function StudentsPanel({ classId }: { classId: string }) {
             <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>Adicionar</Button>
           </div>
         </form>
-        {createAndEnroll.errorMessage ? (
+        {createAndEnroll.errorMessage && (
           <p className="text-sm text-destructive" role="alert">{createAndEnroll.errorMessage}</p>
-        ) : null}
+        )}
       </div>
 
-      {unenroll.errorMessage ? (
+      {unenroll.errorMessage && (
         <p className="text-sm text-destructive" role="alert">{unenroll.errorMessage}</p>
-      ) : null}
+      )}
 
       {isLoading ? (
         <div>Carregando...</div>

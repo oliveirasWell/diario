@@ -105,12 +105,12 @@ export default function AttendancePage() {
 
   return (
     <div className="space-y-4">
-      {queryError ? (
+      {queryError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
-      ) : null}
-      {mutationError ? (
+      )}
+      {mutationError && (
         <p className="text-sm text-destructive" role="alert">{mutationError}</p>
-      ) : null}
+      )}
       {isLoadingDates || isLoadingEnroll ? (
         <div className="text-sm text-muted-foreground">Carregando presenças…</div>
       ) : !dates?.length ? (

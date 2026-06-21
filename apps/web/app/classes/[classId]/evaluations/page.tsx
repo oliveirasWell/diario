@@ -44,9 +44,9 @@ export default function EvaluationsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {isError ? (
+      {isError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
-      ) : null}
+      )}
 
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <form onSubmit={handleSubmit(onSubmit)} className="flex items-end gap-2">
@@ -57,14 +57,14 @@ export default function EvaluationsPage() {
           </div>
           <Button type="submit" disabled={isSubmitting || createEval.isPending}>Adicionar</Button>
         </form>
-        {createEval.errorMessage ? (
+        {createEval.errorMessage && (
           <p className="text-sm text-destructive" role="alert">{createEval.errorMessage}</p>
-        ) : null}
+        )}
       </div>
 
-      {deleteEval.errorMessage ? (
+      {deleteEval.errorMessage && (
         <p className="text-sm text-destructive" role="alert">{deleteEval.errorMessage}</p>
-      ) : null}
+      )}
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>

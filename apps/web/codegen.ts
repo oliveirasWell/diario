@@ -2,14 +2,16 @@ import type { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
   schema: "./schema.graphql",
+  documents: ["lib/gql-documents.ts"],
   generates: {
-    "src/gql/schema-types.ts": {
-      plugins: ["typescript"],
+    "src/gql/graphql.ts": {
+      plugins: ["typescript", "typescript-operations", "typed-document-node"],
       config: {
-        maybeValue: "T | null | undefined",
+        gqlTagName: "graphql",
         scalars: {
           DateTime: "string",
         },
+        useTypeImports: true,
       },
     },
   },

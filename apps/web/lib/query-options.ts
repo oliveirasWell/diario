@@ -1,13 +1,17 @@
 import { queryOptions } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
-import type { Class, Enrollment, Evaluation, Grade } from "@/src/gql/schema-types";
+import {
+  AttendanceDatesDocument,
+  AttendanceRecordsDocument,
+  ClassDocument,
+  ClassesDocument,
+  EnrollmentsDocument,
+  EvaluationsDocument,
+  GradesByClassDocument,
+} from "@/src/gql/graphql";
+import type { AttendanceRecordsQuery } from "@/src/gql/graphql";
 
-export type AttendanceRecord = {
-  id: string;
-  enrollmentId: string;
-  status: "PRESENT" | "ABSENT" | "LATE";
-  session: { id: string; date: string };
-};
+export type AttendanceRecord = AttendanceRecordsQuery["attendanceRecords"][number];
 
 export const queryKeys = {
   classes: () => ["classes"] as const,
@@ -24,11 +28,7 @@ export function classesQueryOptions() {
   return queryOptions({
     queryKey: queryKeys.classes(),
     queryFn: async () => {
-      const data = await gqlRequest<{ classes: Class[] }>(/* GraphQL */ `
-        query Classes {
-          classes { id name year ownerId }
-        }
-      `);
+      const data = await gqlRequest(ClassesDocument);
       return data.classes;
     },
     staleTime: 60_000,
@@ -40,17 +40,7 @@ export function classQueryOptions(classId: string) {
   return queryOptions({
     queryKey: queryKeys.class(classId),
     queryFn: async () => {
-      const res = await gqlRequest<{
-        class: {
-          id: string;
-          name: string;
-          daysOfWeek: number[];
-          startDate?: string | null;
-          endDate?: string | null;
-        };
-      }>(/* GraphQL */ `
-        query Class($id: ID!) { class(id: $id) { id name daysOfWeek startDate endDate } }
-      `, { id: classId });
+      const res = await gqlRequest(ClassDocument, { id: classId });
       return res.class;
     },
     enabled: !!classId,
@@ -63,15 +53,7 @@ export function enrollmentsQueryOptions(classId: string) {
   return queryOptions({
     queryKey: queryKeys.enrollments(classId),
     queryFn: async () => {
-      const data = await gqlRequest<{ enrollments: Enrollment[] }>(/* GraphQL */ `
-        query Enrollments($classId: ID!) {
-          enrollments(classId: $classId) {
-            id
-            concept
-            student { id name email }
-          }
-        }
-      `, { classId });
+      const data = await gqlRequest(EnrollmentsDocument, { classId });
       return data.enrollments;
     },
     enabled: !!classId,
@@ -84,11 +66,7 @@ export function attendanceDatesQueryOptions(classId: string, from?: string, to?:
   return queryOptions({
     queryKey: queryKeys.attendanceDates(classId, from, to),
     queryFn: async () => {
-      const data = await gqlRequest<{ attendanceDates: string[] }>(/* GraphQL */ `
-        query AttendanceDates($classId: ID!, $from: DateTime, $to: DateTime) {
-          attendanceDates(classId: $classId, from: $from, to: $to)
-        }
-      `, { classId, from, to });
+      const data = await gqlRequest(AttendanceDatesDocument, { classId, from, to });
       return data.attendanceDates.map((d) => new Date(d));
     },
     enabled: !!classId,
@@ -101,13 +79,7 @@ export function attendanceRecordsQueryOptions(classId: string, from?: string, to
   return queryOptions({
     queryKey: queryKeys.attendanceRecords(classId),
     queryFn: async () => {
-      const data = await gqlRequest<{ attendanceRecords: AttendanceRecord[] }>(/* GraphQL */ `
-        query AttendanceRecords($classId: ID!, $from: DateTime, $to: DateTime) {
-          attendanceRecords(classId: $classId, from: $from, to: $to) {
-            id enrollmentId status session { id date }
-          }
-        }
-      `, { classId, from, to });
+      const data = await gqlRequest(AttendanceRecordsDocument, { classId, from, to });
       return data.attendanceRecords;
     },
     enabled: !!classId,
@@ -120,11 +92,7 @@ export function evaluationsQueryOptions(classId: string) {
   return queryOptions({
     queryKey: queryKeys.evaluations(classId),
     queryFn: async () => {
-      const data = await gqlRequest<{ evaluations: Evaluation[] }>(/* GraphQL */ `
-        query Evaluations($classId: ID!) {
-          evaluations(classId: $classId) { id classId title weight maxScore createdAt }
-        }
-      `, { classId });
+      const data = await gqlRequest(EvaluationsDocument, { classId });
       return data.evaluations;
     },
     enabled: !!classId,
@@ -137,11 +105,7 @@ export function gradesQueryOptions(classId: string) {
   return queryOptions({
     queryKey: queryKeys.grades(classId),
     queryFn: async () => {
-      const data = await gqlRequest<{ gradesByClass: Grade[] }>(/* GraphQL */ `
-        query GradesByClass($classId: ID!) {
-          gradesByClass(classId: $classId) { id enrollmentId evaluationId score }
-        }
-      `, { classId });
+      const data = await gqlRequest(GradesByClassDocument, { classId });
       return data.gradesByClass;
     },
     enabled: !!classId,

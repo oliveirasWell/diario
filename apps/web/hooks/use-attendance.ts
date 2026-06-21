@@ -11,15 +11,25 @@ import {
   queryKeys,
   type AttendanceRecord,
 } from "@/lib/query-options";
+import {
+  AttendanceStatus,
+  MarkAllPresentDocument,
+  MarkAttendanceDocument,
+} from "@/src/gql/graphql";
 
-export type AttendanceStatus = "PRESENT" | "ABSENT" | "LATE";
 export type { AttendanceRecord };
+export { AttendanceStatus };
 
 export function attendanceRecordsKey(classId: string) {
   return queryKeys.attendanceRecords(classId);
 }
 
-const CYCLE: (AttendanceStatus | null)[] = ["PRESENT", "ABSENT", "LATE", null];
+const CYCLE: (AttendanceStatus | null)[] = [
+  AttendanceStatus.Present,
+  AttendanceStatus.Absent,
+  AttendanceStatus.Late,
+  null,
+];
 
 function nextStatus(current?: AttendanceStatus | null) {
   const idx = CYCLE.indexOf(current ?? null);
@@ -68,11 +78,7 @@ export function useAttendanceMutation(classId: string) {
 
   const mutation = useAppMutation({
     mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
-      const data = await gqlRequest<{ markAttendance: boolean }>(/* GraphQL */ `
-        mutation MarkAttendance($classId: ID!, $date: DateTime!, $enrollmentId: ID!, $status: AttendanceStatus) {
-          markAttendance(classId: $classId, date: $date, enrollmentId: $enrollmentId, status: $status)
-        }
-      `, {
+      const data = await gqlRequest(MarkAttendanceDocument, {
         classId,
         date: normalizeAttendanceDate(date),
         enrollmentId,
@@ -93,11 +99,10 @@ export function useAttendanceMutation(classId: string) {
 
   const markAllMutation = useAppMutation({
     mutationFn: async ({ date }: { date: Date }) => {
-      const data = await gqlRequest<{ markAllPresent: boolean }>(/* GraphQL */ `
-        mutation MarkAllPresent($classId: ID!, $date: DateTime!) {
-          markAllPresent(classId: $classId, date: $date)
-        }
-      `, { classId, date: normalizeAttendanceDate(date) });
+      const data = await gqlRequest(MarkAllPresentDocument, {
+        classId,
+        date: normalizeAttendanceDate(date),
+      });
       return data.markAllPresent;
     },
     onMutate: async ({ date }) => {
@@ -106,7 +111,7 @@ export function useAttendanceMutation(classId: string) {
       const enrollments = qc.getQueryData<{ id: string }[]>(queryKeys.enrollments(classId)) ?? [];
       let next = prev;
       for (const en of enrollments) {
-        next = patchAttendanceRecords(next, en.id, date, "PRESENT");
+        next = patchAttendanceRecords(next, en.id, date, AttendanceStatus.Present);
       }
       qc.setQueryData(key, next);
       return { prev, key } satisfies MutationCtx;
@@ -120,7 +125,7 @@ export function useAttendanceMutation(classId: string) {
     cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
       mutation.mutate({ ...vars, status: nextStatus(current) }),
     markPresent: (vars: CellVars) =>
-      mutation.mutate({ ...vars, status: "PRESENT" }),
+      mutation.mutate({ ...vars, status: AttendanceStatus.Present }),
     markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
     errorMessage: mutation.errorMessage ?? markAllMutation.errorMessage,
     clearError: () => {

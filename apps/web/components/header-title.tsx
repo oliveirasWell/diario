@@ -3,6 +3,7 @@
 import { usePathname, useParams } from "next/navigation";
 import Link from "next/link";
 import { gqlRequest } from "@/lib/graphql-client";
+import { HdrClassDocument } from "@/src/gql/graphql";
 import { useEffect, useState } from "react";
 
 export function HeaderTitle() {
@@ -17,9 +18,7 @@ export function HeaderTitle() {
     async function run() {
       if (inClassDetail) {
         try {
-          const data = await gqlRequest<{ class: { id: string; name: string } }>(/* GraphQL */`
-            query HdrClass($id: ID!) { class(id: $id) { id name } }
-          `, { id: params!.classId as string });
+          const data = await gqlRequest(HdrClassDocument, { id: params!.classId as string });
           if (!ignore) setClassName(data.class?.name ?? (params!.classId as string));
         } catch {
           if (!ignore) setClassName(params!.classId as string);

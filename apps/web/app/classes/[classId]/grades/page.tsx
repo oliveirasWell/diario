@@ -84,12 +84,12 @@ export default function GradesPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {queryError ? (
+      {queryError && (
         <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
-      ) : null}
-      {mutationError ? (
+      )}
+      {mutationError && (
         <p className="text-sm text-destructive" role="alert">{mutationError}</p>
-      ) : null}
+      )}
       <div className="flex items-center gap-2">
         <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
         <Button
