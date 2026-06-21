@@ -147,8 +147,8 @@ Ver [`docs/v4/monorepo.md`](./v4/monorepo.md).
 
 ## Ordem sugerida próxima sessão
 
-1. R-01 + R-02 (integridade, baixo esforço)  
-2. R-05 testes mínimos em R-01/R-02  
-3. R-07 sort server-side  
+1. **v2.5** — editar nome turma/aluno ([`docs/v2.5/spec.md`](./v2.5/spec.md))
+2. R-01 + R-02 (integridade, baixo esforço)  
+3. R-05 testes mínimos em R-01/R-02  
 4. v4.0 import conforme `docs/v4/spec.md`  
 5. R-08/R-09 quando mobile  
