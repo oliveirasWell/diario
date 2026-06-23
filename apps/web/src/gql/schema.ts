@@ -44,11 +44,20 @@ export type Class = {
   daysOfWeek: Array<Scalars['Int']['output']>;
   endDate?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
+  invitedUserIds: Array<Scalars['ID']['output']>;
   name: Scalars['String']['output'];
+  owner?: Maybe<User>;
   ownerId: Scalars['ID']['output'];
   startDate?: Maybe<Scalars['DateTime']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   year: Scalars['Int']['output'];
+};
+
+export type ClassInviteInfo = {
+  __typename?: 'ClassInviteInfo';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerName?: Maybe<Scalars['String']['output']>;
 };
 
 export type Enrollment = {
@@ -81,9 +90,11 @@ export type Grade = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  acceptInvite: Class;
   createAndEnroll: Enrollment;
   createClass: Class;
   createEvaluation: Evaluation;
+  createInviteLink: Scalars['String']['output'];
   deleteClass: Scalars['Boolean']['output'];
   deleteEvaluation: Scalars['Boolean']['output'];
   excludeAttendanceDate: Scalars['Boolean']['output'];
@@ -95,6 +106,11 @@ export type Mutation = {
   unenrollStudent: Scalars['Boolean']['output'];
   updateClassSchedule: Class;
   upsertGrade: Grade;
+};
+
+
+export type MutationAcceptInviteArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -119,6 +135,11 @@ export type MutationCreateEvaluationArgs = {
   maxScore: Scalars['Float']['input'];
   title: Scalars['String']['input'];
   weight?: InputMaybe<Scalars['Float']['input']>;
+};
+
+
+export type MutationCreateInviteLinkArgs = {
+  classId: Scalars['ID']['input'];
 };
 
 
@@ -194,6 +215,7 @@ export type Query = {
   attendanceDates: Array<Scalars['DateTime']['output']>;
   attendanceRecords: Array<AttendanceRecord>;
   class?: Maybe<Class>;
+  classInviteInfo?: Maybe<ClassInviteInfo>;
   classes: Array<Class>;
   enrollments: Array<Enrollment>;
   evaluations: Array<Evaluation>;
@@ -220,6 +242,11 @@ export type QueryClassArgs = {
 };
 
 
+export type QueryClassInviteInfoArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type QueryEnrollmentsArgs = {
   classId: Scalars['ID']['input'];
 };
@@ -242,4 +269,12 @@ export type Student = {
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type User = {
+  __typename?: 'User';
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  image?: Maybe<Scalars['String']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
 };

@@ -31,3 +31,33 @@ export async function requireOwnedClass(classId: string, ownerIds: string[]) {
   }
   return c;
 }
+
+export async function requireOwnerStrict(classId: string, ownerIds: string[]) {
+  const prisma = await getPrisma();
+  const c = await prisma.class.findFirst({
+    where: { id: classId, ownerId: { in: ownerIds } },
+  });
+  if (!c) {
+    throw new Error("Not found");
+  }
+  return c;
+}
+
+// ponytail: requireOwnedOrInvited unifies owner + invited check. If invite-only
+// access becomes a security concern, split into separate lookup.
+export async function requireOwnedOrInvited(classId: string, ownerIds: string[]) {
+  const prisma = await getPrisma();
+  const c = await prisma.class.findFirst({
+    where: {
+      id: classId,
+      OR: [
+        { ownerId: { in: ownerIds } },
+        { invitedUserIds: { hasSome: ownerIds } },
+      ],
+    },
+  });
+  if (!c) {
+    throw new Error("Not found");
+  }
+  return c;
+}

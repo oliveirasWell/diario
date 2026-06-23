@@ -25,6 +25,7 @@ model Class {
   startDate     DateTime?
   endDate       DateTime?
   excludedDates DateTime[] @default([])
+  invitedUserIds String[]   @default([])
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 

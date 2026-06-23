@@ -1,5 +1,5 @@
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
+import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited, requireOwnerStrict } from "../auth";
 import { getPrisma } from "../prisma";
 import type {
   MutationCreateClassArgs,
@@ -12,6 +12,19 @@ import type {
 export const classFieldResolvers = {
   Class: {
     daysOfWeek: (parent: { daysOfWeek?: number[] }) => parent.daysOfWeek ?? [],
+
+    owner: async (parent: { ownerId: string }) => {
+      const prisma = await getPrisma();
+      return prisma.user.findUnique({ where: { id: parent.ownerId } });
+    },
+
+    invitedUserIds: async (parent: { ownerId: string; invitedUserIds?: string[] }, _: unknown, ctx: GraphQLContext) => {
+      // ponytail: hide invited list from non-owners. Resolver-level, not DB-level.
+      if (parent.ownerId === ctx.user?.prismaUserId) {
+        return parent.invitedUserIds ?? [];
+      }
+      return [];
+    },
   },
 };
 
@@ -22,7 +35,14 @@ export const classQueryResolvers = {
       return [];
     }
     const prisma = await getPrisma();
-    return prisma.class.findMany({ where: { ownerId: { in: ownerIds } } });
+    return prisma.class.findMany({
+      where: {
+        OR: [
+          { ownerId: { in: ownerIds } },
+          { invitedUserIds: { hasSome: ownerIds } },
+        ],
+      },
+    });
   },
 
   class: async (_: unknown, { id }: QueryClassArgs, ctx: GraphQLContext) => {
@@ -31,7 +51,26 @@ export const classQueryResolvers = {
       return null;
     }
     const prisma = await getPrisma();
-    return prisma.class.findFirst({ where: { id, ownerId: { in: ownerIds } } });
+    return prisma.class.findFirst({
+      where: {
+        id,
+        OR: [
+          { ownerId: { in: ownerIds } },
+          { invitedUserIds: { hasSome: ownerIds } },
+        ],
+      },
+    });
+  },
+
+  classInviteInfo: async (_: unknown, { id }: { id: string }) => {
+    const prisma = await getPrisma();
+    const c = await prisma.class.findUnique({ where: { id } });
+    if (!c) {
+      return null;
+    }
+    const owner = await prisma.user.findUnique({ where: { id: c.ownerId } });
+    // ponytail: public-ish lookup. Only exposes name + ownerName. Safe enough.
+    return { id: c.id, name: c.name, ownerName: owner?.name ?? null };
   },
 };
 
@@ -61,7 +100,7 @@ export const classMutationResolvers = {
   ) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
-    const c = await requireOwnedClass(args.id, ownerIds);
+    const c = await requireOwnedOrInvited(args.id, ownerIds);
     return prisma.class.update({
       where: { id: args.id },
       data: {
@@ -74,7 +113,7 @@ export const classMutationResolvers = {
 
   renameClass: async (_: unknown, args: MutationRenameClassArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
-    await requireOwnedClass(args.id, ownerIds);
+    await requireOwnedOrInvited(args.id, ownerIds);
     const name = args.name.trim();
     if (!name) {
       throw new Error("Nome é obrigatório");
@@ -88,7 +127,7 @@ export const classMutationResolvers = {
 
   deleteClass: async (_: unknown, { id }: MutationDeleteClassArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
-    await requireOwnedClass(id, ownerIds);
+    await requireOwnedOrInvited(id, ownerIds);
     const prisma = await getPrisma();
     await prisma.$transaction(async (tx) => {
       const sessions = await tx.attendanceSession.findMany({ where: { classId: id } });
@@ -103,5 +142,31 @@ export const classMutationResolvers = {
       await tx.class.delete({ where: { id } });
     });
     return true;
+  },
+
+  createInviteLink: async (_: unknown, { classId }: { classId: string }, ctx: GraphQLContext) => {
+    const ownerIds = requireOwnerIds(ctx);
+    await requireOwnerStrict(classId, ownerIds);
+    const origin = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    // ponytail: classId in URL. Token-based links if link-sharing becomes an issue.
+    return `${origin}/invite/${classId}`;
+  },
+
+  acceptInvite: async (_: unknown, { id }: { id: string }, ctx: GraphQLContext) => {
+    const ownerIds = requireOwnerIds(ctx);
+    const prisma = await getPrisma();
+    const c = await prisma.class.findUnique({ where: { id } });
+    if (!c) {
+      throw new Error("Not found");
+    }
+    // ponytail: idempotent — if already invited, just return class.
+    const alreadyInvited = c.invitedUserIds?.some((uid) => ownerIds.includes(uid)) ?? false;
+    if (alreadyInvited) {
+      return c;
+    }
+    return prisma.class.update({
+      where: { id },
+      data: { invitedUserIds: { push: ownerIds[0] } },
+    });
   },
 };
