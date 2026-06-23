@@ -2,11 +2,11 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
-  '@apollo/protobufjs': true
-  '@parcel/watcher': true
-  '@prisma/client': true
-  '@prisma/engines': true
-  '@sentry/cli': true
+  "@apollo/protobufjs": true
+  "@parcel/watcher": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  "@sentry/cli": true
   prisma: false
   sharp: false
   unrs-resolver: false

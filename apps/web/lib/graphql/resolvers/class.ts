@@ -18,14 +18,18 @@ export const classFieldResolvers = {
 export const classQueryResolvers = {
   classes: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
     const prisma = await getPrisma();
     return prisma.class.findMany({ where: { ownerId: { in: ownerIds } } });
   },
 
   class: async (_: unknown, { id }: QueryClassArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return null;
+    if (!ownerIds.length) {
+      return null;
+    }
     const prisma = await getPrisma();
     return prisma.class.findFirst({ where: { id, ownerId: { in: ownerIds } } });
   },
@@ -34,7 +38,9 @@ export const classQueryResolvers = {
 export const classMutationResolvers = {
   createClass: async (_: unknown, args: MutationCreateClassArgs, ctx: GraphQLContext) => {
     const ownerId = ctx.user?.prismaUserId;
-    if (!ownerId) throw new Error("Unauthorized");
+    if (!ownerId) {
+      throw new Error("Unauthorized");
+    }
     const prisma = await getPrisma();
     return prisma.class.create({
       data: {
@@ -48,7 +54,11 @@ export const classMutationResolvers = {
     });
   },
 
-  updateClassSchedule: async (_: unknown, args: MutationUpdateClassScheduleArgs, ctx: GraphQLContext) => {
+  updateClassSchedule: async (
+    _: unknown,
+    args: MutationUpdateClassScheduleArgs,
+    ctx: GraphQLContext,
+  ) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const c = await requireOwnedClass(args.id, ownerIds);
@@ -66,7 +76,9 @@ export const classMutationResolvers = {
     const ownerIds = requireOwnerIds(ctx);
     await requireOwnedClass(args.id, ownerIds);
     const name = args.name.trim();
-    if (!name) throw new Error("Nome é obrigatório");
+    if (!name) {
+      throw new Error("Nome é obrigatório");
+    }
     const prisma = await getPrisma();
     return prisma.class.update({
       where: { id: args.id },
@@ -80,7 +92,9 @@ export const classMutationResolvers = {
     const prisma = await getPrisma();
     await prisma.$transaction(async (tx) => {
       const sessions = await tx.attendanceSession.findMany({ where: { classId: id } });
-      await tx.attendanceRecord.deleteMany({ where: { sessionId: { in: sessions.map((s) => s.id) } } });
+      await tx.attendanceRecord.deleteMany({
+        where: { sessionId: { in: sessions.map((s) => s.id) } },
+      });
       await tx.attendanceSession.deleteMany({ where: { classId: id } });
       const evals = await tx.evaluation.findMany({ where: { classId: id } });
       await tx.grade.deleteMany({ where: { evaluationId: { in: evals.map((e) => e.id) } } });

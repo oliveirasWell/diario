@@ -60,13 +60,17 @@ export function EditNameDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <div className="space-y-2">
-          <label className="block text-sm font-medium" htmlFor="edit-name-input">{label}</label>
+          <label className="block text-sm font-medium" htmlFor="edit-name-input">
+            {label}
+          </label>
           <Input
             id="edit-name-input"
             value={name}
             onChange={(e) => {
               setName(e.target.value);
-              if (validationError) setValidationError(null);
+              if (validationError) {
+                setValidationError(null);
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
@@ -76,14 +80,23 @@ export function EditNameDialog({
             }}
           />
           {validationError && (
-            <p className="text-sm text-red-600" role="alert">{validationError}</p>
+            <p className="text-sm text-red-600" role="alert">
+              {validationError}
+            </p>
           )}
         </div>
         {errorMessage && (
-          <p className="text-sm text-destructive" role="alert">{errorMessage}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {errorMessage}
+          </p>
         )}
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
             {cancelLabel}
           </Button>
           <Button type="button" onClick={() => void handleSave()} disabled={isPending}>

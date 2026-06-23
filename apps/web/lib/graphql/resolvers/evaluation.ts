@@ -10,7 +10,9 @@ import type {
 export const evaluationQueryResolvers = {
   evaluations: async (_: unknown, { classId }: QueryEvaluationsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
     const prisma = await getPrisma();
     return prisma.evaluation.findMany({
       where: { classId, class: { ownerId: { in: ownerIds } } },
@@ -33,13 +35,19 @@ export const evaluationMutationResolvers = {
     });
   },
 
-  deleteEvaluation: async (_: unknown, { id }: MutationDeleteEvaluationArgs, ctx: GraphQLContext) => {
+  deleteEvaluation: async (
+    _: unknown,
+    { id }: MutationDeleteEvaluationArgs,
+    ctx: GraphQLContext,
+  ) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const ev = await prisma.evaluation.findFirst({
       where: { id, class: { ownerId: { in: ownerIds } } },
     });
-    if (!ev) throw new Error("Not found");
+    if (!ev) {
+      throw new Error("Not found");
+    }
     await prisma.grade.deleteMany({ where: { evaluationId: id } });
     await prisma.evaluation.delete({ where: { id } });
     return true;

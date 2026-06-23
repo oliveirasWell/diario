@@ -6,12 +6,16 @@ import type { MutationUpsertGradeArgs, QueryGradesByClassArgs } from "@/src/gql/
 export const gradeQueryResolvers = {
   gradesByClass: async (_: unknown, { classId }: QueryGradesByClassArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
       where: { id: classId, ownerId: { in: ownerIds } },
     });
-    if (!c) return [];
+    if (!c) {
+      return [];
+    }
     return prisma.grade.findMany({
       where: { evaluation: { classId } },
     });
@@ -25,11 +29,15 @@ export const gradeMutationResolvers = {
     const enr = await prisma.enrollment.findFirst({
       where: { id: args.enrollmentId, class: { ownerId: { in: ownerIds } } },
     });
-    if (!enr) throw new Error("Not found");
+    if (!enr) {
+      throw new Error("Not found");
+    }
     const ev = await prisma.evaluation.findFirst({
       where: { id: args.evaluationId, classId: enr.classId },
     });
-    if (!ev) throw new Error("Not found");
+    if (!ev) {
+      throw new Error("Not found");
+    }
     return prisma.grade.upsert({
       where: {
         enrollmentId_evaluationId: {

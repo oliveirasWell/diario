@@ -18,16 +18,35 @@
     "approve:prisma": "pnpm approve-builds prisma @prisma/client @prisma/engines",
     "env:sync": "bash scripts/env-sync.sh",
     "env:push:web": "cp apps/web/.env.local .env.local",
-    "setup:all": "pnpm env:sync && pnpm approve:prisma && pnpm db:generate && pnpm db:push:auto",
+    "setup:all": "pnpm env:sync && pnpm approve:prisma && pnpm db:generate && pnpm db:push:auto && pnpm codegen:web",
     "dev:local": "bash scripts/dev.sh",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
     "lint": "turbo run lint",
     "codegen": "turbo run codegen",
     "codegen:web": "pnpm --filter web graphql-codegen",
-    "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/"
+    "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/web/src/gql/**": "",
+    "apps/web/**/*.{ts,tsx,js,jsx,mjs}": [
+      "prettier --write",
+      "pnpm --filter web exec eslint --fix"
+    ],
+    "packages/db/**/*.ts": [
+      "prettier --write"
+    ],
+    "*.{json,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.4",
     "turbo": "2.0.6"
   }
 }

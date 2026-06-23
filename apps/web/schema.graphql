@@ -11,7 +11,13 @@ type Query {
 }
 
 type Mutation {
-  createClass(name: String!, year: Int!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
+  createClass(
+    name: String!
+    year: Int!
+    daysOfWeek: [Int!]
+    startDate: DateTime
+    endDate: DateTime
+  ): Class!
   updateClassSchedule(id: ID!, daysOfWeek: [Int!], startDate: DateTime, endDate: DateTime): Class!
   deleteClass(id: ID!): Boolean!
   renameClass(id: ID!, name: String!): Class!
@@ -22,7 +28,12 @@ type Mutation {
   deleteEvaluation(id: ID!): Boolean!
   upsertGrade(enrollmentId: ID!, evaluationId: ID!, score: Float!): Grade!
   setEnrollmentConcept(enrollmentId: ID!, concept: String): Enrollment!
-  markAttendance(classId: ID!, date: DateTime!, enrollmentId: ID!, status: AttendanceStatus): Boolean!
+  markAttendance(
+    classId: ID!
+    date: DateTime!
+    enrollmentId: ID!
+    status: AttendanceStatus
+  ): Boolean!
   markAllPresent(classId: ID!, date: DateTime!): Boolean!
   excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
 }

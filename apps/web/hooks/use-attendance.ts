@@ -37,17 +37,17 @@ function patchAttendanceRecords(
   records: AttendanceRecord[],
   enrollmentId: string,
   date: Date,
-  status: AttendanceStatus | null
+  status: AttendanceStatus | null,
 ): AttendanceRecord[] {
   const dK = attendanceDayKey(date);
   const sessionDate = normalizeAttendanceDate(date).toISOString();
   if (status === null) {
     return records.filter(
-      (r) => !(r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK)
+      (r) => !(r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK),
     );
   }
   const idx = records.findIndex(
-    (r) => r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK
+    (r) => r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK,
   );
   if (idx >= 0) {
     const next = records.slice();
@@ -90,7 +90,9 @@ export function useAttendanceMutation(classId: string) {
       return { prev, key } satisfies MutationCtx;
     },
     onError: (_err, _vars, ctx?: MutationCtx) => {
-      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
+      if (ctx) {
+        qc.setQueryData(ctx.key, ctx.prev);
+      }
     },
   });
 
@@ -114,15 +116,16 @@ export function useAttendanceMutation(classId: string) {
       return { prev, key } satisfies MutationCtx;
     },
     onError: (_err, _vars, ctx?: MutationCtx) => {
-      if (ctx) qc.setQueryData(ctx.key, ctx.prev);
+      if (ctx) {
+        qc.setQueryData(ctx.key, ctx.prev);
+      }
     },
   });
 
   return {
     cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
       mutation.mutate({ ...vars, status: nextStatus(current) }),
-    markPresent: (vars: CellVars) =>
-      mutation.mutate({ ...vars, status: AttendanceStatus.Present }),
+    markPresent: (vars: CellVars) => mutation.mutate({ ...vars, status: AttendanceStatus.Present }),
     markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
     errorMessage: mutation.errorMessage ?? markAllMutation.errorMessage,
     clearError: () => {

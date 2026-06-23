@@ -13,7 +13,9 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             staleTime: 0,
             refetchOnWindowFocus: true,
             retry: (failureCount, error) => {
-              if (isUnauthorizedError(error)) return false;
+              if (isUnauthorizedError(error)) {
+                return false;
+              }
               return failureCount < 1;
             },
           },
@@ -21,7 +23,7 @@ export function QueryProvider({ children }: { children: ReactNode }) {
             retry: false,
           },
         },
-      })
+      }),
   );
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }

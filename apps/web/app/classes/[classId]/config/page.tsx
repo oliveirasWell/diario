@@ -48,7 +48,9 @@ export default function ClassConfigPage() {
   });
 
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
     reset({
       daysOfWeek: data.daysOfWeek ?? [],
       startDate: toDateOnly(data.startDate),
@@ -69,7 +71,7 @@ export default function ClassConfigPage() {
   const onToggleDay = (v: number) => {
     const selected = new Set(watch("daysOfWeek") ?? []);
     if (selected.has(v)) {
-      selected.delete(v); 
+      selected.delete(v);
     } else {
       selected.add(v);
     }
@@ -87,7 +89,9 @@ export default function ClassConfigPage() {
   return (
     <div className="space-y-6">
       {isError && (
-        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {formatGraphqlError(error)}
+        </p>
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
@@ -108,21 +112,29 @@ export default function ClassConfigPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="startDate" className="block text-sm font-medium">Início</label>
+            <label htmlFor="startDate" className="block text-sm font-medium">
+              Início
+            </label>
             <Input id="startDate" type="date" className="h-12 sm:h-10" {...register("startDate")} />
           </div>
           <div>
-            <label htmlFor="endDate" className="block text-sm font-medium">Fim</label>
+            <label htmlFor="endDate" className="block text-sm font-medium">
+              Fim
+            </label>
             <Input id="endDate" type="date" className="h-12 sm:h-10" {...register("endDate")} />
           </div>
         </div>
 
         {mutation.errorMessage && (
-          <p className="text-sm text-destructive" role="alert">{mutation.errorMessage}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {mutation.errorMessage}
+          </p>
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Salvando…" : "Salvar"}</Button>
+          <Button type="submit" disabled={mutation.isPending}>
+            {mutation.isPending ? "Salvando…" : "Salvar"}
+          </Button>
         </div>
       </form>
     </div>

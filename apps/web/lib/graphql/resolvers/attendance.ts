@@ -34,7 +34,7 @@ export const attendanceQueryResolvers = {
     }
 
     const excluded = new Set(
-      (c.excludedDates ?? []).map((x) => new Date(x).toISOString().slice(0, 10))
+      (c.excludedDates ?? []).map((x) => new Date(x).toISOString().slice(0, 10)),
     );
 
     const out: Date[] = [];
@@ -81,7 +81,7 @@ export const attendanceQueryResolvers = {
       include: { records: true },
     });
     return sessions.flatMap((s) =>
-      s.records.map((r) => ({ ...r, session: { id: s.id, date: s.date } }))
+      s.records.map((r) => ({ ...r, session: { id: s.id, date: s.date } })),
     );
   },
 };
@@ -97,11 +97,15 @@ export const attendanceMutationResolvers = {
     });
 
     if (args.status == null) {
-      if (!session) return true;
+      if (!session) {
+        return true;
+      }
       const existing = await prisma.attendanceRecord.findFirst({
         where: { sessionId: session.id, enrollmentId: args.enrollmentId },
       });
-      if (!existing) return true;
+      if (!existing) {
+        return true;
+      }
       await prisma.attendanceRecord.delete({ where: { id: existing.id } });
       return true;
     }
@@ -175,7 +179,11 @@ export const attendanceMutationResolvers = {
     return true;
   },
 
-  excludeAttendanceDate: async (_: unknown, args: MutationExcludeAttendanceDateArgs, ctx: GraphQLContext) => {
+  excludeAttendanceDate: async (
+    _: unknown,
+    args: MutationExcludeAttendanceDateArgs,
+    ctx: GraphQLContext,
+  ) => {
     const ownerIds = requireOwnerIds(ctx);
     const c = await requireOwnedClass(args.classId, ownerIds);
     const prisma = await getPrisma();

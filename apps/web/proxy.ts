@@ -6,7 +6,11 @@ const PUBLIC_PATHS = ["/login", "/api/auth"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p)) || pathname.startsWith("/_next") || pathname.startsWith("/favicon")) {
+  if (
+    PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon")
+  ) {
     return NextResponse.next();
   }
 
@@ -32,8 +36,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!.+\\.)(?!.+api/auth).*)",
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!.+\\.)(?!.+api/auth).*)", "/(api|trpc)(.*)"],
 };

@@ -40,7 +40,9 @@ export default function RootLayout({
         <AuthSessionProvider>
           <QueryProvider>
             <Header />
-            <main className="flex-1 w-full mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">{children}</main>
+            <main className="flex-1 w-full mx-auto max-w-full sm:max-w-6xl px-3 sm:px-6">
+              {children}
+            </main>
           </QueryProvider>
         </AuthSessionProvider>
         <SpeedInsights />

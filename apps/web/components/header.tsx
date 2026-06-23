@@ -9,7 +9,9 @@ export function Header() {
   const { status } = useSession();
   const pathname = usePathname();
 
-  if (pathname === "/login") return null;
+  if (pathname === "/login") {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-30 w-full bg-muted/30">

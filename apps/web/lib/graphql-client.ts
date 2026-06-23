@@ -8,9 +8,15 @@ function getGqlEndpoint() {
     }
     return `${window.location.origin}/api/graphql`;
   }
-  if (process.env.NEXTAUTH_URL) return `${process.env.NEXTAUTH_URL.replace(/\/$/, "")}/api/graphql`;
-  if (process.env.NODE_ENV === "development") return "http://localhost:3000/api/graphql";
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}/api/graphql`;
+  if (process.env.NEXTAUTH_URL) {
+    return `${process.env.NEXTAUTH_URL.replace(/\/$/, "")}/api/graphql`;
+  }
+  if (process.env.NODE_ENV === "development") {
+    return "http://localhost:3000/api/graphql";
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api/graphql`;
+  }
   return "http://localhost:3000/api/graphql";
 }
 

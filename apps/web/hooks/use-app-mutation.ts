@@ -4,7 +4,7 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 import { formatGraphqlError } from "@/lib/graphql-error";
 
 export function useAppMutation<TData, TVariables, TContext = unknown>(
-  options: UseMutationOptions<TData, unknown, TVariables, TContext>
+  options: UseMutationOptions<TData, unknown, TVariables, TContext>,
 ) {
   const mutation = useMutation(options);
   return {

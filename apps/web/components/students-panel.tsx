@@ -7,6 +7,7 @@ import {
   useUnenrollStudentMutation,
 } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { EditNameDialog } from "@/components/edit-name-dialog";
@@ -14,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatGraphqlError } from "@/lib/graphql-error";
+import { sortByStudentName } from "@/lib/utils";
 import { useState } from "react";
 
 const NewStudentSchema = z.object({
@@ -29,10 +31,18 @@ export function StudentsPanel({ classId }: { classId: string }) {
   const createAndEnroll = useCreateAndEnrollMutation(classId);
   const unenroll = useUnenrollStudentMutation(classId);
   const renameStudent = useRenameStudentMutation(classId);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [deleteTarget, setDeleteTarget] = useState<EditTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewStudentInput>({
+  const sorted = data ? sortByStudentName(data, sortDir) : data;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<NewStudentInput>({
     resolver: zodResolver(NewStudentSchema),
   });
 
@@ -46,7 +56,9 @@ export function StudentsPanel({ classId }: { classId: string }) {
   };
 
   const onDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget) {
+      return;
+    }
     try {
       await unenroll.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
@@ -56,7 +68,9 @@ export function StudentsPanel({ classId }: { classId: string }) {
   };
 
   const onRename = async (name: string) => {
-    if (!editTarget) return;
+    if (!editTarget) {
+      return;
+    }
     try {
       await renameStudent.mutateAsync({ enrollmentId: editTarget.id, name });
       setEditTarget(null);
@@ -68,11 +82,16 @@ export function StudentsPanel({ classId }: { classId: string }) {
   return (
     <div className="space-y-4 sm:space-y-6">
       {isError && (
-        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {formatGraphqlError(error)}
+        </p>
       )}
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
         <h3 className="font-normal">Adicionar aluno à turma</h3>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="grid grid-cols-1 items-end gap-2 sm:gap-3 md:grid-cols-3"
+        >
           <div>
             <label className="block text-sm font-medium">Nome</label>
             <Input placeholder="Ex.: Maria Silva" {...register("name")} />
@@ -84,11 +103,15 @@ export function StudentsPanel({ classId }: { classId: string }) {
             {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
           </div>
           <div className="flex gap-2">
-            <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>Adicionar</Button>
+            <Button type="submit" disabled={isSubmitting || createAndEnroll.isPending}>
+              Adicionar
+            </Button>
           </div>
         </form>
         {createAndEnroll.errorMessage && (
-          <p className="text-sm text-destructive" role="alert">{createAndEnroll.errorMessage}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {createAndEnroll.errorMessage}
+          </p>
         )}
       </div>
 
@@ -97,12 +120,25 @@ export function StudentsPanel({ classId }: { classId: string }) {
       ) : (
         <div className="bg-muted/25">
           <div className="grid grid-cols-3 bg-muted/50 px-4 py-2 font-normal">
-            <div>Nome</div>
+            <button
+              className="inline-flex items-center gap-1 text-left"
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            >
+              Nome
+              {sortDir === "asc" ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
+            </button>
             <div>Email</div>
             <div className="text-right">Ações</div>
           </div>
-          {data?.map((e) => (
-            <div key={e.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
+          {sorted?.map((e) => (
+            <div
+              key={e.id}
+              className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40"
+            >
               <div>{e.student.name}</div>
               <div className="truncate">{e.student.email || "—"}</div>
               <div className="flex justify-end gap-1">

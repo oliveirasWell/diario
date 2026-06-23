@@ -1,7 +1,11 @@
 import * as XLSX from "xlsx";
 
 export type ExportGradeEval = { id: string; title: string; maxScore: number };
-type ExportEnrollment = { id: string; student: { id: string; name: string }; concept?: string | null };
+type ExportEnrollment = {
+  id: string;
+  student: { id: string; name: string };
+  concept?: string | null;
+};
 type ExportGrade = { enrollmentId: string; evaluationId: string; score: number };
 
 export function exportGradesToXlsx(opts: {
@@ -14,7 +18,9 @@ export function exportGradesToXlsx(opts: {
 
   // Index grades by enrollment|evaluation
   const idx = new Map<string, number>();
-  for (const g of grades) idx.set(`${g.enrollmentId}|${g.evaluationId}`, g.score);
+  for (const g of grades) {
+    idx.set(`${g.enrollmentId}|${g.evaluationId}`, g.score);
+  }
 
   // Header: Aluno, each evaluation title, Média, Conceito
   const header = ["Aluno", ...evaluations.map((e) => e.title), "Média", "Conceito"];

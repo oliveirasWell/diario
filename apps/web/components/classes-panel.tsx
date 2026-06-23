@@ -1,6 +1,11 @@
 "use client";
 
-import { useClassesQuery, useCreateClassMutation, useDeleteClassMutation, useRenameClassMutation } from "@/hooks/use-classes";
+import {
+  useClassesQuery,
+  useCreateClassMutation,
+  useDeleteClassMutation,
+  useRenameClassMutation,
+} from "@/hooks/use-classes";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,7 +46,12 @@ export function ClassesPanel() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<NewClassInput>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<NewClassInput>({
     resolver: zodResolver(NewClassSchema),
     defaultValues: { year: new Date().getFullYear() },
   });
@@ -57,7 +67,9 @@ export function ClassesPanel() {
   };
 
   const onDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget) {
+      return;
+    }
     try {
       await deleteClass.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
@@ -67,7 +79,9 @@ export function ClassesPanel() {
   };
 
   const onRename = async (name: string) => {
-    if (!editTarget) return;
+    if (!editTarget) {
+      return;
+    }
     try {
       await renameClass.mutateAsync({ id: editTarget.id, name });
       setEditTarget(null);
@@ -83,11 +97,15 @@ export function ClassesPanel() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex justify-end">
-        <Button type="button" onClick={() => setCreateOpen(true)}>Nova turma</Button>
+        <Button type="button" onClick={() => setCreateOpen(true)}>
+          Nova turma
+        </Button>
       </div>
 
       {isError && (
-        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {formatGraphqlError(error)}
+        </p>
       )}
 
       {isLoading ? (
@@ -100,7 +118,10 @@ export function ClassesPanel() {
             <div className="text-right">Ações</div>
           </div>
           {data?.map((c) => (
-            <div key={c.id} className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40">
+            <div
+              key={c.id}
+              className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40"
+            >
               <a
                 href={`/classes/${c.id}`}
                 className="underline-offset-2 hover:underline"
@@ -139,7 +160,9 @@ export function ClassesPanel() {
         open={createOpen}
         onOpenChange={(open) => {
           setCreateOpen(open);
-          if (!open) createClass.clearError();
+          if (!open) {
+            createClass.clearError();
+          }
         }}
       >
         <DialogContent showCloseButton>
@@ -148,20 +171,28 @@ export function ClassesPanel() {
           </DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <label className="block text-sm font-medium" htmlFor="class-name">Nome</label>
+              <label className="block text-sm font-medium" htmlFor="class-name">
+                Nome
+              </label>
               <Input id="class-name" placeholder="Ex.: 1ºA" {...register("name")} />
               {errors.name && <p className="text-sm text-red-600">{errors.name.message}</p>}
             </div>
             <div className="space-y-2">
-              <label className="block text-sm font-medium" htmlFor="class-year">Ano</label>
+              <label className="block text-sm font-medium" htmlFor="class-year">
+                Ano
+              </label>
               <Input id="class-year" type="number" {...register("year", { valueAsNumber: true })} />
               {errors.year && <p className="text-sm text-red-600">{errors.year.message}</p>}
             </div>
             {createClass.errorMessage && (
-              <p className="text-sm text-destructive" role="alert">{createClass.errorMessage}</p>
+              <p className="text-sm text-destructive" role="alert">
+                {createClass.errorMessage}
+              </p>
             )}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>Cancelar</Button>
+              <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                Cancelar
+              </Button>
               <Button type="submit" disabled={isSubmitting || createClass.isPending}>
                 {createClass.isPending ? "Criando…" : "Criar"}
               </Button>

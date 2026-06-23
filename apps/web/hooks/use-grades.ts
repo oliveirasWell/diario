@@ -16,7 +16,12 @@ export function useGradesByClass(classId: string) {
 export function useUpsertGrade() {
   const qc = useQueryClient();
   return useAppMutation({
-    mutationFn: async (vars: { enrollmentId: string; evaluationId: string; score: number; classId: string }) => {
+    mutationFn: async (vars: {
+      enrollmentId: string;
+      evaluationId: string;
+      score: number;
+      classId: string;
+    }) => {
       const data = await gqlRequest(UpsertGradeDocument, {
         enrollmentId: vars.enrollmentId,
         evaluationId: vars.evaluationId,
