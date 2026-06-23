@@ -1,7 +1,7 @@
 import { normalizeAttendanceDate, sessionDayBounds } from "@/lib/attendance-date";
 import { toPrismaAttendanceStatus, PrismaAttendanceStatus } from "@/lib/graphql/db-bridge";
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
+import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
 import type {
   MutationExcludeAttendanceDateArgs,
@@ -20,7 +20,10 @@ export const attendanceQueryResolvers = {
 
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
-      where: { id: args.classId, ownerId: { in: ownerIds } },
+      where: {
+        id: args.classId,
+        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+      },
     });
     if (!c) {
       return [];
@@ -57,7 +60,10 @@ export const attendanceQueryResolvers = {
 
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
-      where: { id: args.classId, ownerId: { in: ownerIds } },
+      where: {
+        id: args.classId,
+        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+      },
     });
     if (!c) {
       return [];
@@ -89,7 +95,7 @@ export const attendanceQueryResolvers = {
 export const attendanceMutationResolvers = {
   markAttendance: async (_: unknown, args: MutationMarkAttendanceArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
-    await requireOwnedClass(args.classId, ownerIds);
+    await requireOwnedOrInvited(args.classId, ownerIds);
     const prisma = await getPrisma();
     const bounds = sessionDayBounds(args.date);
     const session = await prisma.attendanceSession.findFirst({
@@ -140,7 +146,7 @@ export const attendanceMutationResolvers = {
 
   markAllPresent: async (_: unknown, args: MutationMarkAllPresentArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
-    await requireOwnedClass(args.classId, ownerIds);
+    await requireOwnedOrInvited(args.classId, ownerIds);
     const prisma = await getPrisma();
     const bounds = sessionDayBounds(args.date);
     const normalizedDate = normalizeAttendanceDate(args.date);
@@ -185,7 +191,7 @@ export const attendanceMutationResolvers = {
     ctx: GraphQLContext,
   ) => {
     const ownerIds = requireOwnerIds(ctx);
-    const c = await requireOwnedClass(args.classId, ownerIds);
+    const c = await requireOwnedOrInvited(args.classId, ownerIds);
     const prisma = await getPrisma();
     const d = new Date(args.date);
     const dk = d.toISOString().slice(0, 10);

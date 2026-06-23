@@ -11,7 +11,10 @@ export const gradeQueryResolvers = {
     }
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
-      where: { id: classId, ownerId: { in: ownerIds } },
+      where: {
+        id: classId,
+        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+      },
     });
     if (!c) {
       return [];
@@ -27,7 +30,12 @@ export const gradeMutationResolvers = {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const enr = await prisma.enrollment.findFirst({
-      where: { id: args.enrollmentId, class: { ownerId: { in: ownerIds } } },
+      where: {
+        id: args.enrollmentId,
+        class: {
+          OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+        },
+      },
     });
     if (!enr) {
       throw new Error("Not found");

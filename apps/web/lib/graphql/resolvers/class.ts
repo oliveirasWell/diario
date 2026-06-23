@@ -18,7 +18,11 @@ export const classFieldResolvers = {
       return prisma.user.findUnique({ where: { id: parent.ownerId } });
     },
 
-    invitedUserIds: async (parent: { ownerId: string; invitedUserIds?: string[] }, _: unknown, ctx: GraphQLContext) => {
+    invitedUserIds: async (
+      parent: { ownerId: string; invitedUserIds?: string[] },
+      _: unknown,
+      ctx: GraphQLContext,
+    ) => {
       // ponytail: hide invited list from non-owners. Resolver-level, not DB-level.
       if (parent.ownerId === ctx.user?.prismaUserId) {
         return parent.invitedUserIds ?? [];
@@ -37,10 +41,7 @@ export const classQueryResolvers = {
     const prisma = await getPrisma();
     return prisma.class.findMany({
       where: {
-        OR: [
-          { ownerId: { in: ownerIds } },
-          { invitedUserIds: { hasSome: ownerIds } },
-        ],
+        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
       },
     });
   },
@@ -54,10 +55,7 @@ export const classQueryResolvers = {
     return prisma.class.findFirst({
       where: {
         id,
-        OR: [
-          { ownerId: { in: ownerIds } },
-          { invitedUserIds: { hasSome: ownerIds } },
-        ],
+        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
       },
     });
   },

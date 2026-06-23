@@ -1,5 +1,5 @@
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedClass } from "../auth";
+import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
 import type {
   MutationCreateAndEnrollArgs,
@@ -17,7 +17,12 @@ export const enrollmentQueryResolvers = {
     }
     const prisma = await getPrisma();
     return prisma.enrollment.findMany({
-      where: { classId, class: { ownerId: { in: ownerIds } } },
+      where: {
+        classId,
+        class: {
+          OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+        },
+      },
       include: { student: true },
     });
   },
@@ -26,7 +31,7 @@ export const enrollmentQueryResolvers = {
 export const enrollmentMutationResolvers = {
   createAndEnroll: async (_: unknown, args: MutationCreateAndEnrollArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
-    await requireOwnedClass(args.classId, ownerIds);
+    await requireOwnedOrInvited(args.classId, ownerIds);
     const data: { name: string; email?: string } = { name: args.name };
     const normalized = typeof args.email === "string" ? args.email.trim() : undefined;
     if (normalized) {
@@ -50,7 +55,12 @@ export const enrollmentMutationResolvers = {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
-      where: { id: enrollmentId, class: { ownerId: { in: ownerIds } } },
+      where: {
+        id: enrollmentId,
+        class: {
+          OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+        },
+      },
     });
     if (!found) {
       throw new Error("Not found");
@@ -74,7 +84,12 @@ export const enrollmentMutationResolvers = {
     }
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
-      where: { id: args.enrollmentId, class: { ownerId: { in: ownerIds } } },
+      where: {
+        id: args.enrollmentId,
+        class: {
+          OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+        },
+      },
     });
     if (!found) {
       throw new Error("Not found");
@@ -97,7 +112,12 @@ export const enrollmentMutationResolvers = {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const enr = await prisma.enrollment.findFirst({
-      where: { id: enrollmentId, class: { ownerId: { in: ownerIds } } },
+      where: {
+        id: enrollmentId,
+        class: {
+          OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
+        },
+      },
     });
     if (!enr) {
       throw new Error("Not found");

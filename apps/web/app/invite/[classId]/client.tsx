@@ -38,9 +38,7 @@ export function InviteClient({ classId }: { classId: string }) {
 
   if (isError) {
     return (
-      <div className="p-6 text-center text-sm text-destructive">
-        {formatGraphqlError(error)}
-      </div>
+      <div className="p-6 text-center text-sm text-destructive">{formatGraphqlError(error)}</div>
     );
   }
 
@@ -50,13 +48,21 @@ export function InviteClient({ classId }: { classId: string }) {
 
   // ponytail: dialog is always open; decline navigates away. Simple enough.
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next) { handleDecline(); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          handleDecline();
+        }
+      }}
+    >
       <DialogContent showCloseButton={false} className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Convite</DialogTitle>
         </DialogHeader>
         <DialogDescription>
-          {data.ownerName ?? "Um usuário"} te convidou para administrar a turma &ldquo;{data.name}&rdquo;. Deseja aceitar?
+          {data.ownerName ?? "Um usuário"} te convidou para administrar a turma &ldquo;{data.name}
+          &rdquo;. Deseja aceitar?
         </DialogDescription>
         {acceptInvite.errorMessage && (
           <p className="text-sm text-destructive" role="alert">
