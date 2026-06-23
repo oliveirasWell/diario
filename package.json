@@ -27,9 +27,24 @@
     "codegen:web": "pnpm --filter web graphql-codegen",
     "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "apps/web/**/*.{ts,tsx,js,jsx,mjs}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "packages/db/**/*.ts": [
+      "prettier --write"
+    ],
+    "*.{json,css,md,yml,yaml}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.4",
     "turbo": "2.0.6"
   }
