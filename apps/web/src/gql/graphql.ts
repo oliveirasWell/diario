@@ -45,11 +45,20 @@ export type Class = {
   daysOfWeek: Array<Scalars['Int']['output']>;
   endDate?: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
+  invitedUserIds: Array<Scalars['ID']['output']>;
   name: Scalars['String']['output'];
+  owner?: Maybe<User>;
   ownerId: Scalars['ID']['output'];
   startDate?: Maybe<Scalars['DateTime']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   year: Scalars['Int']['output'];
+};
+
+export type ClassInviteInfo = {
+  __typename?: 'ClassInviteInfo';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+  ownerName?: Maybe<Scalars['String']['output']>;
 };
 
 export type Enrollment = {
@@ -82,9 +91,11 @@ export type Grade = {
 
 export type Mutation = {
   __typename?: 'Mutation';
+  acceptInvite: Class;
   createAndEnroll: Enrollment;
   createClass: Class;
   createEvaluation: Evaluation;
+  createInviteLink: Scalars['String']['output'];
   deleteClass: Scalars['Boolean']['output'];
   deleteEvaluation: Scalars['Boolean']['output'];
   excludeAttendanceDate: Scalars['Boolean']['output'];
@@ -96,6 +107,11 @@ export type Mutation = {
   unenrollStudent: Scalars['Boolean']['output'];
   updateClassSchedule: Class;
   upsertGrade: Grade;
+};
+
+
+export type MutationAcceptInviteArgs = {
+  id: Scalars['ID']['input'];
 };
 
 
@@ -120,6 +136,11 @@ export type MutationCreateEvaluationArgs = {
   maxScore: Scalars['Float']['input'];
   title: Scalars['String']['input'];
   weight?: InputMaybe<Scalars['Float']['input']>;
+};
+
+
+export type MutationCreateInviteLinkArgs = {
+  classId: Scalars['ID']['input'];
 };
 
 
@@ -195,6 +216,7 @@ export type Query = {
   attendanceDates: Array<Scalars['DateTime']['output']>;
   attendanceRecords: Array<AttendanceRecord>;
   class?: Maybe<Class>;
+  classInviteInfo?: Maybe<ClassInviteInfo>;
   classes: Array<Class>;
   enrollments: Array<Enrollment>;
   evaluations: Array<Evaluation>;
@@ -221,6 +243,11 @@ export type QueryClassArgs = {
 };
 
 
+export type QueryClassInviteInfoArgs = {
+  id: Scalars['ID']['input'];
+};
+
+
 export type QueryEnrollmentsArgs = {
   classId: Scalars['ID']['input'];
 };
@@ -243,6 +270,14 @@ export type Student = {
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
+};
+
+export type User = {
+  __typename?: 'User';
+  email?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  image?: Maybe<Scalars['String']['output']>;
+  name?: Maybe<Scalars['String']['output']>;
 };
 
 export type ClassesQueryVariables = Exact<{ [key: string]: never; }>;
@@ -408,6 +443,27 @@ export type SetConceptMutationVariables = Exact<{
 
 export type SetConceptMutation = { __typename?: 'Mutation', setEnrollmentConcept: { __typename?: 'Enrollment', id: string } };
 
+export type ClassInviteInfoQueryVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type ClassInviteInfoQuery = { __typename?: 'Query', classInviteInfo?: { __typename?: 'ClassInviteInfo', id: string, name: string, ownerName?: string | null } | null };
+
+export type AcceptInviteMutationVariables = Exact<{
+  id: Scalars['ID']['input'];
+}>;
+
+
+export type AcceptInviteMutation = { __typename?: 'Mutation', acceptInvite: { __typename?: 'Class', id: string } };
+
+export type CreateInviteLinkMutationVariables = Exact<{
+  classId: Scalars['ID']['input'];
+}>;
+
+
+export type CreateInviteLinkMutation = { __typename?: 'Mutation', createInviteLink: string };
+
 export type UpdateClassScheduleMutationVariables = Exact<{
   id: Scalars['ID']['input'];
   daysOfWeek?: InputMaybe<Array<Scalars['Int']['input']> | Scalars['Int']['input']>;
@@ -440,4 +496,7 @@ export const CreateEvaluationDocument = {"kind":"Document","definitions":[{"kind
 export const DelEvalDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"DelEval"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"deleteEvaluation"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}]}]}}]} as unknown as DocumentNode<DelEvalMutation, DelEvalMutationVariables>;
 export const UpsertGradeDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpsertGrade"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"enrollmentId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"evaluationId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"score"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Float"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"upsertGrade"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"enrollmentId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"enrollmentId"}}},{"kind":"Argument","name":{"kind":"Name","value":"evaluationId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"evaluationId"}}},{"kind":"Argument","name":{"kind":"Name","value":"score"},"value":{"kind":"Variable","name":{"kind":"Name","value":"score"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"enrollmentId"}},{"kind":"Field","name":{"kind":"Name","value":"evaluationId"}},{"kind":"Field","name":{"kind":"Name","value":"score"}}]}}]}}]} as unknown as DocumentNode<UpsertGradeMutation, UpsertGradeMutationVariables>;
 export const SetConceptDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"SetConcept"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"enrollmentId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"concept"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"String"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"setEnrollmentConcept"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"enrollmentId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"enrollmentId"}}},{"kind":"Argument","name":{"kind":"Name","value":"concept"},"value":{"kind":"Variable","name":{"kind":"Name","value":"concept"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<SetConceptMutation, SetConceptMutationVariables>;
+export const ClassInviteInfoDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"query","name":{"kind":"Name","value":"ClassInviteInfo"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"classInviteInfo"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}},{"kind":"Field","name":{"kind":"Name","value":"name"}},{"kind":"Field","name":{"kind":"Name","value":"ownerName"}}]}}]}}]} as unknown as DocumentNode<ClassInviteInfoQuery, ClassInviteInfoQueryVariables>;
+export const AcceptInviteDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"AcceptInvite"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"acceptInvite"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<AcceptInviteMutation, AcceptInviteMutationVariables>;
+export const CreateInviteLinkDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"CreateInviteLink"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"classId"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"createInviteLink"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"classId"},"value":{"kind":"Variable","name":{"kind":"Name","value":"classId"}}}]}]}}]} as unknown as DocumentNode<CreateInviteLinkMutation, CreateInviteLinkMutationVariables>;
 export const UpdateClassScheduleDocument = {"kind":"Document","definitions":[{"kind":"OperationDefinition","operation":"mutation","name":{"kind":"Name","value":"UpdateClassSchedule"},"variableDefinitions":[{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"id"}},"type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"ID"}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"daysOfWeek"}},"type":{"kind":"ListType","type":{"kind":"NonNullType","type":{"kind":"NamedType","name":{"kind":"Name","value":"Int"}}}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"startDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"DateTime"}}},{"kind":"VariableDefinition","variable":{"kind":"Variable","name":{"kind":"Name","value":"endDate"}},"type":{"kind":"NamedType","name":{"kind":"Name","value":"DateTime"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"updateClassSchedule"},"arguments":[{"kind":"Argument","name":{"kind":"Name","value":"id"},"value":{"kind":"Variable","name":{"kind":"Name","value":"id"}}},{"kind":"Argument","name":{"kind":"Name","value":"daysOfWeek"},"value":{"kind":"Variable","name":{"kind":"Name","value":"daysOfWeek"}}},{"kind":"Argument","name":{"kind":"Name","value":"startDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"startDate"}}},{"kind":"Argument","name":{"kind":"Name","value":"endDate"},"value":{"kind":"Variable","name":{"kind":"Name","value":"endDate"}}}],"selectionSet":{"kind":"SelectionSet","selections":[{"kind":"Field","name":{"kind":"Name","value":"id"}}]}}]}}]} as unknown as DocumentNode<UpdateClassScheduleMutation, UpdateClassScheduleMutationVariables>;

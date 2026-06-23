@@ -208,6 +208,30 @@ export const SetConceptDocument = graphql(`
   }
 `);
 
+export const ClassInviteInfoDocument = graphql(`
+  query ClassInviteInfo($id: ID!) {
+    classInviteInfo(id: $id) {
+      id
+      name
+      ownerName
+    }
+  }
+`);
+
+export const AcceptInviteDocument = graphql(`
+  mutation AcceptInvite($id: ID!) {
+    acceptInvite(id: $id) {
+      id
+    }
+  }
+`);
+
+export const CreateInviteLinkDocument = graphql(`
+  mutation CreateInviteLink($classId: ID!) {
+    createInviteLink(classId: $classId)
+  }
+`);
+
 export const UpdateClassScheduleDocument = graphql(`
   mutation UpdateClassSchedule(
     $id: ID!

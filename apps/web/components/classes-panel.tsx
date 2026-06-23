@@ -5,7 +5,9 @@ import {
   useCreateClassMutation,
   useDeleteClassMutation,
   useRenameClassMutation,
+  useCreateInviteLinkMutation,
 } from "@/hooks/use-classes";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,12 +41,15 @@ type EditTarget = { id: string; name: string };
 export function ClassesPanel() {
   const qc = useQueryClient();
   const { data, isLoading, isError, error } = useClassesQuery();
+  const { data: session } = useSession();
   const createClass = useCreateClassMutation();
   const deleteClass = useDeleteClassMutation();
   const renameClass = useRenameClassMutation();
+  const createInviteLink = useCreateInviteLinkMutation();
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const {
     register,
@@ -85,6 +90,17 @@ export function ClassesPanel() {
     try {
       await renameClass.mutateAsync({ id: editTarget.id, name });
       setEditTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const handleShare = async (c: { id: string; name: string }) => {
+    try {
+      const url = await createInviteLink.mutateAsync(c.id);
+      await navigator.clipboard.writeText(url);
+      setCopiedId(c.id);
+      setTimeout(() => setCopiedId(null), 2000);
     } catch {
       // errorMessage shown inline
     }
@@ -132,6 +148,18 @@ export function ClassesPanel() {
               </a>
               <div>{c.year}</div>
               <div className="flex justify-end gap-1">
+                {c.ownerId === session?.user?.prismaUserId && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    title="Compartilhar turma"
+                    onClick={() => handleShare(c)}
+                    disabled={createInviteLink.isPending}
+                  >
+                    {copiedId === c.id ? "✓" : "🔗"}
+                  </Button>
+                )}
                 <Button
                   type="button"
                   variant="ghost"
