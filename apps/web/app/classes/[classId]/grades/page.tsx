@@ -18,7 +18,8 @@ import {
   TablePinHead,
   TableRow,
 } from "@/components/ui/table";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { exportGradesToXlsx } from "@/lib/export-grades";
 
 function GradeInput({
@@ -84,13 +85,18 @@ export default function GradesPage() {
   const mutationError = upsert.errorMessage ?? setConcept.errorMessage;
 
   const [q, setQ] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const list = useMemo(() => {
     const base = enrolls ?? [];
     const filtered = q
       ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
       : base;
-    return filtered.slice().sort((a, b) => a.student.name.localeCompare(b.student.name));
-  }, [enrolls, q]);
+    return [...filtered].sort((a, b) =>
+      sortDir === "asc"
+        ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
+        : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
+    );
+  }, [enrolls, q, sortDir]);
 
   const gradeIndex = useMemo(() => {
     const m = new Map<string, number>();
@@ -157,7 +163,19 @@ export default function GradesPage() {
           <Table className="min-w-max">
             <TableHeader>
               <TableRow>
-                <TablePinHead>Aluno</TablePinHead>
+                <TablePinHead>
+                  <button
+                    className="inline-flex items-center gap-1"
+                    onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                  >
+                    Aluno
+                    {sortDir === "asc" ? (
+                      <ChevronUp className="size-4" />
+                    ) : (
+                      <ChevronDown className="size-4" />
+                    )}
+                  </button>
+                </TablePinHead>
                 {evals?.map((ev) => (
                   <TableHead key={ev.id}>{ev.title}</TableHead>
                 ))}

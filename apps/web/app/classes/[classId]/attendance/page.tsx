@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { MoreVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, MoreVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,6 +70,7 @@ export default function AttendancePage() {
   const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
   const [q, setQ] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const todayKey = attendanceDayKey(new Date());
@@ -99,8 +100,12 @@ export default function AttendancePage() {
     const filtered = q
       ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
       : base;
-    return filtered.slice().sort((a, b) => a.student.name.localeCompare(b.student.name));
-  }, [enrollments, q]);
+    return [...filtered].sort((a, b) =>
+      sortDir === "asc"
+        ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
+        : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
+    );
+  }, [enrollments, q, sortDir]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -199,7 +204,19 @@ export default function AttendancePage() {
             <Table className="min-w-max">
               <TableHeader>
                 <TableRow>
-                  <TablePinHead>Aluno</TablePinHead>
+                  <TablePinHead>
+                    <button
+                      className="inline-flex items-center gap-1"
+                      onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                    >
+                      Aluno
+                      {sortDir === "asc" ? (
+                        <ChevronUp className="size-4" />
+                      ) : (
+                        <ChevronDown className="size-4" />
+                      )}
+                    </button>
+                  </TablePinHead>
                   {visibleDates.map((d) => {
                     const dKey = attendanceDayKey(d);
                     const isToday = dKey === todayKey;
