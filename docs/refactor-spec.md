@@ -72,6 +72,16 @@ Prioridade: P0 (antes de escala) → P2 (quando doer).
 
 ---
 
+### R-06b · Limite explícito para bulk de presença
+
+**Onde:** `apps/web/lib/graphql/resolvers/attendance.ts` — mutations bulk com `dates[]`.
+
+**Problema:** `dates[]` grande prende uma transação longa; o limite precisa respeitar regra de negócio, não só esconder datas no client.
+
+**Fix:** definir janela máxima por turma/período no domínio e validar no resolver antes da transação.
+
+---
+
 ### R-07 · Ordenação estável em `gradesByClass`
 
 **Onde:** `apps/web/lib/graphql/resolvers/grade.ts:20-23`
