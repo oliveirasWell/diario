@@ -148,7 +148,7 @@ export default function AttendancePage() {
                         className={cn("text-center", isToday && "bg-primary/10")}
                       >
                         <div className="flex items-center justify-center gap-1.5">
-                          {d.toLocaleDateString()}
+                          {d.toLocaleDateString("pt-BR", { timeZone: "UTC" })}
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={
