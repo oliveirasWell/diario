@@ -25,6 +25,7 @@ export function useCreateEvaluationMutation(classId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 }

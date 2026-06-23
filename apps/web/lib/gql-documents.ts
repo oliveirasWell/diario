@@ -85,10 +85,24 @@ export const EvaluationsDocument = graphql(`
 export const GradesByClassDocument = graphql(`
   query GradesByClass($classId: ID!) {
     gradesByClass(classId: $classId) {
-      id
-      enrollmentId
-      evaluationId
-      score
+      evaluations {
+        id
+        title
+        maxScore
+      }
+      rows {
+        enrollmentId
+        concept
+        student {
+          id
+          name
+        }
+        grades {
+          id
+          evaluationId
+          score
+        }
+      }
     }
   }
 `);

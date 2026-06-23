@@ -5,12 +5,17 @@ import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { gradesQueryOptions, queryKeys } from "@/lib/query-options";
 import { SetConceptDocument, UpsertGradeDocument } from "@/src/gql/graphql";
-import type { Grade } from "@/src/gql/schema";
+import type { ClassGradeRow, Grade } from "@/src/gql/schema";
 
-export type { Grade };
+export type { ClassGradeRow, Grade };
 
 export function useGradesByClass(classId: string) {
-  return useQuery(gradesQueryOptions(classId));
+  const query = useQuery(gradesQueryOptions(classId));
+  return {
+    ...query,
+    evaluations: query.data?.evaluations,
+    rows: query.data?.rows,
+  };
 }
 
 export function useUpsertGrade() {
@@ -41,6 +46,7 @@ export function useSetConcept() {
       return data.setEnrollmentConcept;
     },
     onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.grades(vars.classId) });
       qc.invalidateQueries({ queryKey: queryKeys.enrollments(vars.classId) });
     },
   });
