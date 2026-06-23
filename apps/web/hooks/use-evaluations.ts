@@ -4,10 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { evaluationsQueryOptions, queryKeys } from "@/lib/query-options";
-import {
-  CreateEvaluationDocument,
-  DelEvalDocument,
-} from "@/src/gql/graphql";
+import { CreateEvaluationDocument, DelEvalDocument } from "@/src/gql/graphql";
 import type { Evaluation } from "@/src/gql/schema";
 
 export type { Evaluation };

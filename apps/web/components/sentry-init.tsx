@@ -4,8 +4,12 @@ import { useEffect } from "react";
 
 export function SentryInit() {
   useEffect(() => {
-    if (process.env.NODE_ENV !== "production") return;
-    if (!process.env.NEXT_PUBLIC_SENTRY_DSN) return;
+    if (process.env.NODE_ENV !== "production") {
+      return;
+    }
+    if (!process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      return;
+    }
     void import("../sentry.client.config");
   }, []);
   return null;

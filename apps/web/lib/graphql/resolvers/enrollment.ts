@@ -12,7 +12,9 @@ import type {
 export const enrollmentQueryResolvers = {
   enrollments: async (_: unknown, { classId }: QueryEnrollmentsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
     const prisma = await getPrisma();
     return prisma.enrollment.findMany({
       where: { classId, class: { ownerId: { in: ownerIds } } },
@@ -27,7 +29,9 @@ export const enrollmentMutationResolvers = {
     await requireOwnedClass(args.classId, ownerIds);
     const data: { name: string; email?: string } = { name: args.name };
     const normalized = typeof args.email === "string" ? args.email.trim() : undefined;
-    if (normalized) data.email = normalized.toLowerCase();
+    if (normalized) {
+      data.email = normalized.toLowerCase();
+    }
     const prisma = await getPrisma();
     return prisma.$transaction(async (tx) => {
       const student = await tx.student.create({ data });
@@ -38,13 +42,19 @@ export const enrollmentMutationResolvers = {
     });
   },
 
-  unenrollStudent: async (_: unknown, { enrollmentId }: MutationUnenrollStudentArgs, ctx: GraphQLContext) => {
+  unenrollStudent: async (
+    _: unknown,
+    { enrollmentId }: MutationUnenrollStudentArgs,
+    ctx: GraphQLContext,
+  ) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
       where: { id: enrollmentId, class: { ownerId: { in: ownerIds } } },
     });
-    if (!found) throw new Error("Not found");
+    if (!found) {
+      throw new Error("Not found");
+    }
 
     // Delete dependent data (grades, attendance) before removing enrollment
     await prisma.$transaction(async (tx) => {
@@ -59,12 +69,16 @@ export const enrollmentMutationResolvers = {
   renameStudent: async (_: unknown, args: MutationRenameStudentArgs, ctx: GraphQLContext) => {
     const ownerIds = requireOwnerIds(ctx);
     const name = args.name.trim();
-    if (!name) throw new Error("Nome é obrigatório");
+    if (!name) {
+      throw new Error("Nome é obrigatório");
+    }
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
       where: { id: args.enrollmentId, class: { ownerId: { in: ownerIds } } },
     });
-    if (!found) throw new Error("Not found");
+    if (!found) {
+      throw new Error("Not found");
+    }
     await prisma.student.update({
       where: { id: found.studentId },
       data: { name },
@@ -78,14 +92,16 @@ export const enrollmentMutationResolvers = {
   setEnrollmentConcept: async (
     _: unknown,
     { enrollmentId, concept }: MutationSetEnrollmentConceptArgs,
-    ctx: GraphQLContext
+    ctx: GraphQLContext,
   ) => {
     const ownerIds = requireOwnerIds(ctx);
     const prisma = await getPrisma();
     const enr = await prisma.enrollment.findFirst({
       where: { id: enrollmentId, class: { ownerId: { in: ownerIds } } },
     });
-    if (!enr) throw new Error("Not found");
+    if (!enr) {
+      throw new Error("Not found");
+    }
     return prisma.enrollment.update({
       where: { id: enrollmentId },
       data: { concept: concept ?? null },

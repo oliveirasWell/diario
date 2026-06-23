@@ -6,7 +6,5 @@ import { useParams } from "next/navigation";
 export default function ClassStudentsPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  return (
-    <StudentsPanel classId={classId} />
-  );
+  return <StudentsPanel classId={classId} />;
 }

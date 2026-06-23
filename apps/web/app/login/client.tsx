@@ -21,9 +21,7 @@ export function LoginClient() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="max-w-sm w-full space-y-6 text-center">
-        <Button onClick={() => signIn("google", { callbackUrl })}>
-          Entrar com Google
-        </Button>
+        <Button onClick={() => signIn("google", { callbackUrl })}>Entrar com Google</Button>
       </div>
     </div>
   );

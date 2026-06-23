@@ -41,10 +41,17 @@ export function ConfirmDeleteDialog({
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         {errorMessage && (
-          <p className="text-sm text-destructive" role="alert">{errorMessage}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {errorMessage}
+          </p>
         )}
         <DialogFooter>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={isPending}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            disabled={isPending}
+          >
             {cancelLabel}
           </Button>
           <Button type="button" variant="destructive" onClick={onConfirm} disabled={isPending}>

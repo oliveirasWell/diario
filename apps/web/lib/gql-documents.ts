@@ -154,12 +154,7 @@ export const MarkAttendanceDocument = graphql(`
     $enrollmentId: ID!
     $status: AttendanceStatus
   ) {
-    markAttendance(
-      classId: $classId
-      date: $date
-      enrollmentId: $enrollmentId
-      status: $status
-    )
+    markAttendance(classId: $classId, date: $date, enrollmentId: $enrollmentId, status: $status)
   }
 `);
 
@@ -196,11 +191,7 @@ export const DeleteEvaluationDocument = graphql(`
 
 export const UpsertGradeDocument = graphql(`
   mutation UpsertGrade($enrollmentId: ID!, $evaluationId: ID!, $score: Float!) {
-    upsertGrade(
-      enrollmentId: $enrollmentId
-      evaluationId: $evaluationId
-      score: $score
-    ) {
+    upsertGrade(enrollmentId: $enrollmentId, evaluationId: $evaluationId, score: $score) {
       id
       enrollmentId
       evaluationId

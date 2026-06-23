@@ -5,7 +5,9 @@ let globalPromise: Promise<MongoClient> | undefined;
 
 export function getMongoClientPromise(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI as string | undefined;
-  if (!uri) throw new Error("MONGODB_URI is not set");
+  if (!uri) {
+    throw new Error("MONGODB_URI is not set");
+  }
 
   if (process.env.NODE_ENV === "development") {
     const g = globalThis as any;

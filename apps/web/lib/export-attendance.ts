@@ -16,7 +16,9 @@ export function exportAttendanceToXlsx(opts: {
   const { className, dates, enrollments, records } = opts;
 
   const recMap = new Map<string, AttendanceStatus>();
-  for (const r of records) recMap.set(`${r.enrollmentId}|${attendanceDayKey(r.session.date)}`, r.status);
+  for (const r of records) {
+    recMap.set(`${r.enrollmentId}|${attendanceDayKey(r.session.date)}`, r.status);
+  }
 
   const header = ["Aluno", ...dates.map((d) => attendanceDayKey(d))];
   const rows: (string | number)[][] = [header];

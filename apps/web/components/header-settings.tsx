@@ -33,7 +33,9 @@ export function HeaderSettings() {
         {email ? (
           <>
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="truncate font-normal text-foreground">{email}</DropdownMenuLabel>
+              <DropdownMenuLabel className="truncate font-normal text-foreground">
+                {email}
+              </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
           </>
@@ -57,10 +59,7 @@ export function HeaderSettings() {
         <DropdownMenuItem disabled className="text-muted-foreground">
           Versão {pkg.version}
         </DropdownMenuItem>
-        <DropdownMenuItem
-          variant="destructive"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-        >
+        <DropdownMenuItem variant="destructive" onClick={() => signOut({ callbackUrl: "/login" })}>
           <LogOut className="size-4" />
           Sair
         </DropdownMenuItem>

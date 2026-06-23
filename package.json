@@ -25,9 +25,12 @@
     "lint": "turbo run lint",
     "codegen": "turbo run codegen",
     "codegen:web": "pnpm --filter web graphql-codegen",
-    "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/"
+    "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
+    "prettier": "^3.8.4",
     "turbo": "2.0.6"
   }
 }

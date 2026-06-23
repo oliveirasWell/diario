@@ -4,7 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { enrollmentsQueryOptions, queryKeys } from "@/lib/query-options";
-import { CreateAndEnrollDocument, RenameStudentDocument, UnenrollDocument } from "@/src/gql/graphql";
+import {
+  CreateAndEnrollDocument,
+  RenameStudentDocument,
+  UnenrollDocument,
+} from "@/src/gql/graphql";
 
 export function useEnrollmentsQuery(classId: string) {
   return useQuery(enrollmentsQueryOptions(classId));

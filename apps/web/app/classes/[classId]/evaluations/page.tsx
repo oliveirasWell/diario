@@ -1,7 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvaluationsQuery, useCreateEvaluationMutation, useDeleteEvaluationMutation } from "@/hooks/use-evaluations";
+import {
+  useEvaluationsQuery,
+  useCreateEvaluationMutation,
+  useDeleteEvaluationMutation,
+} from "@/hooks/use-evaluations";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -33,7 +37,12 @@ export default function EvaluationsPage() {
   const deleteEval = useDeleteEvaluationMutation(classId);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
   });
 
@@ -47,7 +56,9 @@ export default function EvaluationsPage() {
   };
 
   const onDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget) {
+      return;
+    }
     try {
       await deleteEval.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
@@ -59,7 +70,9 @@ export default function EvaluationsPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {isError && (
-        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(error)}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {formatGraphqlError(error)}
+        </p>
       )}
 
       <div className="space-y-3 bg-muted/25 p-3 sm:space-y-4 sm:p-4">
@@ -69,10 +82,14 @@ export default function EvaluationsPage() {
             <Input placeholder="Ex.: Prova 1" {...register("title")} />
             {errors.title && <p className="text-sm text-red-600">{errors.title.message}</p>}
           </div>
-          <Button type="submit" disabled={isSubmitting || createEval.isPending}>Adicionar</Button>
+          <Button type="submit" disabled={isSubmitting || createEval.isPending}>
+            Adicionar
+          </Button>
         </form>
         {createEval.errorMessage && (
-          <p className="text-sm text-destructive" role="alert">{createEval.errorMessage}</p>
+          <p className="text-sm text-destructive" role="alert">
+            {createEval.errorMessage}
+          </p>
         )}
       </div>
 

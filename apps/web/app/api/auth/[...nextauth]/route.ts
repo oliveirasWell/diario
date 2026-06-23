@@ -49,8 +49,12 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }: { session: Session; token: JWT }) {
       if (session.user) {
-        if (token.sub) session.user.id = token.sub;
-        if (token.prismaUserId) session.user.prismaUserId = token.prismaUserId;
+        if (token.sub) {
+          session.user.id = token.sub;
+        }
+        if (token.prismaUserId) {
+          session.user.prismaUserId = token.prismaUserId;
+        }
       }
       return session;
     },

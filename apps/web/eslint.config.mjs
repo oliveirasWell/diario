@@ -2,18 +2,29 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 import unusedImports from "eslint-plugin-unused-imports";
+import reactCompiler from "eslint-plugin-react-compiler";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // Custom rules
+  {
+    rules: {
+      curly: "error",
+    },
+  },
+  {
+    plugins: { "react-compiler": reactCompiler },
+    rules: {
+      "react-compiler/react-compiler": "error",
+    },
+  },
   {
     plugins: { "unused-imports": unusedImports },
     rules: {
       "unused-imports/no-unused-imports": "error",
       "unused-imports/no-unused-vars": [
         "error",
-        { args: "after-used", argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+        { args: "after-used", argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "no-unused-vars": "off",
     },

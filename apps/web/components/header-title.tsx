@@ -25,7 +25,9 @@ export function HeaderTitle() {
     const className = classData?.name ?? classId;
     return (
       <div className="font-semibold truncate text-base sm:text-lg flex items-center gap-1.5">
-        <Link href="/classes" className="underline underline-offset-2">Turmas</Link>
+        <Link href="/classes" className="underline underline-offset-2">
+          Turmas
+        </Link>
         <span>/</span>
         <span className="truncate max-w-[60vw] sm:max-w-none">{className}</span>
       </div>

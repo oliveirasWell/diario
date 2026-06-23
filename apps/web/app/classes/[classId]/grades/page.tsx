@@ -48,9 +48,13 @@ function GradeInput({
       onChange={(e) => setValue(e.target.value)}
       onBlur={() => {
         const v = value.trim();
-        if (v === "") return;
+        if (v === "") {
+          return;
+        }
         const num = Number(v);
-        if (Number.isNaN(num)) return;
+        if (Number.isNaN(num)) {
+          return;
+        }
         onSave(num);
       }}
     />
@@ -60,8 +64,18 @@ function GradeInput({
 export default function GradesPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const { data: evals, isLoading: loadingE, isError: errorE, error: errE } = useEvaluationsQuery(classId);
-  const { data: enrolls, isLoading: loadingEn, isError: errorEn, error: errEn } = useEnrollments(classId);
+  const {
+    data: evals,
+    isLoading: loadingE,
+    isError: errorE,
+    error: errE,
+  } = useEvaluationsQuery(classId);
+  const {
+    data: enrolls,
+    isLoading: loadingEn,
+    isError: errorEn,
+    error: errEn,
+  } = useEnrollments(classId);
   const { data: grades, isError: errorG, error: errG } = useGradesByClass(classId);
   const upsert = useUpsertGrade();
   const setConcept = useSetConcept();
@@ -72,38 +86,63 @@ export default function GradesPage() {
   const [q, setQ] = useState("");
   const list = useMemo(() => {
     const base = enrolls ?? [];
-    const filtered = q ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase())) : base;
-    return filtered.slice().sort((a,b)=>a.student.name.localeCompare(b.student.name));
+    const filtered = q
+      ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
+      : base;
+    return filtered.slice().sort((a, b) => a.student.name.localeCompare(b.student.name));
   }, [enrolls, q]);
 
   const gradeIndex = useMemo(() => {
     const m = new Map<string, number>();
-    (grades ?? []).forEach(g => m.set(`${g.enrollmentId}|${g.evaluationId}`, g.score));
+    (grades ?? []).forEach((g) => m.set(`${g.enrollmentId}|${g.evaluationId}`, g.score));
     return m;
   }, [grades]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {queryError && (
-        <p className="text-sm text-destructive" role="alert">{formatGraphqlError(queryError)}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {formatGraphqlError(queryError)}
+        </p>
       )}
       {mutationError && (
-        <p className="text-sm text-destructive" role="alert">{mutationError}</p>
+        <p className="text-sm text-destructive" role="alert">
+          {mutationError}
+        </p>
       )}
       <div className="flex items-center gap-2">
-        <Input placeholder="Buscar aluno…" value={q} onChange={(e)=>setQ(e.target.value)} className="w-[40%] min-w-[160px]" />
+        <Input
+          placeholder="Buscar aluno…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          className="w-[40%] min-w-[160px]"
+        />
         <Button
           type="button"
           variant="secondary"
           size="sm"
           className="ml-auto"
           onClick={() => {
-            if (!evals || !enrolls) return;
+            if (!evals || !enrolls) {
+              return;
+            }
             exportGradesToXlsx({
               className: String(classId),
-              evaluations: evals.map(ev => ({ id: ev.id, title: ev.title, maxScore: ev.maxScore ?? 10 })),
-              enrollments: (list ?? []).map(e => ({ id: e.id, student: { id: e.student.id, name: e.student.name }, concept: (e as any).concept ?? null })),
-              grades: (grades ?? []).map(g => ({ enrollmentId: g.enrollmentId, evaluationId: g.evaluationId, score: g.score })),
+              evaluations: evals.map((ev) => ({
+                id: ev.id,
+                title: ev.title,
+                maxScore: ev.maxScore ?? 10,
+              })),
+              enrollments: (list ?? []).map((e) => ({
+                id: e.id,
+                student: { id: e.student.id, name: e.student.name },
+                concept: (e as any).concept ?? null,
+              })),
+              grades: (grades ?? []).map((g) => ({
+                enrollmentId: g.enrollmentId,
+                evaluationId: g.evaluationId,
+                score: g.score,
+              })),
             });
           }}
         >
@@ -148,21 +187,37 @@ export default function GradesPage() {
                   ))}
                   <TableCell>
                     {(() => {
-                      const scores = (evals ?? []).map(ev => {
-                        const s = gradeIndex.get(`${e.id}|${ev.id}`);
-                        if (s == null) return null;
-                        const max = ev.maxScore ?? 10;
-                        return (s / max) * 10;
-                      }).filter((v): v is number => v != null);
-                      const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length) : null;
-                      return <div className="min-w-[64px] text-sm">{avg != null ? avg.toFixed(1) : "—"}</div>;
+                      const scores = (evals ?? [])
+                        .map((ev) => {
+                          const s = gradeIndex.get(`${e.id}|${ev.id}`);
+                          if (s == null) {
+                            return null;
+                          }
+                          const max = ev.maxScore ?? 10;
+                          return (s / max) * 10;
+                        })
+                        .filter((v): v is number => v != null);
+                      const avg = scores.length
+                        ? scores.reduce((a, b) => a + b, 0) / scores.length
+                        : null;
+                      return (
+                        <div className="min-w-[64px] text-sm">
+                          {avg != null ? avg.toFixed(1) : "—"}
+                        </div>
+                      );
                     })()}
                   </TableCell>
                   <TableCell>
                     <select
                       className="h-10 min-w-[96px] bg-muted/40 px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                       value={(e as { concept?: string | null }).concept ?? ""}
-                      onChange={(evn) => setConcept.mutate({ classId, enrollmentId: e.id, concept: evn.currentTarget.value || null })}
+                      onChange={(evn) =>
+                        setConcept.mutate({
+                          classId,
+                          enrollmentId: e.id,
+                          concept: evn.currentTarget.value || null,
+                        })
+                      }
                     >
                       <option value="">—</option>
                       <option value="A">A</option>

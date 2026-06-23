@@ -18,8 +18,11 @@ function applyTheme(mode: ThemeMode, mqlRef: React.MutableRefObject<MediaQueryLi
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
     mqlRef.current = mql;
     const setBySystem = () => {
-      if (mql.matches) root.classList.add("dark");
-      else root.classList.remove("dark");
+      if (mql.matches) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
     };
     setBySystem();
     mql.onchange = setBySystem;
@@ -35,7 +38,9 @@ export function useThemeMode() {
     setModeState(stored);
     applyTheme(stored, mqlRef);
     return () => {
-      if (mqlRef.current) mqlRef.current.onchange = null;
+      if (mqlRef.current) {
+        mqlRef.current.onchange = null;
+      }
     };
   }, []);
 
