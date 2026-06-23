@@ -33,7 +33,6 @@ export function StudentsPanel({ classId }: { classId: string }) {
   const [deleteTarget, setDeleteTarget] = useState<EditTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
-  // ponytail: React Compiler memoizes this, useMemo is noise
   const sorted = data
     ? [...data].sort((a, b) =>
         sortDir === "asc"
