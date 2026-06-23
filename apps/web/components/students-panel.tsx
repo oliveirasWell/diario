@@ -29,8 +29,18 @@ export function StudentsPanel({ classId }: { classId: string }) {
   const createAndEnroll = useCreateAndEnrollMutation(classId);
   const unenroll = useUnenrollStudentMutation(classId);
   const renameStudent = useRenameStudentMutation(classId);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [deleteTarget, setDeleteTarget] = useState<EditTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
+
+  // ponytail: React Compiler memoizes this, useMemo is noise
+  const sorted = data
+    ? [...data].sort((a, b) =>
+        sortDir === "asc"
+          ? a.student.name.localeCompare(b.student.name)
+          : b.student.name.localeCompare(a.student.name),
+      )
+    : data;
 
   const {
     register,
@@ -115,11 +125,17 @@ export function StudentsPanel({ classId }: { classId: string }) {
       ) : (
         <div className="bg-muted/25">
           <div className="grid grid-cols-3 bg-muted/50 px-4 py-2 font-normal">
-            <div>Nome</div>
+            <button
+              className="inline-flex items-center gap-1 text-left"
+              onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            >
+              Nome
+              <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
+            </button>
             <div>Email</div>
             <div className="text-right">Ações</div>
           </div>
-          {data?.map((e) => (
+          {sorted?.map((e) => (
             <div
               key={e.id}
               className="grid grid-cols-3 items-center px-4 py-2 transition-colors hover:bg-muted/40"

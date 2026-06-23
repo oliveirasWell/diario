@@ -34,7 +34,7 @@
     "apps/web/src/gql/**": "",
     "apps/web/**/*.{ts,tsx,js,jsx,mjs}": [
       "prettier --write",
-      "eslint --fix"
+      "pnpm --filter web exec eslint --fix"
     ],
     "packages/db/**/*.ts": [
       "prettier --write"
