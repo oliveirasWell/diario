@@ -15,6 +15,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { formatGraphqlError } from "@/lib/graphql-error";
+import { sortByStudentName } from "@/lib/utils";
 import { useState } from "react";
 
 const NewStudentSchema = z.object({
@@ -34,13 +35,7 @@ export function StudentsPanel({ classId }: { classId: string }) {
   const [deleteTarget, setDeleteTarget] = useState<EditTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
-  const sorted = data
-    ? [...data].sort((a, b) =>
-        sortDir === "asc"
-          ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
-          : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
-      )
-    : data;
+  const sorted = data ? sortByStudentName(data, sortDir) : data;
 
   const {
     register,

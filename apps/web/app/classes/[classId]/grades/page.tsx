@@ -5,6 +5,7 @@ import { useEvaluationsQuery } from "@/hooks/use-evaluations";
 import { useEnrollments } from "@/hooks/use-attendance";
 import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
 import { formatGraphqlError } from "@/lib/graphql-error";
+import { sortByStudentName } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,11 +92,7 @@ export default function GradesPage() {
     const filtered = q
       ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
       : base;
-    return [...filtered].sort((a, b) =>
-      sortDir === "asc"
-        ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
-        : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
-    );
+    return sortByStudentName(filtered, sortDir);
   }, [enrolls, q, sortDir]);
 
   const gradeIndex = useMemo(() => {

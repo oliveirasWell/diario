@@ -35,7 +35,7 @@ import {
 
 import { useExcludeAttendanceDate } from "@/hooks/use-attendance-admin";
 import { formatGraphqlError } from "@/lib/graphql-error";
-import { cn } from "@/lib/utils";
+import { cn, sortByStudentName } from "@/lib/utils";
 import { AttendanceStatus } from "@/src/gql/schema";
 
 const STATUS_LABEL: Record<AttendanceStatus, string> = {
@@ -100,11 +100,7 @@ export default function AttendancePage() {
     const filtered = q
       ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
       : base;
-    return [...filtered].sort((a, b) =>
-      sortDir === "asc"
-        ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
-        : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
-    );
+    return sortByStudentName(filtered, sortDir);
   }, [enrollments, q, sortDir]);
 
   useEffect(() => {
