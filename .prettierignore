@@ -17,3 +17,4 @@ packages/**/build
 *.md
 SECURITY.md
 LICENSE
+apps/web/src/gql/**

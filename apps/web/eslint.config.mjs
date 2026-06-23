@@ -64,6 +64,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "src/gql/**",
     "next-env.d.ts",
   ]),
 ]);

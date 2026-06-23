@@ -18,7 +18,7 @@
     "approve:prisma": "pnpm approve-builds prisma @prisma/client @prisma/engines",
     "env:sync": "bash scripts/env-sync.sh",
     "env:push:web": "cp apps/web/.env.local .env.local",
-    "setup:all": "pnpm env:sync && pnpm approve:prisma && pnpm db:generate && pnpm db:push:auto",
+    "setup:all": "pnpm env:sync && pnpm approve:prisma && pnpm db:generate && pnpm db:push:auto && pnpm codegen:web",
     "dev:local": "bash scripts/dev.sh",
     "build": "turbo run build",
     "start": "pnpm --filter web start",
@@ -31,6 +31,7 @@
     "prepare": "husky"
   },
   "lint-staged": {
+    "apps/web/src/gql/**": "",
     "apps/web/**/*.{ts,tsx,js,jsx,mjs}": [
       "prettier --write",
       "eslint --fix"
