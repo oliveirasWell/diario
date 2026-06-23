@@ -7,6 +7,7 @@ import type {
   MutationExcludeAttendanceDateArgs,
   MutationMarkAllPresentArgs,
   MutationMarkAttendanceArgs,
+  MutationMarkEnrollmentPresentForDatesArgs,
   QueryAttendanceDatesArgs,
   QueryAttendanceRecordsArgs,
 } from "@/src/gql/schema";
@@ -117,12 +118,14 @@ export const attendanceMutationResolvers = {
     }
 
     const prismaStatus = toPrismaAttendanceStatus(args.status);
-    let activeSession = session;
-    if (!activeSession) {
-      activeSession = await prisma.attendanceSession.create({
-        data: { classId: args.classId, date: normalizeAttendanceDate(args.date) },
-      });
-    }
+    const normalizedDate = normalizeAttendanceDate(args.date);
+    const activeSession =
+      session ??
+      (await prisma.attendanceSession.upsert({
+        where: { classId_date: { classId: args.classId, date: normalizedDate } },
+        update: {},
+        create: { classId: args.classId, date: normalizedDate },
+      }));
 
     const existing = await prisma.attendanceRecord.findFirst({
       where: { sessionId: activeSession.id, enrollmentId: args.enrollmentId },
@@ -156,8 +159,10 @@ export const attendanceMutationResolvers = {
         where: { classId: args.classId, date: bounds },
       });
       if (!session) {
-        session = await tx.attendanceSession.create({
-          data: { classId: args.classId, date: normalizedDate },
+        session = await tx.attendanceSession.upsert({
+          where: { classId_date: { classId: args.classId, date: normalizedDate } },
+          update: {},
+          create: { classId: args.classId, date: normalizedDate },
         });
       }
       const enrollments = await tx.enrollment.findMany({ where: { classId: args.classId } });
@@ -179,6 +184,56 @@ export const attendanceMutationResolvers = {
             },
           });
         }
+      }
+    });
+
+    return true;
+  },
+
+  markEnrollmentPresentForDates: async (
+    _: unknown,
+    args: MutationMarkEnrollmentPresentForDatesArgs,
+    ctx: GraphQLContext,
+  ) => {
+    const ownerIds = requireOwnerIds(ctx);
+    await requireOwnedOrInvited(args.classId, ownerIds);
+    const prisma = await getPrisma();
+    const dates = args.dates.map((d) => normalizeAttendanceDate(d));
+
+    await prisma.$transaction(async (tx) => {
+      const enrollment = await tx.enrollment.findFirst({
+        where: { id: args.enrollmentId, classId: args.classId },
+      });
+      if (!enrollment) {
+        throw new Error("Not found");
+      }
+
+      for (const date of dates) {
+        const bounds = sessionDayBounds(date);
+        const session =
+          (await tx.attendanceSession.findFirst({
+            where: { classId: args.classId, date: bounds },
+          })) ??
+          (await tx.attendanceSession.upsert({
+            where: { classId_date: { classId: args.classId, date } },
+            update: {},
+            create: { classId: args.classId, date },
+          }));
+
+        await tx.attendanceRecord.upsert({
+          where: {
+            sessionId_enrollmentId: {
+              sessionId: session.id,
+              enrollmentId: args.enrollmentId,
+            },
+          },
+          update: { status: PrismaAttendanceStatus.PRESENT },
+          create: {
+            sessionId: session.id,
+            enrollmentId: args.enrollmentId,
+            status: PrismaAttendanceStatus.PRESENT,
+          },
+        });
       }
     });
 
