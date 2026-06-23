@@ -22,6 +22,8 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
+const toDateOnly = (s?: string | null) => (s ? new Date(s).toISOString().slice(0, 10) : undefined);
+
 export default function ClassConfigPage() {
   const params = useParams();
   const classId = params?.classId as string;
@@ -47,7 +49,6 @@ export default function ClassConfigPage() {
 
   useEffect(() => {
     if (!data) return;
-    const toDateOnly = (s?: string | null) => (s ? new Date(s).toISOString().slice(0, 10) : undefined);
     reset({
       daysOfWeek: data.daysOfWeek ?? [],
       startDate: toDateOnly(data.startDate),
@@ -67,7 +68,11 @@ export default function ClassConfigPage() {
 
   const onToggleDay = (v: number) => {
     const selected = new Set(watch("daysOfWeek") ?? []);
-    if (selected.has(v)) selected.delete(v); else selected.add(v);
+    if (selected.has(v)) {
+      selected.delete(v); 
+    } else {
+      selected.add(v);
+    }
     setValue("daysOfWeek", Array.from(selected).sort());
   };
 
@@ -117,7 +122,7 @@ export default function ClassConfigPage() {
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={mutation.isPending}>Salvar</Button>
+          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Salvando…" : "Salvar"}</Button>
         </div>
       </form>
     </div>

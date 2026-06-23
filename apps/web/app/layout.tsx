@@ -33,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
-      className={`${roboto.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${roboto.variable} ${jetbrainsMono.variable} h-full antialiased tabular-nums`}
     >
       <body className="min-h-full flex flex-col">
         <SentryInit />

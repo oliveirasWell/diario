@@ -148,7 +148,7 @@ export default function AttendancePage() {
                         className={cn("text-center", isToday && "bg-primary/10")}
                       >
                         <div className="flex items-center justify-center gap-1.5">
-                          {d.toLocaleDateString()}
+                          {d.toLocaleDateString("pt-BR", { timeZone: "UTC" })}
                           <DropdownMenu>
                             <DropdownMenuTrigger
                               render={
@@ -156,7 +156,7 @@ export default function AttendancePage() {
                                   type="button"
                                   variant="ghost"
                                   size="icon-sm"
-                                  className="hidden shrink-0 bg-muted/15 hover:bg-muted/25 md:inline-flex"
+                                  className="shrink-0 bg-muted/15 hover:bg-muted/25"
                                   aria-label="Ações da data"
                                 />
                               }
@@ -188,7 +188,7 @@ export default function AttendancePage() {
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="hidden shrink-0 md:inline-flex"
+                          className="shrink-0"
                           title="Marcar semana toda Presente"
                           onClick={() => {
                             visibleDates.forEach((d) =>

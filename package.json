@@ -28,6 +28,6 @@
     "codegen:check": "pnpm --filter web codegen && git diff --exit-code apps/web/src/gql/"
   },
   "devDependencies": {
-    "turbo": "^2.0.6"
+    "turbo": "2.0.6"
   }
 }

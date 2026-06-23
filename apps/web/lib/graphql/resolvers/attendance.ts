@@ -14,42 +14,72 @@ import type {
 export const attendanceQueryResolvers = {
   attendanceDates: async (_: unknown, args: QueryAttendanceDatesArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
+
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
       where: { id: args.classId, ownerId: { in: ownerIds } },
     });
-    if (!c) return [];
+    if (!c) {
+      return [];
+    }
+
     const days: number[] = c.daysOfWeek ?? [];
     const start = args.from ? new Date(args.from) : c.startDate ? new Date(c.startDate) : null;
     const end = args.to ? new Date(args.to) : c.endDate ? new Date(c.endDate) : null;
-    if (!start || !end || !days.length) return [];
+    if (!start || !end || !days.length) {
+      return [];
+    }
+
     const excluded = new Set(
       (c.excludedDates ?? []).map((x) => new Date(x).toISOString().slice(0, 10))
     );
+
     const out: Date[] = [];
-    for (let d = new Date(start); d <= end; d = new Date(d.getTime() + 24 * 60 * 60 * 1000)) {
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    for (let d = new Date(start); d <= end; d = new Date(d.getTime() + oneDayMs)) {
       const key = new Date(d).toISOString().slice(0, 10);
-      if (days.includes(d.getDay()) && !excluded.has(key)) out.push(new Date(d));
+      if (days.includes(d.getUTCDay()) && !excluded.has(key)) {
+        out.push(new Date(d));
+      }
     }
+
     return out;
   },
 
   attendanceRecords: async (_: unknown, args: QueryAttendanceRecordsArgs, ctx: GraphQLContext) => {
     const ownerIds = ownerIdsFrom(ctx);
-    if (!ownerIds.length) return [];
+    if (!ownerIds.length) {
+      return [];
+    }
+
     const prisma = await getPrisma();
     const c = await prisma.class.findFirst({
       where: { id: args.classId, ownerId: { in: ownerIds } },
     });
-    if (!c) return [];
-    const where: { classId: string; date?: { gte?: Date; lte?: Date } } = { classId: args.classId };
+    if (!c) {
+      return [];
+    }
+
+    const where: { classId: string; date?: { gte?: Date; lte?: Date } } = {
+      classId: args.classId,
+    };
     if (args.from || args.to) {
       where.date = {};
-      if (args.from) where.date.gte = new Date(args.from);
-      if (args.to) where.date.lte = new Date(args.to);
+      if (args.from) {
+        where.date.gte = new Date(args.from);
+      }
+      if (args.to) {
+        where.date.lte = new Date(args.to);
+      }
     }
-    const sessions = await prisma.attendanceSession.findMany({ where, include: { records: true } });
+
+    const sessions = await prisma.attendanceSession.findMany({
+      where,
+      include: { records: true },
+    });
     return sessions.flatMap((s) =>
       s.records.map((r) => ({ ...r, session: { id: s.id, date: s.date } }))
     );
