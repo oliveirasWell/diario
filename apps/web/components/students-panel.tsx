@@ -7,6 +7,7 @@ import {
   useUnenrollStudentMutation,
 } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
 import { EditNameDialog } from "@/components/edit-name-dialog";
@@ -129,7 +130,11 @@ export function StudentsPanel({ classId }: { classId: string }) {
               onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
             >
               Nome
-              <span className="text-xs">{sortDir === "asc" ? "▲" : "▼"}</span>
+              {sortDir === "asc" ? (
+                <ChevronUp className="size-4" />
+              ) : (
+                <ChevronDown className="size-4" />
+              )}
             </button>
             <div>Email</div>
             <div className="text-right">Ações</div>
