@@ -122,7 +122,7 @@ export default function ClassConfigPage() {
         )}
 
         <div className="flex justify-end">
-          <Button type="submit" disabled={mutation.isPending}>Salvar</Button>
+          <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Salvando…" : "Salvar"}</Button>
         </div>
       </form>
     </div>
