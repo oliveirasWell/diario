@@ -36,8 +36,8 @@ export function StudentsPanel({ classId }: { classId: string }) {
   const sorted = data
     ? [...data].sort((a, b) =>
         sortDir === "asc"
-          ? a.student.name.localeCompare(b.student.name)
-          : b.student.name.localeCompare(a.student.name),
+          ? a.student.name.localeCompare(b.student.name, undefined, { numeric: true })
+          : b.student.name.localeCompare(a.student.name, undefined, { numeric: true }),
       )
     : data;
 
