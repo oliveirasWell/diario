@@ -16,13 +16,30 @@ export function exportGradesToXlsx(opts: {
 }) {
   const { className, evaluations, enrollments, grades } = opts;
 
-  // Index grades by enrollment|evaluation
+  const rows = buildGradeRows({ evaluations, enrollments, grades });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  const colWidths = [{ wch: 24 }, ...evaluations.map(() => ({ wch: 10 })), { wch: 8 }, { wch: 10 }];
+  (ws as any)["!cols"] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Notas");
+  const fileName = `${className || "turma"}-notas.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
+
+export function buildGradeRows(opts: {
+  evaluations: ExportGradeEval[];
+  enrollments: ExportEnrollment[];
+  grades: ExportGrade[];
+}) {
+  const { evaluations, enrollments, grades } = opts;
   const idx = new Map<string, number>();
   for (const g of grades) {
     idx.set(`${g.enrollmentId}|${g.evaluationId}`, g.score);
   }
 
-  // Header: Aluno, each evaluation title, Média, Conceito
   const header = ["Aluno", ...evaluations.map((e) => e.title), "Média", "Conceito"];
   const rows: (string | number)[][] = [header];
 
@@ -47,14 +64,5 @@ export function exportGradesToXlsx(opts: {
     rows.push(row);
   }
 
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  // Set basic column widths (Aluno wider)
-  const colWidths = [{ wch: 24 }, ...evaluations.map(() => ({ wch: 10 })), { wch: 8 }, { wch: 10 }];
-  (ws as any)["!cols"] = colWidths;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Notas");
-  const fileName = `${className || "turma"}-notas.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  return rows;
 }
