@@ -70,8 +70,8 @@ export function attendanceDatesQueryOptions(classId: string, from?: string, to?:
       return data.attendanceDates.map((d) => new Date(d));
     },
     enabled: !!classId,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
   });
 }
 

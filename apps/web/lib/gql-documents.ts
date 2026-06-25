@@ -164,6 +164,12 @@ export const MarkAllPresentDocument = graphql(`
   }
 `);
 
+export const MarkEnrollmentPresentForDatesDocument = graphql(`
+  mutation MarkEnrollmentPresentForDates($classId: ID!, $enrollmentId: ID!, $dates: [DateTime!]!) {
+    markEnrollmentPresentForDates(classId: $classId, enrollmentId: $enrollmentId, dates: $dates)
+  }
+`);
+
 export const ExcludeAttendanceDateDocument = graphql(`
   mutation Ex($classId: ID!, $date: DateTime!) {
     excludeAttendanceDate(classId: $classId, date: $date)

@@ -36,6 +36,7 @@ type Mutation {
     status: AttendanceStatus
   ): Boolean!
   markAllPresent(classId: ID!, date: DateTime!): Boolean!
+  markEnrollmentPresentForDates(classId: ID!, enrollmentId: ID!, dates: [DateTime!]!): Boolean!
   excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
   createInviteLink(classId: ID!): String!
   acceptInvite(id: ID!): Class!

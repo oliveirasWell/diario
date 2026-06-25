@@ -100,6 +100,7 @@ export type Mutation = {
   excludeAttendanceDate: Scalars['Boolean']['output'];
   markAllPresent: Scalars['Boolean']['output'];
   markAttendance: Scalars['Boolean']['output'];
+  markEnrollmentPresentForDates: Scalars['Boolean']['output'];
   renameClass: Class;
   renameStudent: Enrollment;
   setEnrollmentConcept: Enrollment;
@@ -170,6 +171,13 @@ export type MutationMarkAttendanceArgs = {
   date: Scalars['DateTime']['input'];
   enrollmentId: Scalars['ID']['input'];
   status?: InputMaybe<AttendanceStatus>;
+};
+
+
+export type MutationMarkEnrollmentPresentForDatesArgs = {
+  classId: Scalars['ID']['input'];
+  dates: Array<Scalars['DateTime']['input']>;
+  enrollmentId: Scalars['ID']['input'];
 };
 
 

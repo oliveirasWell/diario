@@ -267,12 +267,13 @@ export default function AttendancePage() {
                           variant="ghost"
                           size="icon"
                           className="shrink-0"
-                          title="Marcar semana toda Presente"
-                          onClick={() => {
-                            visibleDates.forEach((d) =>
-                              attendance.markPresent({ date: d, enrollmentId: e.id }),
-                            );
-                          }}
+                          title="Marcar todos os dias Presente"
+                          onClick={() =>
+                            attendance.markEnrollmentPresentForDates({
+                              dates: visibleDates,
+                              enrollmentId: e.id,
+                            })
+                          }
                         >
                           ✅
                         </Button>

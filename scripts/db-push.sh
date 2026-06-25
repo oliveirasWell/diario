@@ -17,9 +17,15 @@ if [ -z "${MONGODB_URI:-}" ]; then
 fi
 
 # Validate that DB name exists in URI (e.g., ...mongodb.net/diario?....)
-if [[ ! "$MONGODB_URI" =~ ^mongodb(\+srv)?:\/\/[^\/]+\/[^^\/?#]+ ]]; then
+if [[ ! "$MONGODB_URI" =~ ^mongodb(\+srv)?:\/\/[^\/]+\/([^\/?#]+) ]]; then
   echo "Invalid MONGODB_URI: missing database name."
-  echo "Example: mongodb+srv://user:pass@cluster0.x.mongodb.net/diario?retryWrites=true&w=majority"
+  echo "Example: mongodb+srv://user:pass@cluster0.x.mongodb.net/diario-dev?retryWrites=true&w=majority"
+  exit 1
+fi
+
+if [ "${BASH_REMATCH[2]}" = "diario" ] && [ "${ALLOW_PROD_DB_PUSH:-}" != "1" ]; then
+  echo "Refusing to push schema to production database 'diario'."
+  echo "Use diario-dev locally, or rerun with ALLOW_PROD_DB_PUSH=1 if intentional."
   exit 1
 fi
 
