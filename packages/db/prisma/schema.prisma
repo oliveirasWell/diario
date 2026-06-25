@@ -90,8 +90,6 @@ model AttendanceSession {
 
   class     Class @relation(fields: [classId], references: [id])
   records   AttendanceRecord[]
-
-  @@unique([classId, date])
 }
 
 model AttendanceRecord {

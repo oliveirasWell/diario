@@ -183,7 +183,11 @@ export default function GradesPage() {
             <TableBody>
               {list?.map((e) => (
                 <TableRow key={e.id}>
-                  <TablePinCell>{e.student.name}</TablePinCell>
+                  <TablePinCell>
+                    <span className="block w-40 truncate" title={e.student.name}>
+                      {e.student.name}
+                    </span>
+                  </TablePinCell>
                   {evals?.map((ev) => (
                     <TableCell key={ev.id}>
                       <GradeInput

@@ -121,10 +121,8 @@ export const attendanceMutationResolvers = {
     const normalizedDate = normalizeAttendanceDate(args.date);
     const activeSession =
       session ??
-      (await prisma.attendanceSession.upsert({
-        where: { classId_date: { classId: args.classId, date: normalizedDate } },
-        update: {},
-        create: { classId: args.classId, date: normalizedDate },
+      (await prisma.attendanceSession.create({
+        data: { classId: args.classId, date: normalizedDate },
       }));
 
     const existing = await prisma.attendanceRecord.findFirst({
@@ -159,10 +157,8 @@ export const attendanceMutationResolvers = {
         where: { classId: args.classId, date: bounds },
       });
       if (!session) {
-        session = await tx.attendanceSession.upsert({
-          where: { classId_date: { classId: args.classId, date: normalizedDate } },
-          update: {},
-          create: { classId: args.classId, date: normalizedDate },
+        session = await tx.attendanceSession.create({
+          data: { classId: args.classId, date: normalizedDate },
         });
       }
       const enrollments = await tx.enrollment.findMany({ where: { classId: args.classId } });
@@ -214,10 +210,8 @@ export const attendanceMutationResolvers = {
           (await tx.attendanceSession.findFirst({
             where: { classId: args.classId, date: bounds },
           })) ??
-          (await tx.attendanceSession.upsert({
-            where: { classId_date: { classId: args.classId, date } },
-            update: {},
-            create: { classId: args.classId, date },
+          (await tx.attendanceSession.create({
+            data: { classId: args.classId, date },
           }));
 
         await tx.attendanceRecord.upsert({
