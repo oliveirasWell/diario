@@ -12,7 +12,11 @@ import {
   type AttendanceRecord,
 } from "@/lib/query-options";
 import { AttendanceStatus } from "@/src/gql/schema";
-import { MarkAllPresentDocument, MarkAttendanceDocument } from "@/src/gql/graphql";
+import {
+  MarkAllPresentDocument,
+  MarkAttendanceDocument,
+  MarkEnrollmentPresentForDatesDocument,
+} from "@/src/gql/graphql";
 
 export type { AttendanceRecord };
 export { AttendanceStatus };
@@ -67,6 +71,7 @@ function patchAttendanceRecords(
 
 type CellVars = { date: Date; enrollmentId: string };
 type MutationVars = CellVars & { status: AttendanceStatus | null };
+type BulkVars = { dates: Date[]; enrollmentId: string };
 type MutationCtx = { prev: AttendanceRecord[]; key: ReturnType<typeof attendanceRecordsKey> };
 
 export function useAttendanceMutation(classId: string) {
@@ -122,15 +127,46 @@ export function useAttendanceMutation(classId: string) {
     },
   });
 
+  const markEnrollmentPresentForDatesMutation = useAppMutation({
+    mutationFn: async ({ dates, enrollmentId }: BulkVars) => {
+      const data = await gqlRequest(MarkEnrollmentPresentForDatesDocument, {
+        classId,
+        enrollmentId,
+        dates: dates.map((date) => normalizeAttendanceDate(date).toISOString()),
+      });
+      return data.markEnrollmentPresentForDates;
+    },
+    onMutate: async ({ dates, enrollmentId }) => {
+      await qc.cancelQueries({ queryKey: key });
+      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
+      let next = prev;
+      for (const date of dates) {
+        next = patchAttendanceRecords(next, enrollmentId, date, AttendanceStatus.Present);
+      }
+      qc.setQueryData(key, next);
+      return { prev, key } satisfies MutationCtx;
+    },
+    onError: (_err, _vars, ctx?: MutationCtx) => {
+      if (ctx) {
+        qc.setQueryData(ctx.key, ctx.prev);
+      }
+    },
+  });
+
   return {
     cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
       mutation.mutate({ ...vars, status: nextStatus(current) }),
-    markPresent: (vars: CellVars) => mutation.mutate({ ...vars, status: AttendanceStatus.Present }),
+    markEnrollmentPresentForDates: (vars: BulkVars) =>
+      markEnrollmentPresentForDatesMutation.mutate(vars),
     markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
-    errorMessage: mutation.errorMessage ?? markAllMutation.errorMessage,
+    errorMessage:
+      mutation.errorMessage ??
+      markAllMutation.errorMessage ??
+      markEnrollmentPresentForDatesMutation.errorMessage,
     clearError: () => {
       mutation.clearError();
       markAllMutation.clearError();
+      markEnrollmentPresentForDatesMutation.clearError();
     },
   };
 }
