@@ -20,11 +20,11 @@ export default defineConfig({
         "lib/graphql/create-schema.ts",
         "lib/graphql/db-bridge.ts",
         "lib/graphql/prisma.ts",
+        "lib/graphql/resolvers/**/*.ts",
         "app/api/auth/**/route.ts",
       ],
       exclude: [
         "lib/gql-documents.ts",
-        "lib/graphql/resolvers/**",
         "lib/graphql-error.ts",
         "lib/graphql-client.ts",
         "lib/mongodb.ts",
@@ -33,6 +33,9 @@ export default defineConfig({
         "**/*.config.ts",
       ],
       thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
         lines: 80,
       },
     },

@@ -9,6 +9,16 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       MONGODB_URI: mongodb://localhost:27017/diario-ci
       NEXTAUTH_SECRET: ci-nextauth-secret-minimum-32-chars

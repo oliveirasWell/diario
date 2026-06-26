@@ -20,4 +20,17 @@ describe("buildGradeRows", () => {
       ["Ana", 8, 10, 6.5, "A"],
     ]);
   });
+
+  it("leaves missing scores and averages blank", () => {
+    expect(
+      buildGradeRows({
+        evaluations: [{ id: "eval-1", title: "P1", maxScore: 0 }],
+        enrollments: [{ id: "enr-1", student: { id: "stu-1", name: "Ana" }, concept: null }],
+        grades: [],
+      }),
+    ).toEqual([
+      ["Aluno", "P1", "Média", "Conceito"],
+      ["Ana", "", "", ""],
+    ]);
+  });
 });

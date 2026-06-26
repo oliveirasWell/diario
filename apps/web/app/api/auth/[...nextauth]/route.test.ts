@@ -46,6 +46,18 @@ describe("NextAuth callbacks", () => {
     });
   });
 
+  it("keeps auth working when prisma sync fails", async () => {
+    userUpsert.mockRejectedValueOnce(new Error("db down"));
+    const { authOptions } = await import("./route");
+
+    const token = await authOptions.callbacks!.jwt!({
+      token: { email: "a@example.com" },
+      user: { email: "a@example.com" } as any,
+    } as any);
+
+    expect(token).toEqual({ email: "a@example.com" });
+  });
+
   it("copies auth ids into session", async () => {
     const { authOptions } = await import("./route");
 
@@ -55,5 +67,16 @@ describe("NextAuth callbacks", () => {
     } as any);
 
     expect(session.user).toMatchObject({ id: "next-1", prismaUserId: "prisma-1" });
+  });
+
+  it("keeps sessions without user untouched", async () => {
+    const { authOptions } = await import("./route");
+
+    const session = await authOptions.callbacks!.session!({
+      session: {},
+      token: {},
+    } as any);
+
+    expect(session).toEqual({});
   });
 });
