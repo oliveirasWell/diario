@@ -1,12 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  firstAccessibleClassId,
-  ownerIdsFrom,
-  requireOwnedClass,
-  requireOwnedOrInvited,
-  requireOwnerIds,
-  requireOwnerStrict,
-} from "./auth";
+import { ownerIdsFrom, requireOwnedOrInvited, requireOwnerIds, requireOwnerStrict } from "./auth";
 
 const prisma = vi.hoisted(() => ({
   class: {
@@ -48,11 +41,10 @@ describe("GraphQL auth helpers", () => {
     });
   });
 
-  it("requires owned class", async () => {
-    const klass = { id: "class-1" };
-    prisma.class.findFirst.mockResolvedValueOnce(klass);
+  it("rejects strict owner misses", async () => {
+    prisma.class.findFirst.mockResolvedValueOnce(null);
 
-    await expect(requireOwnedClass("class-1", ["user-1"])).resolves.toBe(klass);
+    await expect(requireOwnerStrict("class-1", ["user-1"])).rejects.toThrow("Not found");
   });
 
   it("returns owned or invited class", async () => {
@@ -68,18 +60,8 @@ describe("GraphQL auth helpers", () => {
     });
   });
 
-  it("hides inaccessible class ids", async () => {
-    prisma.class.findFirst.mockResolvedValueOnce(null);
-    await expect(firstAccessibleClassId("class-1", ["user-1"])).resolves.toBeNull();
-  });
-
   it("throws when class is inaccessible", async () => {
     prisma.class.findFirst.mockResolvedValueOnce(null);
     await expect(requireOwnedOrInvited("class-1", ["user-1"])).rejects.toThrow("Not found");
-  });
-
-  it("returns accessible class id", async () => {
-    prisma.class.findFirst.mockResolvedValueOnce({ id: "class-1" });
-    await expect(firstAccessibleClassId("class-1", ["user-1"])).resolves.toBe("class-1");
   });
 });

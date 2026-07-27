@@ -11,7 +11,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "build/**"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "build/**"],
       "env": [
         "NODE_ENV",
         "MONGODB_URI",
@@ -37,6 +37,9 @@
     "test": {},
     "test:coverage": {
       "outputs": ["coverage/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"]
     },
     "codegen": {
       "outputs": ["**/src/gql/**", "**/__generated__/**"]
