@@ -7,6 +7,22 @@ import { attendanceMutationResolvers, attendanceQueryResolvers } from "./attenda
 const CLASS_ID = "class-1";
 const ENROLLMENT_ID = "enrollment-1";
 const SESSION_ID = "session-1";
+const SESSION_JAN_5 = { id: SESSION_ID, date: new Date("2026-01-05T12:00:00.000Z") };
+const SESSION_JAN_6 = { id: "session-2", date: new Date("2026-01-06T12:00:00.000Z") };
+
+function mockSessionStore(existing: { id: string; date: Date }[]) {
+  let sessions = [...existing];
+  prismaMock.attendanceSession.findMany.mockImplementation(async () => sessions);
+  prismaMock.attendanceSession.createMany.mockImplementation(
+    async ({ data }: { data: { date: Date }[] }) => {
+      sessions = [
+        ...sessions,
+        ...data.map((row, index) => ({ id: `created-${index}`, date: row.date })),
+      ];
+      return { count: data.length };
+    },
+  );
+}
 
 describe("attendanceQueryResolvers.attendanceDates", () => {
   it("returns nothing for anonymous users", async () => {
@@ -145,8 +161,7 @@ describe("attendanceMutationResolvers.markAttendance", () => {
 
   it("creates the session on demand and upserts the status", async () => {
     prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
-    prismaMock.attendanceSession.findMany.mockResolvedValue([]);
-    prismaMock.attendanceSession.create.mockResolvedValue({ id: SESSION_ID });
+    mockSessionStore([]);
 
     await attendanceMutationResolvers.markAttendance(
       null,
@@ -159,89 +174,35 @@ describe("attendanceMutationResolvers.markAttendance", () => {
       teacherContext,
     );
 
-    expect(prismaMock.attendanceSession.create).toHaveBeenCalledWith({
-      data: { classId: CLASS_ID, date: new Date("2026-01-05T12:00:00.000Z") },
+    expect(prismaMock.attendanceSession.createMany).toHaveBeenCalledWith({
+      data: [{ classId: CLASS_ID, date: new Date("2026-01-05T12:00:00.000Z") }],
     });
     expect(prismaMock.attendanceRecord.upsert).toHaveBeenCalledWith({
-      where: { sessionId_enrollmentId: { sessionId: SESSION_ID, enrollmentId: ENROLLMENT_ID } },
+      where: { sessionId_enrollmentId: { sessionId: "created-0", enrollmentId: ENROLLMENT_ID } },
       update: { status: "ABSENT" },
-      create: { sessionId: SESSION_ID, enrollmentId: ENROLLMENT_ID, status: "ABSENT" },
+      create: { sessionId: "created-0", enrollmentId: ENROLLMENT_ID, status: "ABSENT" },
     });
   });
 });
 
-describe("attendanceMutationResolvers.markAllPresent", () => {
-  it("marks every enrollment of the class present", async () => {
-    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
-    prismaMock.attendanceSession.findMany.mockResolvedValue([
-      { id: SESSION_ID, date: new Date("2026-01-05T12:00:00.000Z") },
-    ]);
-    prismaMock.enrollment.findMany.mockResolvedValue([
-      { id: ENROLLMENT_ID },
-      { id: "enrollment-2" },
-    ]);
-
-    await expect(
-      attendanceMutationResolvers.markAllPresent(
-        null,
-        { classId: CLASS_ID, date: "2026-01-05" },
-        teacherContext,
-      ),
-    ).resolves.toBe(true);
-
-    expect(prismaMock.attendanceRecord.upsert).toHaveBeenCalledTimes(2);
-    expect(prismaMock.attendanceRecord.upsert).toHaveBeenLastCalledWith({
-      where: { sessionId_enrollmentId: { sessionId: SESSION_ID, enrollmentId: "enrollment-2" } },
-      update: { status: "PRESENT" },
-      create: { sessionId: SESSION_ID, enrollmentId: "enrollment-2", status: "PRESENT" },
-    });
-  });
-});
-
-describe("attendanceMutationResolvers.markEnrollmentPresentForDates", () => {
-  it("reuses the existing sessions and creates only the missing ones", async () => {
-    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
-    prismaMock.enrollment.findFirst.mockResolvedValue({ id: ENROLLMENT_ID });
-    prismaMock.attendanceSession.findMany.mockResolvedValue([
-      { id: SESSION_ID, date: new Date("2026-01-05T12:00:00.000Z") },
-    ]);
-    prismaMock.attendanceSession.create.mockImplementation(
-      async ({ data }: { data: { date: Date } }) => ({ id: "session-2", date: data.date }),
-    );
-
-    await expect(
-      attendanceMutationResolvers.markEnrollmentPresentForDates(
-        null,
-        { classId: CLASS_ID, enrollmentId: ENROLLMENT_ID, dates: ["2026-01-05", "2026-01-06"] },
-        teacherContext,
-      ),
-    ).resolves.toBe(true);
-
-    expect(prismaMock.attendanceSession.create).toHaveBeenCalledTimes(1);
-    expect(prismaMock.attendanceSession.create).toHaveBeenCalledWith({
-      data: { classId: CLASS_ID, date: new Date("2026-01-06T12:00:00.000Z") },
-    });
-    expect(prismaMock.attendanceRecord.upsert).toHaveBeenCalledTimes(2);
-    expect(prismaMock.attendanceRecord.upsert).toHaveBeenCalledWith({
-      where: { sessionId_enrollmentId: { sessionId: "session-2", enrollmentId: ENROLLMENT_ID } },
-      update: { status: "PRESENT" },
-      create: { sessionId: "session-2", enrollmentId: ENROLLMENT_ID, status: "PRESENT" },
-    });
-  });
-
+describe("attendanceMutationResolvers.markPresent", () => {
   it("looks the sessions up in a single range query", async () => {
     prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
-    prismaMock.enrollment.findFirst.mockResolvedValue({ id: ENROLLMENT_ID });
-    prismaMock.attendanceSession.findMany.mockResolvedValue([]);
-    prismaMock.attendanceSession.create.mockImplementation(
-      async ({ data }: { data: { date: Date } }) => ({ id: SESSION_ID, date: data.date }),
-    );
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([SESSION_JAN_5, SESSION_JAN_6]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([]);
 
-    await attendanceMutationResolvers.markEnrollmentPresentForDates(
-      null,
-      { classId: CLASS_ID, enrollmentId: ENROLLMENT_ID, dates: ["2026-01-06", "2026-01-05"] },
-      teacherContext,
-    );
+    await expect(
+      attendanceMutationResolvers.markPresent(
+        null,
+        {
+          classId: CLASS_ID,
+          dates: ["2026-01-06", "2026-01-05"],
+          enrollmentIds: [ENROLLMENT_ID],
+        },
+        teacherContext,
+      ),
+    ).resolves.toBe(true);
 
     expect(prismaMock.attendanceSession.findMany).toHaveBeenCalledTimes(1);
     expect(prismaMock.attendanceSession.findMany).toHaveBeenCalledWith({
@@ -253,19 +214,122 @@ describe("attendanceMutationResolvers.markEnrollmentPresentForDates", () => {
         },
       },
     });
+    expect(prismaMock.attendanceSession.createMany).not.toHaveBeenCalled();
+  });
+
+  it("creates the missing days in one call", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([SESSION_JAN_5]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([]);
+
+    await attendanceMutationResolvers.markPresent(
+      null,
+      { classId: CLASS_ID, dates: ["2026-01-05", "2026-01-06"], enrollmentIds: [ENROLLMENT_ID] },
+      teacherContext,
+    );
+
+    expect(prismaMock.attendanceSession.createMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.attendanceSession.createMany).toHaveBeenCalledWith({
+      data: [{ classId: CLASS_ID, date: new Date("2026-01-06T12:00:00.000Z") }],
+    });
+  });
+
+  it("updates the existing records and creates the missing ones in one call each", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([SESSION_JAN_5, SESSION_JAN_6]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([
+      { sessionId: SESSION_JAN_5.id, enrollmentId: ENROLLMENT_ID },
+    ]);
+
+    await attendanceMutationResolvers.markPresent(
+      null,
+      { classId: CLASS_ID, dates: ["2026-01-05", "2026-01-06"], enrollmentIds: [ENROLLMENT_ID] },
+      teacherContext,
+    );
+
+    expect(prismaMock.attendanceRecord.updateMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.attendanceRecord.updateMany).toHaveBeenCalledWith({
+      where: {
+        sessionId: { in: [SESSION_JAN_5.id, SESSION_JAN_6.id] },
+        enrollmentId: { in: [ENROLLMENT_ID] },
+      },
+      data: { status: "PRESENT" },
+    });
+    expect(prismaMock.attendanceRecord.createMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.attendanceRecord.createMany).toHaveBeenCalledWith({
+      data: [{ sessionId: SESSION_JAN_6.id, enrollmentId: ENROLLMENT_ID, status: "PRESENT" }],
+    });
+  });
+
+  it("marks the whole class when no enrollment is named", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([
+      { id: ENROLLMENT_ID },
+      { id: "enrollment-2" },
+    ]);
+    mockSessionStore([SESSION_JAN_5]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([]);
+
+    await attendanceMutationResolvers.markPresent(
+      null,
+      { classId: CLASS_ID, dates: ["2026-01-05"], enrollmentIds: null },
+      teacherContext,
+    );
+
+    expect(prismaMock.enrollment.findMany).toHaveBeenCalledWith({ where: { classId: CLASS_ID } });
+    expect(prismaMock.attendanceRecord.createMany).toHaveBeenCalledWith({
+      data: [
+        { sessionId: SESSION_JAN_5.id, enrollmentId: ENROLLMENT_ID, status: "PRESENT" },
+        { sessionId: SESSION_JAN_5.id, enrollmentId: "enrollment-2", status: "PRESENT" },
+      ],
+    });
   });
 
   it("rejects an enrollment from another class", async () => {
     prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
-    prismaMock.enrollment.findFirst.mockResolvedValue(null);
+    prismaMock.enrollment.findMany.mockResolvedValue([]);
 
     await expect(
-      attendanceMutationResolvers.markEnrollmentPresentForDates(
+      attendanceMutationResolvers.markPresent(
         null,
-        { classId: CLASS_ID, enrollmentId: "missing", dates: ["2026-01-05"] },
+        { classId: CLASS_ID, dates: ["2026-01-05"], enrollmentIds: ["missing"] },
         teacherContext,
       ),
     ).rejects.toThrow("Not found");
+  });
+
+  it("writes nothing when there is no date to mark", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([]);
+
+    await expect(
+      attendanceMutationResolvers.markPresent(
+        null,
+        { classId: CLASS_ID, dates: [], enrollmentIds: [ENROLLMENT_ID] },
+        teacherContext,
+      ),
+    ).resolves.toBe(true);
+
+    expect(prismaMock.attendanceRecord.updateMany).not.toHaveBeenCalled();
+    expect(prismaMock.attendanceRecord.createMany).not.toHaveBeenCalled();
+  });
+
+  it("writes everything inside a single transaction", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([SESSION_JAN_5]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([]);
+
+    await attendanceMutationResolvers.markPresent(
+      null,
+      { classId: CLASS_ID, dates: ["2026-01-05"], enrollmentIds: [ENROLLMENT_ID] },
+      teacherContext,
+    );
+
+    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
   });
 });
 

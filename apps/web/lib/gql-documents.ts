@@ -49,14 +49,16 @@ export const EnrollmentsDocument = graphql(`
   }
 `);
 
-export const AttendanceDatesDocument = graphql(`
-  query AttendanceDates($classId: ID!, $from: DateTime, $to: DateTime) {
+export const AttendanceBoardDocument = graphql(`
+  query AttendanceBoard($classId: ID!, $from: DateTime, $to: DateTime) {
     attendanceDates(classId: $classId, from: $from, to: $to)
-  }
-`);
-
-export const AttendanceRecordsDocument = graphql(`
-  query AttendanceRecords($classId: ID!, $from: DateTime, $to: DateTime) {
+    enrollments(classId: $classId) {
+      id
+      student {
+        id
+        name
+      }
+    }
     attendanceRecords(classId: $classId, from: $from, to: $to) {
       id
       enrollmentId
@@ -158,15 +160,9 @@ export const MarkAttendanceDocument = graphql(`
   }
 `);
 
-export const MarkAllPresentDocument = graphql(`
-  mutation MarkAllPresent($classId: ID!, $date: DateTime!) {
-    markAllPresent(classId: $classId, date: $date)
-  }
-`);
-
-export const MarkEnrollmentPresentForDatesDocument = graphql(`
-  mutation MarkEnrollmentPresentForDates($classId: ID!, $enrollmentId: ID!, $dates: [DateTime!]!) {
-    markEnrollmentPresentForDates(classId: $classId, enrollmentId: $enrollmentId, dates: $dates)
+export const MarkPresentDocument = graphql(`
+  mutation MarkPresent($classId: ID!, $dates: [DateTime!]!, $enrollmentIds: [ID!]) {
+    markPresent(classId: $classId, dates: $dates, enrollmentIds: $enrollmentIds)
   }
 `);
 

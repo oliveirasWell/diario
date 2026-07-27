@@ -15,41 +15,44 @@ export function useEnrollmentsQuery(classId: string) {
 }
 
 export function useCreateAndEnrollMutation(classId: string) {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: { name: string; email?: string | null }) => {
       const data = await gqlRequest(CreateAndEnrollDocument, { classId, ...input });
       return data.createAndEnroll;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
 }
 
 export function useUnenrollStudentMutation(classId: string) {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (enrollmentId: string) => {
       const data = await gqlRequest(UnenrollDocument, { enrollmentId });
       return data.unenrollStudent;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
 }
 
 export function useRenameStudentMutation(classId: string) {
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: { enrollmentId: string; name: string }) => {
       const data = await gqlRequest(RenameStudentDocument, input);
       return data.renameStudent;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
-      qc.invalidateQueries({ queryKey: queryKeys.grades(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 }

@@ -18,8 +18,7 @@ export function useExcludeAttendanceDate(classId: string) {
       return data.excludeAttendanceDate;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
-      qc.invalidateQueries({ queryKey: queryKeys.attendanceRecords(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
 }

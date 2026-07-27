@@ -5,25 +5,17 @@ import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { attendanceDayKey, normalizeAttendanceDate } from "@/lib/attendance-date";
 import {
-  attendanceDatesQueryOptions,
-  attendanceRecordsQueryOptions,
+  attendanceBoardQueryOptions,
   enrollmentsQueryOptions,
   queryKeys,
+  type AttendanceBoard,
   type AttendanceRecord,
 } from "@/lib/query-options";
 import { AttendanceStatus } from "@/src/gql/schema";
-import {
-  MarkAllPresentDocument,
-  MarkAttendanceDocument,
-  MarkEnrollmentPresentForDatesDocument,
-} from "@/src/gql/graphql";
+import { MarkAttendanceDocument, MarkPresentDocument } from "@/src/gql/graphql";
 
-export type { AttendanceRecord };
+export type { AttendanceBoard, AttendanceRecord };
 export { AttendanceStatus };
-
-export function attendanceRecordsKey(classId: string) {
-  return queryKeys.attendanceRecords(classId);
-}
 
 const STATUS_CYCLE: (AttendanceStatus | null)[] = [
   AttendanceStatus.Present,
@@ -74,50 +66,45 @@ function withAttendanceStatus(
   ];
 }
 
-function markEnrollmentsPresent(
+function markPresentInRecords(
   records: AttendanceRecord[],
   enrollmentIds: string[],
-  date: Date,
-): AttendanceRecord[] {
-  return enrollmentIds.reduce(
-    (updated, enrollmentId) =>
-      withAttendanceStatus(updated, enrollmentId, date, AttendanceStatus.Present),
-    records,
-  );
-}
-
-function markDatesPresent(
-  records: AttendanceRecord[],
-  enrollmentId: string,
   dates: Date[],
 ): AttendanceRecord[] {
   return dates.reduce(
-    (updated, date) => withAttendanceStatus(updated, enrollmentId, date, AttendanceStatus.Present),
+    (afterDates, date) =>
+      enrollmentIds.reduce(
+        (afterEnrollments, enrollmentId) =>
+          withAttendanceStatus(afterEnrollments, enrollmentId, date, AttendanceStatus.Present),
+        afterDates,
+      ),
     records,
   );
 }
 
 type CellTarget = { date: Date; enrollmentId: string };
 type MarkAttendanceInput = CellTarget & { status: AttendanceStatus | null };
-type BulkPresentInput = { dates: Date[]; enrollmentId: string };
-type RecordsSnapshot = { previousRecords: AttendanceRecord[] };
+type MarkPresentInput = { dates: Date[]; enrollmentIds?: string[] };
+type BoardSnapshot = { previousBoard?: AttendanceBoard };
 
 export function useAttendanceMutation(classId: string) {
   const queryClient = useQueryClient();
-  const recordsQueryKey = attendanceRecordsKey(classId);
+  const boardQueryKey = queryKeys.attendanceBoard(classId);
 
-  const applyOptimisticRecords = async (
-    update: (records: AttendanceRecord[]) => AttendanceRecord[],
-  ): Promise<RecordsSnapshot> => {
-    await queryClient.cancelQueries({ queryKey: recordsQueryKey });
-    const previousRecords = queryClient.getQueryData<AttendanceRecord[]>(recordsQueryKey) ?? [];
-    queryClient.setQueryData(recordsQueryKey, update(previousRecords));
-    return { previousRecords };
+  const applyOptimisticBoard = async (
+    update: (board: AttendanceBoard) => AttendanceBoard,
+  ): Promise<BoardSnapshot> => {
+    await queryClient.cancelQueries({ queryKey: boardQueryKey });
+    const previousBoard = queryClient.getQueryData<AttendanceBoard>(boardQueryKey);
+    if (previousBoard) {
+      queryClient.setQueryData(boardQueryKey, update(previousBoard));
+    }
+    return { previousBoard };
   };
 
-  const rollbackRecords = (_error: unknown, _variables: unknown, snapshot?: RecordsSnapshot) => {
-    if (snapshot) {
-      queryClient.setQueryData(recordsQueryKey, snapshot.previousRecords);
+  const rollbackBoard = (_error: unknown, _variables: unknown, snapshot?: BoardSnapshot) => {
+    if (snapshot?.previousBoard) {
+      queryClient.setQueryData(boardQueryKey, snapshot.previousBoard);
     }
   };
 
@@ -132,68 +119,54 @@ export function useAttendanceMutation(classId: string) {
       return data.markAttendance;
     },
     onMutate: ({ enrollmentId, date, status }) =>
-      applyOptimisticRecords((records) =>
-        withAttendanceStatus(records, enrollmentId, date, status),
-      ),
-    onError: rollbackRecords,
-  });
-
-  const markAllPresent = useAppMutation({
-    mutationFn: async ({ date }: { date: Date }) => {
-      const data = await gqlRequest(MarkAllPresentDocument, {
-        classId,
-        date: normalizeAttendanceDate(date).toISOString(),
-      });
-      return data.markAllPresent;
-    },
-    onMutate: ({ date }) => {
-      const enrollments =
-        queryClient.getQueryData<{ id: string }[]>(queryKeys.enrollments(classId)) ?? [];
-      return applyOptimisticRecords((records) =>
-        markEnrollmentsPresent(
-          records,
-          enrollments.map((enrollment) => enrollment.id),
+      applyOptimisticBoard((board) => ({
+        ...board,
+        attendanceRecords: withAttendanceStatus(
+          board.attendanceRecords,
+          enrollmentId,
           date,
+          status,
         ),
-      );
-    },
-    onError: rollbackRecords,
+      })),
+    onError: rollbackBoard,
   });
 
-  const markPresentForDates = useAppMutation({
-    mutationFn: async ({ dates, enrollmentId }: BulkPresentInput) => {
-      const data = await gqlRequest(MarkEnrollmentPresentForDatesDocument, {
+  const markPresent = useAppMutation({
+    mutationFn: async ({ dates, enrollmentIds }: MarkPresentInput) => {
+      const data = await gqlRequest(MarkPresentDocument, {
         classId,
-        enrollmentId,
         dates: dates.map((date) => normalizeAttendanceDate(date).toISOString()),
+        enrollmentIds,
       });
-      return data.markEnrollmentPresentForDates;
+      return data.markPresent;
     },
-    onMutate: ({ dates, enrollmentId }) =>
-      applyOptimisticRecords((records) => markDatesPresent(records, enrollmentId, dates)),
-    onError: rollbackRecords,
+    onMutate: ({ dates, enrollmentIds }) =>
+      applyOptimisticBoard((board) => ({
+        ...board,
+        attendanceRecords: markPresentInRecords(
+          board.attendanceRecords,
+          enrollmentIds ?? board.enrollments.map((enrollment) => enrollment.id),
+          dates,
+        ),
+      })),
+    onError: rollbackBoard,
   });
 
-  const mutations = [markAttendance, markAllPresent, markPresentForDates];
+  const mutations = [markAttendance, markPresent];
 
   return {
     cycleStatus: (current: AttendanceStatus | undefined, target: CellTarget) =>
       markAttendance.mutate({ ...target, status: nextStatus(current) }),
-    markEnrollmentPresentForDates: (input: BulkPresentInput) => markPresentForDates.mutate(input),
-    markAllPresent: (date: Date) => markAllPresent.mutate({ date }),
+    markPresent: (input: MarkPresentInput) => markPresent.mutate(input),
     errorMessage: mutations.find((mutation) => mutation.errorMessage)?.errorMessage ?? null,
     clearError: () => mutations.forEach((mutation) => mutation.clearError()),
   };
 }
 
-export function useAttendanceDates(classId: string, from?: string, to?: string) {
-  return useQuery(attendanceDatesQueryOptions(classId, from, to));
+export function useAttendanceBoard(classId: string, from?: string, to?: string) {
+  return useQuery(attendanceBoardQueryOptions(classId, from, to));
 }
 
 export function useEnrollments(classId: string) {
   return useQuery(enrollmentsQueryOptions(classId));
-}
-
-export function useAttendanceRecords(classId: string, from?: string, to?: string) {
-  return useQuery(attendanceRecordsQueryOptions(classId, from, to));
 }
