@@ -1,5 +1,6 @@
 import type { GraphQLContext } from "./context";
 import { getPrisma } from "./prisma";
+import { userError } from "./errors";
 
 export function ownedOrInvitedWhere(ownerIds: string[]) {
   return { OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }] };
@@ -20,7 +21,7 @@ export function ownerIdsFrom(context: GraphQLContext): string[] {
 export function requireOwnerIds(context: GraphQLContext): string[] {
   const ownerIds = ownerIdsFrom(context);
   if (!ownerIds.length) {
-    throw new Error("Unauthorized");
+    throw userError("Unauthorized");
   }
   return ownerIds;
 }
@@ -31,7 +32,7 @@ export async function requireOwnerStrict(classId: string, ownerIds: string[]) {
     where: { id: classId, ownerId: { in: ownerIds } },
   });
   if (!classRecord) {
-    throw new Error("Not found");
+    throw userError("Not found");
   }
   return classRecord;
 }
@@ -44,7 +45,7 @@ export async function requireOwnedOrInvited(classId: string, ownerIds: string[])
     where: { id: classId, ...ownedOrInvitedWhere(ownerIds) },
   });
   if (!classRecord) {
-    throw new Error("Not found");
+    throw userError("Not found");
   }
   return classRecord;
 }

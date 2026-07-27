@@ -9,6 +9,7 @@ import { toPrismaAttendanceStatus, PrismaAttendanceStatus } from "@/lib/graphql/
 import type { GraphQLContext } from "../context";
 import { ownedOrInvitedWhere, ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
+import { userError } from "../errors";
 import type {
   MutationExcludeAttendanceDateArgs,
   MutationMarkAttendanceArgs,
@@ -195,7 +196,7 @@ export const attendanceMutationResolvers = {
           : { classId: args.classId },
       });
       if (args.enrollmentIds?.length && enrollments.length !== args.enrollmentIds.length) {
-        throw new Error("Not found");
+        throw userError("Not found");
       }
 
       const sessions = await findOrCreateSessions(transaction, args.classId, args.dates);
@@ -217,17 +218,20 @@ export const attendanceMutationResolvers = {
         where: { sessionId: { in: sessionIds }, enrollmentId: { in: enrollmentIds } },
         data: { status: PrismaAttendanceStatus.PRESENT },
       });
-      await transaction.attendanceRecord.createMany({
-        data: sessionIds.flatMap((sessionId) =>
-          enrollmentIds
-            .filter((enrollmentId) => !existingCells.has(`${sessionId}|${enrollmentId}`))
-            .map((enrollmentId) => ({
-              sessionId,
-              enrollmentId,
-              status: PrismaAttendanceStatus.PRESENT,
-            })),
-        ),
-      });
+
+      const missing = sessionIds.flatMap((sessionId) =>
+        enrollmentIds
+          .filter((enrollmentId) => !existingCells.has(`${sessionId}|${enrollmentId}`))
+          .map((enrollmentId) => ({
+            sessionId,
+            enrollmentId,
+            status: PrismaAttendanceStatus.PRESENT,
+          })),
+      );
+      // createMany com lista vazia estoura no MongoDB ("No documents provided to insert_many").
+      if (missing.length) {
+        await transaction.attendanceRecord.createMany({ data: missing });
+      }
     });
 
     return true;

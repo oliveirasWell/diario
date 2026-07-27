@@ -1,5 +1,6 @@
 import { createYoga } from "graphql-yoga";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { maskGraphQLError } from "./errors";
 import { TEACHER_NEXT_AUTH_ID, TEACHER_OWNER_IDS, TEACHER_PRISMA_ID } from "@/test/graphql-context";
 import { prismaMock } from "@/test/prisma-mock";
 import { createGraphQLSchema } from "./create-schema";
@@ -9,12 +10,17 @@ const ENROLLMENT_ID = "enrollment-1";
 const SESSION_ID = "session-1";
 const teacher = { id: TEACHER_NEXT_AUTH_ID, prismaUserId: TEACHER_PRISMA_ID };
 
-async function postGraphQL(source: string, variables = {}, user: unknown = null) {
+async function postGraphQL(
+  source: string,
+  variables = {},
+  user: unknown = null,
+  maskedErrors: Parameters<typeof createYoga>[0]["maskedErrors"] = false,
+) {
   const yoga = createYoga({
     schema: createGraphQLSchema(),
     graphqlEndpoint: "/api/graphql",
     context: () => ({ user }),
-    maskedErrors: false,
+    maskedErrors,
   });
   const response = await yoga.handleRequest(
     new Request("http://test.local/api/graphql", {
@@ -81,6 +87,33 @@ describe("GraphQL integration", () => {
         ],
       },
     });
+  });
+
+  it("hides unexpected server failures from the client", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    prismaMock.class.findFirst.mockRejectedValue(new Error("No documents provided to insert_many"));
+
+    const body = await postGraphQL(
+      `mutation { renameClass(id: "${CLASS_ID}", name: "Math") { id } }`,
+      {},
+      teacher,
+      { maskError: maskGraphQLError },
+    );
+
+    expect(body.errors?.[0]?.message).toBe("Algo deu errado. Tente novamente.");
+  });
+
+  it("still shows validation messages to the client", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+
+    const body = await postGraphQL(
+      `mutation { renameClass(id: "${CLASS_ID}", name: " ") { id } }`,
+      {},
+      teacher,
+      { maskError: maskGraphQLError },
+    );
+
+    expect(body.errors?.[0]?.message).toBe("Nome é obrigatório");
   });
 
   it("loads dates, students and records in a single response", async () => {

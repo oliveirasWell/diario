@@ -300,6 +300,24 @@ describe("attendanceMutationResolvers.markPresent", () => {
     ).rejects.toThrow("Not found");
   });
 
+  it("creates nothing when every cell already exists", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+    mockSessionStore([SESSION_JAN_5]);
+    prismaMock.attendanceRecord.findMany.mockResolvedValue([
+      { sessionId: SESSION_JAN_5.id, enrollmentId: ENROLLMENT_ID },
+    ]);
+
+    await attendanceMutationResolvers.markPresent(
+      null,
+      { classId: CLASS_ID, dates: ["2026-01-05"], enrollmentIds: [ENROLLMENT_ID] },
+      teacherContext,
+    );
+
+    expect(prismaMock.attendanceRecord.updateMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.attendanceRecord.createMany).not.toHaveBeenCalled();
+  });
+
   it("writes nothing when there is no date to mark", async () => {
     prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
     prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);

@@ -1,6 +1,7 @@
 import { createYoga } from "graphql-yoga";
 import { createGraphQLContext } from "@/lib/graphql/context";
 import { createGraphQLSchema } from "@/lib/graphql/create-schema";
+import { maskGraphQLError } from "@/lib/graphql/errors";
 import { log } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -11,7 +12,7 @@ const { handleRequest } = createYoga({
   schema: createGraphQLSchema(),
   graphqlEndpoint: "/api/graphql",
   context: createGraphQLContext,
-  maskedErrors: process.env.NODE_ENV !== "development",
+  maskedErrors: { maskError: maskGraphQLError },
 });
 
 async function toGlobalResponse(res: Response): Promise<Response> {
