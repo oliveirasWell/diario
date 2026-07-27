@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { GoogleIcon } from "./google-icon";
 
-export function LoginClient() {
+export const LoginClient = () => {
   const params = useSearchParams();
   const router = useRouter();
   const { status } = useSession();
@@ -19,6 +19,8 @@ export function LoginClient() {
     }
   }, [status, router]);
 
+  const handleGoogleSignIn = () => signIn("google", { callbackUrl });
+
   return (
     <div className="relative z-10 row-start-2 flex min-h-[35svh] items-center justify-center bg-background p-8 shadow-2xl md:col-start-2 md:row-auto md:min-h-screen md:p-6 md:shadow-none">
       <div className="w-full max-w-sm space-y-6">
@@ -26,11 +28,11 @@ export function LoginClient() {
           <h1 className="text-3xl font-semibold tracking-tight">Web Diário</h1>
           <p className="text-sm text-muted-foreground">Entre para acessar suas turmas.</p>
         </div>
-        <Button className="h-12 px-6 text-base" onClick={() => signIn("google", { callbackUrl })}>
+        <Button className="h-12 px-6 text-base" onClick={handleGoogleSignIn}>
           <GoogleIcon />
           Entrar com Google
         </Button>
       </div>
     </div>
   );
-}
+};

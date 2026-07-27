@@ -1,41 +1,21 @@
-type ClevelandArtwork = {
-  title: string | null;
-  creation_date: string | null;
-  creators?: Array<{
-    description?: string | null;
-    name?: string | null;
-  }>;
-  images?: {
-    web?: {
-      url?: string | null;
-    };
-  };
-};
+import { log } from "@/lib/log";
+import { ARTWORK_FETCH_TIMEOUT_MS, ARTWORK_MAX_SKIP, CLEVELAND_ARTWORK_API_URL } from "./constants";
+import type { Artwork, ClevelandArtwork, ClevelandArtworkResponse } from "./types";
 
-type ClevelandArtworkResponse = {
-  data?: ClevelandArtwork[];
-};
-
-export type Artwork = {
-  title: string | null;
-  artistTitle: string | null;
-  dateDisplay: string | null;
-  url: string;
-};
-
-async function fetchClevelandArtworks(): Promise<ClevelandArtwork[]> {
-  const skip = Math.floor(Math.random() * 40000);
+async function fetchClevelandArtwork(): Promise<ClevelandArtwork | null> {
+  const skip = Math.floor(Math.random() * ARTWORK_MAX_SKIP);
   const response = await fetch(
-    `https://openaccess-api.clevelandart.org/api/artworks/?cc0=1&has_image=1&fields=id,title,creation_date,creators,images&limit=100&skip=${skip}`,
-    { cache: "no-store", signal: AbortSignal.timeout(3000) },
+    `${CLEVELAND_ARTWORK_API_URL}?cc0=1&has_image=1&fields=id,title,creation_date,creators,images&limit=1&skip=${skip}`,
+    { cache: "no-store", signal: AbortSignal.timeout(ARTWORK_FETCH_TIMEOUT_MS) },
   );
 
   if (!response.ok) {
-    return [];
+    log.warn("login_artwork_fetch_not_ok", { status: response.status });
+    return null;
   }
 
   const { data = [] }: ClevelandArtworkResponse = await response.json();
-  return data;
+  return data[0] ?? null;
 }
 
 function toArtwork(artwork: ClevelandArtwork): Artwork | null {
@@ -55,11 +35,10 @@ function toArtwork(artwork: ClevelandArtwork): Artwork | null {
 
 export async function getArtwork(): Promise<Artwork | null> {
   try {
-    const artworks = (await fetchClevelandArtworks())
-      .map(toArtwork)
-      .filter((artwork) => artwork !== null);
-    return artworks[Math.floor(Math.random() * artworks.length)] ?? null;
-  } catch {
+    const artwork = await fetchClevelandArtwork();
+    return artwork ? toArtwork(artwork) : null;
+  } catch (err) {
+    log.error("login_artwork_fetch_failed", undefined, err);
     return null;
   }
 }

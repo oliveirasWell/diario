@@ -16,7 +16,7 @@ export default async function LoginPage() {
           backgroundImage: art ? `url("${art.url}"), ${artworkFallback}` : artworkFallback,
         }}
       >
-        {art ? <ArtworkCaption art={art} /> : null}
+        <ArtworkCaption art={art} />
       </section>
       <Suspense
         fallback={<div className="p-6 text-center text-sm text-muted-foreground">Carregando…</div>}

@@ -1,10 +1,14 @@
-import type { Artwork } from "./artwork";
+import type { Artwork } from "./types";
 
 type ArtworkCaptionProps = {
-  art: Artwork;
+  art: Artwork | null;
 };
 
-export function ArtworkCaption({ art }: ArtworkCaptionProps) {
+export const ArtworkCaption = ({ art }: ArtworkCaptionProps) => {
+  if (!art) {
+    return null;
+  }
+
   const caption = [art.title, art.artistTitle, art.dateDisplay].filter(Boolean).join(" · ");
 
   if (!caption) {
@@ -16,4 +20,4 @@ export function ArtworkCaption({ art }: ArtworkCaptionProps) {
       {caption}
     </div>
   );
-}
+};

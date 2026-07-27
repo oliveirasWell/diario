@@ -2,6 +2,10 @@
 
 # Project Notes
 
-- Nunca criar commit local sem pedido explícito na mensagem atual.
-- SVG inline reutilizável deve virar componente próprio.
-- Fetch/mapping de integração deve ficar em adapter/helper pequeno, não em UI/page.
+- Write project notes in English.
+- Never create a local commit without an explicit request in the current message.
+- A reusable inline SVG must become its own component.
+- Integration fetch/mapping belongs in a small adapter/helper, not in UI/page.
+- Components use `export const`, not `export function`. Next route files keep `export default`.
+- Types belong in a `types.ts` next to the module, not inline.
+- URLs and magic values belong in a `constants.ts`, not inline.
