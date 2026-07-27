@@ -1,7 +1,7 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds } from "../auth";
 import { getPrisma } from "../prisma";
-import { userError } from "../errors";
+import { createGraphQLError } from "graphql-yoga";
 import type { MutationUpsertGradeArgs, QueryGradesByClassArgs } from "@/src/gql/schema";
 
 export const gradeQueryResolvers = {
@@ -39,13 +39,13 @@ export const gradeMutationResolvers = {
       },
     });
     if (!enr) {
-      throw userError("Not found");
+      throw createGraphQLError("Not found");
     }
     const ev = await prisma.evaluation.findFirst({
       where: { id: args.evaluationId, classId: enr.classId },
     });
     if (!ev) {
-      throw userError("Not found");
+      throw createGraphQLError("Not found");
     }
     return prisma.grade.upsert({
       where: {

@@ -1,7 +1,7 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
-import { userError } from "../errors";
+import { createGraphQLError } from "graphql-yoga";
 import type {
   MutationCreateEvaluationArgs,
   MutationDeleteEvaluationArgs,
@@ -57,7 +57,7 @@ export const evaluationMutationResolvers = {
       },
     });
     if (!ev) {
-      throw userError("Not found");
+      throw createGraphQLError("Not found");
     }
     await prisma.grade.deleteMany({ where: { evaluationId: id } });
     await prisma.evaluation.delete({ where: { id } });

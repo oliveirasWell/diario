@@ -1,6 +1,5 @@
 import { createYoga } from "graphql-yoga";
-import { describe, expect, it, vi } from "vitest";
-import { maskGraphQLError } from "./errors";
+import { describe, expect, it } from "vitest";
 import { TEACHER_NEXT_AUTH_ID, TEACHER_OWNER_IDS, TEACHER_PRISMA_ID } from "@/test/graphql-context";
 import { prismaMock } from "@/test/prisma-mock";
 import { createGraphQLSchema } from "./create-schema";
@@ -9,13 +8,14 @@ const CLASS_ID = "class-1";
 const ENROLLMENT_ID = "enrollment-1";
 const SESSION_ID = "session-1";
 const teacher = { id: TEACHER_NEXT_AUTH_ID, prismaUserId: TEACHER_PRISMA_ID };
+const GENERIC_ERROR = "Algo deu errado. Tente novamente.";
 
-async function postGraphQL(
+const postGraphQL = async (
   source: string,
   variables = {},
   user: unknown = null,
   maskedErrors: Parameters<typeof createYoga>[0]["maskedErrors"] = false,
-) {
+) => {
   const yoga = createYoga({
     schema: createGraphQLSchema(),
     graphqlEndpoint: "/api/graphql",
@@ -31,7 +31,7 @@ async function postGraphQL(
     {},
   );
   return response.json();
-}
+};
 
 describe("GraphQL integration", () => {
   it("rejects authenticated-only mutations without NextAuth user", async () => {
@@ -90,17 +90,16 @@ describe("GraphQL integration", () => {
   });
 
   it("hides unexpected server failures from the client", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
     prismaMock.class.findFirst.mockRejectedValue(new Error("No documents provided to insert_many"));
 
     const body = await postGraphQL(
       `mutation { renameClass(id: "${CLASS_ID}", name: "Math") { id } }`,
       {},
       teacher,
-      { maskError: maskGraphQLError },
+      { errorMessage: GENERIC_ERROR },
     );
 
-    expect(body.errors?.[0]?.message).toBe("Algo deu errado. Tente novamente.");
+    expect(body.errors?.[0]?.message).toBe(GENERIC_ERROR);
   });
 
   it("still shows validation messages to the client", async () => {
@@ -110,7 +109,7 @@ describe("GraphQL integration", () => {
       `mutation { renameClass(id: "${CLASS_ID}", name: " ") { id } }`,
       {},
       teacher,
-      { maskError: maskGraphQLError },
+      { errorMessage: GENERIC_ERROR },
     );
 
     expect(body.errors?.[0]?.message).toBe("Nome é obrigatório");

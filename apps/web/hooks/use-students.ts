@@ -10,11 +10,11 @@ import {
   UnenrollDocument,
 } from "@/src/gql/graphql";
 
-export function useEnrollmentsQuery(classId: string) {
+export const useEnrollmentsQuery = (classId: string) => {
   return useQuery(enrollmentsQueryOptions(classId));
-}
+};
 
-export function useCreateAndEnrollMutation(classId: string) {
+export const useCreateAndEnrollMutation = (classId: string) => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: { name: string; email?: string | null }) => {
@@ -26,9 +26,9 @@ export function useCreateAndEnrollMutation(classId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
-}
+};
 
-export function useUnenrollStudentMutation(classId: string) {
+export const useUnenrollStudentMutation = (classId: string) => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (enrollmentId: string) => {
@@ -40,9 +40,9 @@ export function useUnenrollStudentMutation(classId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
-}
+};
 
-export function useRenameStudentMutation(classId: string) {
+export const useRenameStudentMutation = (classId: string) => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: { enrollmentId: string; name: string }) => {
@@ -55,4 +55,4 @@ export function useRenameStudentMutation(classId: string) {
       queryClient.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
-}
+};

@@ -24,21 +24,21 @@ const STATUS_CYCLE: (AttendanceStatus | null)[] = [
   null,
 ];
 
-function nextStatus(current?: AttendanceStatus | null) {
+const nextStatus = (current?: AttendanceStatus | null) => {
   const index = STATUS_CYCLE.indexOf(current ?? null);
   return STATUS_CYCLE[(index + 1) % STATUS_CYCLE.length];
-}
+};
 
-function isCellFor(record: AttendanceRecord, enrollmentId: string, dayKey: string) {
+const isCellFor = (record: AttendanceRecord, enrollmentId: string, dayKey: string) => {
   return record.enrollmentId === enrollmentId && attendanceDayKey(record.session.date) === dayKey;
-}
+};
 
-function withAttendanceStatus(
+const withAttendanceStatus = (
   records: AttendanceRecord[],
   enrollmentId: string,
   date: Date,
   status: AttendanceStatus | null,
-): AttendanceRecord[] {
+): AttendanceRecord[] => {
   const dayKey = attendanceDayKey(date);
 
   if (status === null) {
@@ -64,13 +64,13 @@ function withAttendanceStatus(
       },
     },
   ];
-}
+};
 
-function markPresentInRecords(
+const markPresentInRecords = (
   records: AttendanceRecord[],
   enrollmentIds: string[],
   dates: Date[],
-): AttendanceRecord[] {
+): AttendanceRecord[] => {
   return dates.reduce(
     (afterDates, date) =>
       enrollmentIds.reduce(
@@ -80,14 +80,14 @@ function markPresentInRecords(
       ),
     records,
   );
-}
+};
 
 type CellTarget = { date: Date; enrollmentId: string };
 type MarkAttendanceInput = CellTarget & { status: AttendanceStatus | null };
 type MarkPresentInput = { dates: Date[]; enrollmentIds?: string[] };
 type BoardSnapshot = { previousBoard?: AttendanceBoard };
 
-export function useAttendanceMutation(classId: string) {
+export const useAttendanceMutation = (classId: string) => {
   const queryClient = useQueryClient();
   const boardQueryKey = queryKeys.attendanceBoard(classId);
 
@@ -161,12 +161,12 @@ export function useAttendanceMutation(classId: string) {
     errorMessage: mutations.find((mutation) => mutation.errorMessage)?.errorMessage ?? null,
     clearError: () => mutations.forEach((mutation) => mutation.clearError()),
   };
-}
+};
 
-export function useAttendanceBoard(classId: string, from?: string, to?: string) {
+export const useAttendanceBoard = (classId: string, from?: string, to?: string) => {
   return useQuery(attendanceBoardQueryOptions(classId, from, to));
-}
+};
 
-export function useEnrollments(classId: string) {
+export const useEnrollments = (classId: string) => {
   return useQuery(enrollmentsQueryOptions(classId));
-}
+};

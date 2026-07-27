@@ -20,10 +20,10 @@ const board = {
   ],
 };
 
-function runQueryFn() {
+const runQueryFn = () => {
   const { queryFn } = attendanceBoardQueryOptions(CLASS_ID);
   return (queryFn as () => Promise<ReturnType<typeof structuredClone>>)();
-}
+};
 
 describe("attendanceBoardQueryOptions", () => {
   beforeEach(() => {

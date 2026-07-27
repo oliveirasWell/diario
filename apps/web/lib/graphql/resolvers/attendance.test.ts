@@ -10,7 +10,7 @@ const SESSION_ID = "session-1";
 const SESSION_JAN_5 = { id: SESSION_ID, date: new Date("2026-01-05T12:00:00.000Z") };
 const SESSION_JAN_6 = { id: "session-2", date: new Date("2026-01-06T12:00:00.000Z") };
 
-function mockSessionStore(existing: { id: string; date: Date }[]) {
+const mockSessionStore = (existing: { id: string; date: Date }[]) => {
   let sessions = [...existing];
   prismaMock.attendanceSession.findMany.mockImplementation(async () => sessions);
   prismaMock.attendanceSession.createMany.mockImplementation(
@@ -22,7 +22,7 @@ function mockSessionStore(existing: { id: string; date: Date }[]) {
       return { count: data.length };
     },
   );
-}
+};
 
 describe("attendanceQueryResolvers.attendanceDates", () => {
   it("returns nothing for anonymous users", async () => {
@@ -186,7 +186,7 @@ describe("attendanceMutationResolvers.markAttendance", () => {
 });
 
 describe("attendanceMutationResolvers.markPresent", () => {
-  it("looks the sessions up in a single range query", async () => {
+  it("looks every requested day up in a single query", async () => {
     prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
     prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
     mockSessionStore([SESSION_JAN_5, SESSION_JAN_6]);
@@ -208,10 +208,7 @@ describe("attendanceMutationResolvers.markPresent", () => {
     expect(prismaMock.attendanceSession.findMany).toHaveBeenCalledWith({
       where: {
         classId: CLASS_ID,
-        date: {
-          gte: new Date("2026-01-05T00:00:00.000Z"),
-          lte: new Date("2026-01-06T23:59:59.999Z"),
-        },
+        date: { in: [SESSION_JAN_6.date, SESSION_JAN_5.date] },
       },
     });
     expect(prismaMock.attendanceSession.createMany).not.toHaveBeenCalled();
