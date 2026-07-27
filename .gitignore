@@ -21,6 +21,7 @@ build/
 .cache/
 .eslintcache
 coverage/
+test-results/
 
 # Env
 .env
@@ -38,6 +39,7 @@ coverage/
 apps/**/.next/
 apps/**/dist/
 apps/**/build/
+apps/**/test-results/
 apps/**/node_modules/
 apps/**/.env
 apps/**/.env.local

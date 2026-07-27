@@ -21,17 +21,6 @@ export function requireOwnerIds(ctx: GraphQLContext): string[] {
   return ownerIds;
 }
 
-export async function requireOwnedClass(classId: string, ownerIds: string[]) {
-  const prisma = await getPrisma();
-  const c = await prisma.class.findFirst({
-    where: { id: classId, ownerId: { in: ownerIds } },
-  });
-  if (!c) {
-    throw new Error("Not found");
-  }
-  return c;
-}
-
 export async function requireOwnerStrict(classId: string, ownerIds: string[]) {
   const prisma = await getPrisma();
   const c = await prisma.class.findFirst({
@@ -57,19 +46,4 @@ export async function requireOwnedOrInvited(classId: string, ownerIds: string[])
     throw new Error("Not found");
   }
   return c;
-}
-
-// ponytail: reusable where clause for queries filtering by class access.
-// Relation filters like `class: { ownerId: ... }` don't support OR,
-// so this flips the pattern: check class first, then filter by classId.
-export async function firstAccessibleClassId(classId: string, ownerIds: string[]) {
-  const prisma = await getPrisma();
-  const c = await prisma.class.findFirst({
-    where: {
-      id: classId,
-      OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
-    },
-    select: { id: true },
-  });
-  return c?.id ?? null;
 }
