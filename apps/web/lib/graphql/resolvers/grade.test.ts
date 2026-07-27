@@ -1,81 +1,76 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { anonymousContext, teacherContext } from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
 import { gradeMutationResolvers, gradeQueryResolvers } from "./grade";
 
-const prisma = vi.hoisted(() => ({
-  class: { findFirst: vi.fn() },
-  enrollment: { findFirst: vi.fn() },
-  evaluation: { findFirst: vi.fn() },
-  grade: { findMany: vi.fn(), upsert: vi.fn() },
-}));
+const CLASS_ID = "class-1";
+const ENROLLMENT_ID = "enrollment-1";
+const EVALUATION_ID = "evaluation-1";
+const GRADE_ID = "grade-1";
 
-vi.mock("../prisma", () => ({
-  getPrisma: async () => prisma,
-}));
-
-const ctx = { user: { id: "next-1", prismaUserId: "u1" } } as any;
-const anon = { user: null } as any;
-
-beforeEach(() => {
-  vi.resetAllMocks();
-});
-
-describe("grade resolvers", () => {
-  it("queries grades by class", async () => {
+describe("gradeQueryResolvers.gradesByClass", () => {
+  it("returns nothing for anonymous users", async () => {
     await expect(
-      gradeQueryResolvers.gradesByClass(null, { classId: "class-1" }, anon),
+      gradeQueryResolvers.gradesByClass(null, { classId: CLASS_ID }, anonymousContext),
     ).resolves.toEqual([]);
-
-    prisma.class.findFirst.mockResolvedValueOnce(null);
-    await expect(
-      gradeQueryResolvers.gradesByClass(null, { classId: "class-1" }, ctx),
-    ).resolves.toEqual([]);
-
-    prisma.class.findFirst.mockResolvedValueOnce({ id: "class-1" });
-    prisma.grade.findMany.mockResolvedValueOnce([{ id: "grade-1" }]);
-    await expect(
-      gradeQueryResolvers.gradesByClass(null, { classId: "class-1" }, ctx),
-    ).resolves.toEqual([{ id: "grade-1" }]);
   });
 
-  it("upserts grades", async () => {
-    prisma.enrollment.findFirst.mockResolvedValueOnce(null);
-    await expect(
-      gradeMutationResolvers.upsertGrade(
-        null,
-        { enrollmentId: "enrollment-1", evaluationId: "evaluation-1", score: 8 },
-        ctx,
-      ),
-    ).rejects.toThrow("Not found");
+  it("returns nothing when the class is not accessible", async () => {
+    prismaMock.class.findFirst.mockResolvedValue(null);
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce({ id: "enrollment-1", classId: "class-1" });
-    prisma.evaluation.findFirst.mockResolvedValueOnce(null);
     await expect(
-      gradeMutationResolvers.upsertGrade(
-        null,
-        { enrollmentId: "enrollment-1", evaluationId: "evaluation-1", score: 8 },
-        ctx,
-      ),
-    ).rejects.toThrow("Not found");
+      gradeQueryResolvers.gradesByClass(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toEqual([]);
+  });
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce({ id: "enrollment-1", classId: "class-1" });
-    prisma.evaluation.findFirst.mockResolvedValueOnce({ id: "evaluation-1" });
-    prisma.grade.upsert.mockResolvedValueOnce({ id: "grade-1", score: 8 });
+  it("returns the grades of an accessible class", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.grade.findMany.mockResolvedValue([{ id: GRADE_ID }]);
+
     await expect(
-      gradeMutationResolvers.upsertGrade(
-        null,
-        { enrollmentId: "enrollment-1", evaluationId: "evaluation-1", score: 8 },
-        ctx,
-      ),
-    ).resolves.toEqual({ id: "grade-1", score: 8 });
-    expect(prisma.grade.upsert).toHaveBeenCalledWith({
+      gradeQueryResolvers.gradesByClass(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toEqual([{ id: GRADE_ID }]);
+  });
+});
+
+describe("gradeMutationResolvers.upsertGrade", () => {
+  const args = { enrollmentId: ENROLLMENT_ID, evaluationId: EVALUATION_ID, score: 8 };
+
+  it("rejects an enrollment outside the accessible classes", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue(null);
+
+    await expect(gradeMutationResolvers.upsertGrade(null, args, teacherContext)).rejects.toThrow(
+      "Not found",
+    );
+  });
+
+  it("rejects an evaluation from another class", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue({ id: ENROLLMENT_ID, classId: CLASS_ID });
+    prismaMock.evaluation.findFirst.mockResolvedValue(null);
+
+    await expect(gradeMutationResolvers.upsertGrade(null, args, teacherContext)).rejects.toThrow(
+      "Not found",
+    );
+  });
+
+  it("upserts on the enrollment and evaluation pair", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue({ id: ENROLLMENT_ID, classId: CLASS_ID });
+    prismaMock.evaluation.findFirst.mockResolvedValue({ id: EVALUATION_ID });
+    prismaMock.grade.upsert.mockResolvedValue({ id: GRADE_ID, score: 8 });
+
+    await expect(gradeMutationResolvers.upsertGrade(null, args, teacherContext)).resolves.toEqual({
+      id: GRADE_ID,
+      score: 8,
+    });
+    expect(prismaMock.grade.upsert).toHaveBeenCalledWith({
       where: {
         enrollmentId_evaluationId: {
-          enrollmentId: "enrollment-1",
-          evaluationId: "evaluation-1",
+          enrollmentId: ENROLLMENT_ID,
+          evaluationId: EVALUATION_ID,
         },
       },
       update: { score: 8 },
-      create: { enrollmentId: "enrollment-1", evaluationId: "evaluation-1", score: 8 },
+      create: { enrollmentId: ENROLLMENT_ID, evaluationId: EVALUATION_ID, score: 8 },
     });
   });
 });

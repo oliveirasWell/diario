@@ -38,6 +38,8 @@ Vitest (node env) for unit/integration, Playwright (chromium, dev server on :300
 - Keep diffs small and domain-local.
 - Schema change order: SDL/Prisma → implementation → codegen → tests.
 - Comments only for non-obvious why.
+- No abbreviated identifiers: `queryClient` not `qc`, `context` not `ctx`, `dayKey` not `dk`, `transaction` not `tx`, `record` not `r`. Only universal short names stay: `id`, `url`, `i`.
+- Tests: one behavior per `it`, named after the behavior. No ordered `mockResolvedValueOnce` chains encoding a flow. Repeated ids go in named constants.
 - Never hide TypeScript/build errors.
 - Lint/test scripts check by default; autofix belongs in explicit fix commands.
 - No new dependency when the platform, stdlib, or an installed dependency is enough.

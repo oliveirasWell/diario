@@ -1,63 +1,63 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { anonymousContext, teacherContext } from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
 import { evaluationMutationResolvers, evaluationQueryResolvers } from "./evaluation";
 
-const prisma = vi.hoisted(() => ({
-  class: { findFirst: vi.fn() },
-  evaluation: { create: vi.fn(), delete: vi.fn(), findFirst: vi.fn(), findMany: vi.fn() },
-  grade: { deleteMany: vi.fn() },
-}));
+const CLASS_ID = "class-1";
+const EVALUATION_ID = "evaluation-1";
 
-vi.mock("../prisma", () => ({
-  getPrisma: async () => prisma,
-}));
-
-const ctx = { user: { id: "next-1", prismaUserId: "u1" } } as any;
-const anon = { user: null } as any;
-
-beforeEach(() => {
-  vi.resetAllMocks();
-});
-
-describe("evaluation resolvers", () => {
-  it("queries evaluations", async () => {
+describe("evaluationQueryResolvers.evaluations", () => {
+  it("returns nothing for anonymous users", async () => {
     await expect(
-      evaluationQueryResolvers.evaluations(null, { classId: "class-1" }, anon),
+      evaluationQueryResolvers.evaluations(null, { classId: CLASS_ID }, anonymousContext),
     ).resolves.toEqual([]);
-
-    prisma.evaluation.findMany.mockResolvedValueOnce([{ id: "evaluation-1" }]);
-    await expect(
-      evaluationQueryResolvers.evaluations(null, { classId: "class-1" }, ctx),
-    ).resolves.toEqual([{ id: "evaluation-1" }]);
   });
 
-  it("creates evaluations", async () => {
-    prisma.class.findFirst.mockResolvedValueOnce({ id: "class-1" });
-    prisma.evaluation.create.mockResolvedValueOnce({ id: "evaluation-1" });
+  it("returns the evaluations of an accessible class", async () => {
+    prismaMock.evaluation.findMany.mockResolvedValue([{ id: EVALUATION_ID }]);
+
+    await expect(
+      evaluationQueryResolvers.evaluations(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toEqual([{ id: EVALUATION_ID }]);
+  });
+});
+
+describe("evaluationMutationResolvers.createEvaluation", () => {
+  it("defaults the weight to 1", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.evaluation.create.mockResolvedValue({ id: EVALUATION_ID });
+
     await expect(
       evaluationMutationResolvers.createEvaluation(
         null,
-        { classId: "class-1", title: "P1", maxScore: 10, weight: null },
-        ctx,
+        { classId: CLASS_ID, title: "P1", maxScore: 10, weight: null },
+        teacherContext,
       ),
-    ).resolves.toEqual({ id: "evaluation-1" });
-    expect(prisma.evaluation.create).toHaveBeenCalledWith({
-      data: { classId: "class-1", title: "P1", weight: 1, maxScore: 10 },
+    ).resolves.toEqual({ id: EVALUATION_ID });
+    expect(prismaMock.evaluation.create).toHaveBeenCalledWith({
+      data: { classId: CLASS_ID, title: "P1", weight: 1, maxScore: 10 },
     });
   });
+});
 
-  it("deletes evaluations and grades", async () => {
-    prisma.evaluation.findFirst.mockResolvedValueOnce(null);
+describe("evaluationMutationResolvers.deleteEvaluation", () => {
+  it("rejects evaluations outside the accessible classes", async () => {
+    prismaMock.evaluation.findFirst.mockResolvedValue(null);
+
     await expect(
-      evaluationMutationResolvers.deleteEvaluation(null, { id: "missing" }, ctx),
+      evaluationMutationResolvers.deleteEvaluation(null, { id: "missing" }, teacherContext),
     ).rejects.toThrow("Not found");
+  });
 
-    prisma.evaluation.findFirst.mockResolvedValueOnce({ id: "evaluation-1" });
+  it("deletes the grades before the evaluation", async () => {
+    prismaMock.evaluation.findFirst.mockResolvedValue({ id: EVALUATION_ID });
+
     await expect(
-      evaluationMutationResolvers.deleteEvaluation(null, { id: "evaluation-1" }, ctx),
+      evaluationMutationResolvers.deleteEvaluation(null, { id: EVALUATION_ID }, teacherContext),
     ).resolves.toBe(true);
-    expect(prisma.grade.deleteMany).toHaveBeenCalledWith({
-      where: { evaluationId: "evaluation-1" },
+    expect(prismaMock.grade.deleteMany).toHaveBeenCalledWith({
+      where: { evaluationId: EVALUATION_ID },
     });
-    expect(prisma.evaluation.delete).toHaveBeenCalledWith({ where: { id: "evaluation-1" } });
+    expect(prismaMock.evaluation.delete).toHaveBeenCalledWith({ where: { id: EVALUATION_ID } });
   });
 });

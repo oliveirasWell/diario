@@ -25,7 +25,7 @@ export function attendanceRecordsKey(classId: string) {
   return queryKeys.attendanceRecords(classId);
 }
 
-const CYCLE: (AttendanceStatus | null)[] = [
+const STATUS_CYCLE: (AttendanceStatus | null)[] = [
   AttendanceStatus.Present,
   AttendanceStatus.Absent,
   AttendanceStatus.Late,
@@ -33,53 +33,96 @@ const CYCLE: (AttendanceStatus | null)[] = [
 ];
 
 function nextStatus(current?: AttendanceStatus | null) {
-  const idx = CYCLE.indexOf(current ?? null);
-  return CYCLE[(idx + 1) % CYCLE.length];
+  const index = STATUS_CYCLE.indexOf(current ?? null);
+  return STATUS_CYCLE[(index + 1) % STATUS_CYCLE.length];
 }
 
-function patchAttendanceRecords(
+function isCellFor(record: AttendanceRecord, enrollmentId: string, dayKey: string) {
+  return record.enrollmentId === enrollmentId && attendanceDayKey(record.session.date) === dayKey;
+}
+
+function withAttendanceStatus(
   records: AttendanceRecord[],
   enrollmentId: string,
   date: Date,
   status: AttendanceStatus | null,
 ): AttendanceRecord[] {
-  const dK = attendanceDayKey(date);
-  const sessionDate = normalizeAttendanceDate(date).toISOString();
+  const dayKey = attendanceDayKey(date);
+
   if (status === null) {
-    return records.filter(
-      (r) => !(r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK),
-    );
+    return records.filter((record) => !isCellFor(record, enrollmentId, dayKey));
   }
-  const idx = records.findIndex(
-    (r) => r.enrollmentId === enrollmentId && attendanceDayKey(r.session.date) === dK,
-  );
-  if (idx >= 0) {
-    const next = records.slice();
-    next[idx] = { ...next[idx], status };
-    return next;
+
+  const index = records.findIndex((record) => isCellFor(record, enrollmentId, dayKey));
+  if (index >= 0) {
+    const updated = records.slice();
+    updated[index] = { ...updated[index], status };
+    return updated;
   }
+
   return [
     ...records,
     {
-      id: `optimistic-${enrollmentId}-${dK}`,
+      id: `optimistic-${enrollmentId}-${dayKey}`,
       enrollmentId,
       status,
-      session: { id: `optimistic-session-${dK}`, date: sessionDate },
+      session: {
+        id: `optimistic-session-${dayKey}`,
+        date: normalizeAttendanceDate(date).toISOString(),
+      },
     },
   ];
 }
 
-type CellVars = { date: Date; enrollmentId: string };
-type MutationVars = CellVars & { status: AttendanceStatus | null };
-type BulkVars = { dates: Date[]; enrollmentId: string };
-type MutationCtx = { prev: AttendanceRecord[]; key: ReturnType<typeof attendanceRecordsKey> };
+function markEnrollmentsPresent(
+  records: AttendanceRecord[],
+  enrollmentIds: string[],
+  date: Date,
+): AttendanceRecord[] {
+  return enrollmentIds.reduce(
+    (updated, enrollmentId) =>
+      withAttendanceStatus(updated, enrollmentId, date, AttendanceStatus.Present),
+    records,
+  );
+}
+
+function markDatesPresent(
+  records: AttendanceRecord[],
+  enrollmentId: string,
+  dates: Date[],
+): AttendanceRecord[] {
+  return dates.reduce(
+    (updated, date) => withAttendanceStatus(updated, enrollmentId, date, AttendanceStatus.Present),
+    records,
+  );
+}
+
+type CellTarget = { date: Date; enrollmentId: string };
+type MarkAttendanceInput = CellTarget & { status: AttendanceStatus | null };
+type BulkPresentInput = { dates: Date[]; enrollmentId: string };
+type RecordsSnapshot = { previousRecords: AttendanceRecord[] };
 
 export function useAttendanceMutation(classId: string) {
-  const qc = useQueryClient();
-  const key = attendanceRecordsKey(classId);
+  const queryClient = useQueryClient();
+  const recordsQueryKey = attendanceRecordsKey(classId);
 
-  const mutation = useAppMutation({
-    mutationFn: async ({ enrollmentId, date, status }: MutationVars) => {
+  const applyOptimisticRecords = async (
+    update: (records: AttendanceRecord[]) => AttendanceRecord[],
+  ): Promise<RecordsSnapshot> => {
+    await queryClient.cancelQueries({ queryKey: recordsQueryKey });
+    const previousRecords = queryClient.getQueryData<AttendanceRecord[]>(recordsQueryKey) ?? [];
+    queryClient.setQueryData(recordsQueryKey, update(previousRecords));
+    return { previousRecords };
+  };
+
+  const rollbackRecords = (_error: unknown, _variables: unknown, snapshot?: RecordsSnapshot) => {
+    if (snapshot) {
+      queryClient.setQueryData(recordsQueryKey, snapshot.previousRecords);
+    }
+  };
+
+  const markAttendance = useAppMutation({
+    mutationFn: async ({ enrollmentId, date, status }: MarkAttendanceInput) => {
       const data = await gqlRequest(MarkAttendanceDocument, {
         classId,
         date: normalizeAttendanceDate(date).toISOString(),
@@ -88,20 +131,14 @@ export function useAttendanceMutation(classId: string) {
       });
       return data.markAttendance;
     },
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
-      qc.setQueryData(key, patchAttendanceRecords(prev, vars.enrollmentId, vars.date, vars.status));
-      return { prev, key } satisfies MutationCtx;
-    },
-    onError: (_err, _vars, ctx?: MutationCtx) => {
-      if (ctx) {
-        qc.setQueryData(ctx.key, ctx.prev);
-      }
-    },
+    onMutate: ({ enrollmentId, date, status }) =>
+      applyOptimisticRecords((records) =>
+        withAttendanceStatus(records, enrollmentId, date, status),
+      ),
+    onError: rollbackRecords,
   });
 
-  const markAllMutation = useAppMutation({
+  const markAllPresent = useAppMutation({
     mutationFn: async ({ date }: { date: Date }) => {
       const data = await gqlRequest(MarkAllPresentDocument, {
         classId,
@@ -109,26 +146,22 @@ export function useAttendanceMutation(classId: string) {
       });
       return data.markAllPresent;
     },
-    onMutate: async ({ date }) => {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
-      const enrollments = qc.getQueryData<{ id: string }[]>(queryKeys.enrollments(classId)) ?? [];
-      let next = prev;
-      for (const en of enrollments) {
-        next = patchAttendanceRecords(next, en.id, date, AttendanceStatus.Present);
-      }
-      qc.setQueryData(key, next);
-      return { prev, key } satisfies MutationCtx;
+    onMutate: ({ date }) => {
+      const enrollments =
+        queryClient.getQueryData<{ id: string }[]>(queryKeys.enrollments(classId)) ?? [];
+      return applyOptimisticRecords((records) =>
+        markEnrollmentsPresent(
+          records,
+          enrollments.map((enrollment) => enrollment.id),
+          date,
+        ),
+      );
     },
-    onError: (_err, _vars, ctx?: MutationCtx) => {
-      if (ctx) {
-        qc.setQueryData(ctx.key, ctx.prev);
-      }
-    },
+    onError: rollbackRecords,
   });
 
-  const markEnrollmentPresentForDatesMutation = useAppMutation({
-    mutationFn: async ({ dates, enrollmentId }: BulkVars) => {
+  const markPresentForDates = useAppMutation({
+    mutationFn: async ({ dates, enrollmentId }: BulkPresentInput) => {
       const data = await gqlRequest(MarkEnrollmentPresentForDatesDocument, {
         classId,
         enrollmentId,
@@ -136,38 +169,20 @@ export function useAttendanceMutation(classId: string) {
       });
       return data.markEnrollmentPresentForDates;
     },
-    onMutate: async ({ dates, enrollmentId }) => {
-      await qc.cancelQueries({ queryKey: key });
-      const prev = qc.getQueryData<AttendanceRecord[]>(key) ?? [];
-      let next = prev;
-      for (const date of dates) {
-        next = patchAttendanceRecords(next, enrollmentId, date, AttendanceStatus.Present);
-      }
-      qc.setQueryData(key, next);
-      return { prev, key } satisfies MutationCtx;
-    },
-    onError: (_err, _vars, ctx?: MutationCtx) => {
-      if (ctx) {
-        qc.setQueryData(ctx.key, ctx.prev);
-      }
-    },
+    onMutate: ({ dates, enrollmentId }) =>
+      applyOptimisticRecords((records) => markDatesPresent(records, enrollmentId, dates)),
+    onError: rollbackRecords,
   });
 
+  const mutations = [markAttendance, markAllPresent, markPresentForDates];
+
   return {
-    cycle: (current: AttendanceStatus | undefined, vars: CellVars) =>
-      mutation.mutate({ ...vars, status: nextStatus(current) }),
-    markEnrollmentPresentForDates: (vars: BulkVars) =>
-      markEnrollmentPresentForDatesMutation.mutate(vars),
-    markAllPresent: (date: Date) => markAllMutation.mutate({ date }),
-    errorMessage:
-      mutation.errorMessage ??
-      markAllMutation.errorMessage ??
-      markEnrollmentPresentForDatesMutation.errorMessage,
-    clearError: () => {
-      mutation.clearError();
-      markAllMutation.clearError();
-      markEnrollmentPresentForDatesMutation.clearError();
-    },
+    cycleStatus: (current: AttendanceStatus | undefined, target: CellTarget) =>
+      markAttendance.mutate({ ...target, status: nextStatus(current) }),
+    markEnrollmentPresentForDates: (input: BulkPresentInput) => markPresentForDates.mutate(input),
+    markAllPresent: (date: Date) => markAllPresent.mutate({ date }),
+    errorMessage: mutations.find((mutation) => mutation.errorMessage)?.errorMessage ?? null,
+    clearError: () => mutations.forEach((mutation) => mutation.clearError()),
   };
 }
 

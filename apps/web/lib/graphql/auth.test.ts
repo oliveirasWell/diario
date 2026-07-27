@@ -1,67 +1,83 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ownerIdsFrom, requireOwnedOrInvited, requireOwnerIds, requireOwnerStrict } from "./auth";
+import { describe, expect, it } from "vitest";
+import {
+  anonymousContext,
+  teacherContext,
+  TEACHER_NEXT_AUTH_ID,
+  TEACHER_OWNER_IDS,
+  TEACHER_PRISMA_ID,
+} from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
+import {
+  ownedOrInvitedWhere,
+  ownerIdsFrom,
+  requireOwnedOrInvited,
+  requireOwnerIds,
+  requireOwnerStrict,
+} from "./auth";
 
-const prisma = vi.hoisted(() => ({
-  class: {
-    findFirst: vi.fn(),
-  },
-}));
+const CLASS_ID = "class-1";
+const OWNER_IDS = ["user-1"];
 
-vi.mock("./prisma", () => ({
-  getPrisma: async () => prisma,
-}));
-
-describe("GraphQL auth helpers", () => {
-  beforeEach(() => {
-    prisma.class.findFirst.mockReset();
+describe("ownerIdsFrom", () => {
+  it("lists the prisma id before the next-auth id", () => {
+    expect(ownerIdsFrom(teacherContext)).toEqual([TEACHER_PRISMA_ID, TEACHER_NEXT_AUTH_ID]);
   });
 
-  it("dedupes next-auth and prisma ids", () => {
-    expect(ownerIdsFrom({ user: { id: "u1", prismaUserId: "u1" } as any })).toEqual(["u1"]);
+  it("dedupes ids that are the same", () => {
+    expect(ownerIdsFrom({ user: { id: "u1", prismaUserId: "u1" } })).toEqual(["u1"]);
   });
+});
 
+describe("requireOwnerIds", () => {
   it("rejects anonymous users", () => {
-    expect(() => requireOwnerIds({ user: null })).toThrow("Unauthorized");
+    expect(() => requireOwnerIds(anonymousContext)).toThrow("Unauthorized");
   });
 
-  it("returns unique owner ids", () => {
-    expect(requireOwnerIds({ user: { id: "next-1", prismaUserId: "prisma-1" } as any })).toEqual([
-      "prisma-1",
-      "next-1",
-    ]);
+  it("returns the owner ids of a signed in user", () => {
+    expect(requireOwnerIds(teacherContext)).toEqual(TEACHER_OWNER_IDS);
   });
+});
 
-  it("requires strict owner access", async () => {
-    const klass = { id: "class-1" };
-    prisma.class.findFirst.mockResolvedValueOnce(klass);
+describe("ownedOrInvitedWhere", () => {
+  it("matches classes owned by or shared with the user", () => {
+    expect(ownedOrInvitedWhere(OWNER_IDS)).toEqual({
+      OR: [{ ownerId: { in: OWNER_IDS } }, { invitedUserIds: { hasSome: OWNER_IDS } }],
+    });
+  });
+});
 
-    await expect(requireOwnerStrict("class-1", ["user-1"])).resolves.toBe(klass);
-    expect(prisma.class.findFirst).toHaveBeenCalledWith({
-      where: { id: "class-1", ownerId: { in: ["user-1"] } },
+describe("requireOwnerStrict", () => {
+  it("looks the class up by owner only", async () => {
+    const classRecord = { id: CLASS_ID };
+    prismaMock.class.findFirst.mockResolvedValue(classRecord);
+
+    await expect(requireOwnerStrict(CLASS_ID, OWNER_IDS)).resolves.toBe(classRecord);
+    expect(prismaMock.class.findFirst).toHaveBeenCalledWith({
+      where: { id: CLASS_ID, ownerId: { in: OWNER_IDS } },
     });
   });
 
-  it("rejects strict owner misses", async () => {
-    prisma.class.findFirst.mockResolvedValueOnce(null);
+  it("throws when the user does not own the class", async () => {
+    prismaMock.class.findFirst.mockResolvedValue(null);
 
-    await expect(requireOwnerStrict("class-1", ["user-1"])).rejects.toThrow("Not found");
+    await expect(requireOwnerStrict(CLASS_ID, OWNER_IDS)).rejects.toThrow("Not found");
   });
+});
 
-  it("returns owned or invited class", async () => {
-    const klass = { id: "class-1" };
-    prisma.class.findFirst.mockResolvedValueOnce(klass);
+describe("requireOwnedOrInvited", () => {
+  it("accepts owned and invited classes", async () => {
+    const classRecord = { id: CLASS_ID };
+    prismaMock.class.findFirst.mockResolvedValue(classRecord);
 
-    await expect(requireOwnedOrInvited("class-1", ["user-1"])).resolves.toBe(klass);
-    expect(prisma.class.findFirst).toHaveBeenCalledWith({
-      where: {
-        id: "class-1",
-        OR: [{ ownerId: { in: ["user-1"] } }, { invitedUserIds: { hasSome: ["user-1"] } }],
-      },
+    await expect(requireOwnedOrInvited(CLASS_ID, OWNER_IDS)).resolves.toBe(classRecord);
+    expect(prismaMock.class.findFirst).toHaveBeenCalledWith({
+      where: { id: CLASS_ID, ...ownedOrInvitedWhere(OWNER_IDS) },
     });
   });
 
-  it("throws when class is inaccessible", async () => {
-    prisma.class.findFirst.mockResolvedValueOnce(null);
-    await expect(requireOwnedOrInvited("class-1", ["user-1"])).rejects.toThrow("Not found");
+  it("throws when the class is inaccessible", async () => {
+    prismaMock.class.findFirst.mockResolvedValue(null);
+
+    await expect(requireOwnedOrInvited(CLASS_ID, OWNER_IDS)).rejects.toThrow("Not found");
   });
 });

@@ -1,158 +1,232 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  anonymousContext,
+  teacherContext,
+  TEACHER_OWNER_IDS,
+  TEACHER_PRISMA_ID,
+} from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
 import { classFieldResolvers, classMutationResolvers, classQueryResolvers } from "./class";
 
-const prisma = vi.hoisted(() => ({
-  $transaction: vi.fn(),
-  attendanceRecord: { deleteMany: vi.fn() },
-  attendanceSession: { deleteMany: vi.fn(), findMany: vi.fn() },
-  class: {
-    delete: vi.fn(),
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    update: vi.fn(),
-  },
-  enrollment: { deleteMany: vi.fn() },
-  evaluation: { deleteMany: vi.fn(), findMany: vi.fn() },
-  grade: { deleteMany: vi.fn() },
-  user: { findUnique: vi.fn() },
-}));
+const CLASS_ID = "class-1";
+const OTHER_USER_ID = "user-2";
 
-vi.mock("../prisma", () => ({
-  getPrisma: async () => prisma,
-}));
-
-const ctx = { user: { id: "next-1", prismaUserId: "u1" } } as any;
-const anon = { user: null } as any;
-
-beforeEach(() => {
-  vi.resetAllMocks();
-  prisma.$transaction.mockImplementation(async (fn: (tx: any) => unknown) => fn(prisma));
-  delete process.env.NEXTAUTH_URL;
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
-describe("class resolvers", () => {
-  it("resolves class fields", async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({ id: "u1", name: "Owner" });
-
+describe("classFieldResolvers.Class", () => {
+  it("defaults daysOfWeek to an empty list", () => {
     expect(classFieldResolvers.Class.daysOfWeek({})).toEqual([]);
-    await expect(classFieldResolvers.Class.owner({ ownerId: "u1" })).resolves.toEqual({
-      id: "u1",
+  });
+
+  it("resolves the owner user", async () => {
+    prismaMock.user.findUnique.mockResolvedValue({ id: TEACHER_PRISMA_ID, name: "Owner" });
+
+    await expect(classFieldResolvers.Class.owner({ ownerId: TEACHER_PRISMA_ID })).resolves.toEqual({
+      id: TEACHER_PRISMA_ID,
       name: "Owner",
     });
+  });
+
+  it("shows the invited users to the owner", async () => {
     await expect(
       classFieldResolvers.Class.invitedUserIds(
-        { ownerId: "u1", invitedUserIds: ["u2"] },
+        { ownerId: TEACHER_PRISMA_ID, invitedUserIds: [OTHER_USER_ID] },
         null,
-        ctx,
+        teacherContext,
       ),
-    ).resolves.toEqual(["u2"]);
+    ).resolves.toEqual([OTHER_USER_ID]);
+  });
+
+  it("hides the invited users from everyone else", async () => {
     await expect(
       classFieldResolvers.Class.invitedUserIds(
-        { ownerId: "u2", invitedUserIds: ["u1"] },
+        { ownerId: OTHER_USER_ID, invitedUserIds: [TEACHER_PRISMA_ID] },
         null,
-        ctx,
+        teacherContext,
       ),
     ).resolves.toEqual([]);
   });
+});
 
-  it("queries classes and public invite info", async () => {
-    await expect(classQueryResolvers.classes(null, null, anon)).resolves.toEqual([]);
+describe("classQueryResolvers.classes", () => {
+  it("returns nothing for anonymous users", async () => {
+    await expect(classQueryResolvers.classes(null, null, anonymousContext)).resolves.toEqual([]);
+  });
 
-    prisma.class.findMany.mockResolvedValueOnce([{ id: "class-1" }]);
-    await expect(classQueryResolvers.classes(null, null, ctx)).resolves.toEqual([
-      { id: "class-1" },
+  it("returns the owned and invited classes", async () => {
+    prismaMock.class.findMany.mockResolvedValue([{ id: CLASS_ID }]);
+
+    await expect(classQueryResolvers.classes(null, null, teacherContext)).resolves.toEqual([
+      { id: CLASS_ID },
     ]);
-
-    await expect(classQueryResolvers.class(null, { id: "class-1" }, anon)).resolves.toBeNull();
-
-    prisma.class.findFirst.mockResolvedValueOnce({ id: "class-1" });
-    await expect(classQueryResolvers.class(null, { id: "class-1" }, ctx)).resolves.toEqual({
-      id: "class-1",
+    expect(prismaMock.class.findMany).toHaveBeenCalledWith({
+      where: {
+        OR: [
+          { ownerId: { in: TEACHER_OWNER_IDS } },
+          { invitedUserIds: { hasSome: TEACHER_OWNER_IDS } },
+        ],
+      },
     });
+  });
+});
 
-    prisma.class.findUnique.mockResolvedValueOnce(null);
+describe("classQueryResolvers.class", () => {
+  it("returns null for anonymous users", async () => {
+    await expect(
+      classQueryResolvers.class(null, { id: CLASS_ID }, anonymousContext),
+    ).resolves.toBeNull();
+  });
+
+  it("returns an accessible class", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+
+    await expect(
+      classQueryResolvers.class(null, { id: CLASS_ID }, teacherContext),
+    ).resolves.toEqual({ id: CLASS_ID });
+  });
+});
+
+describe("classQueryResolvers.classInviteInfo", () => {
+  it("returns null for an unknown class", async () => {
+    prismaMock.class.findUnique.mockResolvedValue(null);
+
     await expect(classQueryResolvers.classInviteInfo(null, { id: "missing" })).resolves.toBeNull();
+  });
 
-    prisma.class.findUnique.mockResolvedValueOnce({ id: "class-1", name: "Math", ownerId: "u1" });
-    prisma.user.findUnique.mockResolvedValueOnce({ name: "Owner" });
-    await expect(classQueryResolvers.classInviteInfo(null, { id: "class-1" })).resolves.toEqual({
-      id: "class-1",
+  it("exposes only the class name and the owner name", async () => {
+    prismaMock.class.findUnique.mockResolvedValue({
+      id: CLASS_ID,
+      name: "Math",
+      ownerId: TEACHER_PRISMA_ID,
+    });
+    prismaMock.user.findUnique.mockResolvedValue({ name: "Owner" });
+
+    await expect(classQueryResolvers.classInviteInfo(null, { id: CLASS_ID })).resolves.toEqual({
+      id: CLASS_ID,
       name: "Math",
       ownerName: "Owner",
     });
   });
+});
 
-  it("updates class schedule and name", async () => {
-    prisma.class.findFirst.mockResolvedValue({ id: "class-1", daysOfWeek: [1], excludedDates: [] });
-    prisma.class.update.mockResolvedValue({ id: "class-1" });
+describe("classMutationResolvers.updateClassSchedule", () => {
+  it("stores the new weekdays and dates", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID, daysOfWeek: [1] });
 
     await classMutationResolvers.updateClassSchedule(
       null,
-      { id: "class-1", daysOfWeek: [2], startDate: "2026-01-01", endDate: null },
-      ctx,
+      { id: CLASS_ID, daysOfWeek: [2], startDate: "2026-01-01", endDate: null },
+      teacherContext,
     );
-    expect(prisma.class.update).toHaveBeenCalledWith({
-      where: { id: "class-1" },
+
+    expect(prismaMock.class.update).toHaveBeenCalledWith({
+      where: { id: CLASS_ID },
       data: { daysOfWeek: [2], startDate: new Date("2026-01-01"), endDate: null },
     });
+  });
+});
+
+describe("classMutationResolvers.renameClass", () => {
+  it("rejects a blank name", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
 
     await expect(
-      classMutationResolvers.renameClass(null, { id: "class-1", name: " " }, ctx),
+      classMutationResolvers.renameClass(null, { id: CLASS_ID, name: " " }, teacherContext),
     ).rejects.toThrow("Nome é obrigatório");
+  });
 
-    await classMutationResolvers.renameClass(null, { id: "class-1", name: "  Physics  " }, ctx);
-    expect(prisma.class.update).toHaveBeenLastCalledWith({
-      where: { id: "class-1" },
+  it("trims the new name", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+
+    await classMutationResolvers.renameClass(
+      null,
+      { id: CLASS_ID, name: "  Physics  " },
+      teacherContext,
+    );
+
+    expect(prismaMock.class.update).toHaveBeenCalledWith({
+      where: { id: CLASS_ID },
       data: { name: "Physics" },
     });
   });
+});
 
-  it("deletes class dependent data", async () => {
-    prisma.class.findFirst.mockResolvedValue({ id: "class-1" });
-    prisma.attendanceSession.findMany.mockResolvedValueOnce([{ id: "session-1" }]);
-    prisma.evaluation.findMany.mockResolvedValueOnce([{ id: "evaluation-1" }]);
+describe("classMutationResolvers.deleteClass", () => {
+  it("deletes the dependent data before the class", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.attendanceSession.findMany.mockResolvedValue([{ id: "session-1" }]);
+    prismaMock.evaluation.findMany.mockResolvedValue([{ id: "evaluation-1" }]);
 
-    await expect(classMutationResolvers.deleteClass(null, { id: "class-1" }, ctx)).resolves.toBe(
-      true,
-    );
-    expect(prisma.attendanceRecord.deleteMany).toHaveBeenCalledWith({
+    await expect(
+      classMutationResolvers.deleteClass(null, { id: CLASS_ID }, teacherContext),
+    ).resolves.toBe(true);
+
+    expect(prismaMock.attendanceRecord.deleteMany).toHaveBeenCalledWith({
       where: { sessionId: { in: ["session-1"] } },
     });
-    expect(prisma.grade.deleteMany).toHaveBeenCalledWith({
+    expect(prismaMock.grade.deleteMany).toHaveBeenCalledWith({
       where: { evaluationId: { in: ["evaluation-1"] } },
     });
-    expect(prisma.class.delete).toHaveBeenCalledWith({ where: { id: "class-1" } });
+    expect(prismaMock.class.delete).toHaveBeenCalledWith({ where: { id: CLASS_ID } });
+  });
+});
+
+describe("classMutationResolvers.createInviteLink", () => {
+  it("builds the link from NEXTAUTH_URL", async () => {
+    vi.stubEnv("NEXTAUTH_URL", "https://diario.test");
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+
+    await expect(
+      classMutationResolvers.createInviteLink(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toBe(`https://diario.test/invite/${CLASS_ID}`);
   });
 
-  it("creates and accepts invites", async () => {
-    prisma.class.findFirst.mockResolvedValue({ id: "class-1" });
+  it("falls back to localhost", async () => {
+    vi.stubEnv("NEXTAUTH_URL", "");
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
 
-    process.env.NEXTAUTH_URL = "https://diario.test";
     await expect(
-      classMutationResolvers.createInviteLink(null, { classId: "class-1" }, ctx),
-    ).resolves.toBe("https://diario.test/invite/class-1");
+      classMutationResolvers.createInviteLink(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toBe(`http://localhost:3000/invite/${CLASS_ID}`);
+  });
+});
 
-    prisma.class.findUnique.mockResolvedValueOnce({ id: "class-1", invitedUserIds: ["u1"] });
+describe("classMutationResolvers.acceptInvite", () => {
+  it("throws for an unknown class", async () => {
+    prismaMock.class.findUnique.mockResolvedValue(null);
+
     await expect(
-      classMutationResolvers.acceptInvite(null, { id: "class-1" }, ctx),
-    ).resolves.toEqual({
-      id: "class-1",
-      invitedUserIds: ["u1"],
+      classMutationResolvers.acceptInvite(null, { id: "missing" }, teacherContext),
+    ).rejects.toThrow("Not found");
+  });
+
+  it("is a no-op when the user is already invited", async () => {
+    prismaMock.class.findUnique.mockResolvedValue({
+      id: CLASS_ID,
+      invitedUserIds: [TEACHER_PRISMA_ID],
     });
 
-    prisma.class.findUnique.mockResolvedValueOnce({ id: "class-2", invitedUserIds: [] });
-    prisma.class.update.mockResolvedValueOnce({ id: "class-2", invitedUserIds: ["u1"] });
     await expect(
-      classMutationResolvers.acceptInvite(null, { id: "class-2" }, ctx),
-    ).resolves.toEqual({
-      id: "class-2",
-      invitedUserIds: ["u1"],
+      classMutationResolvers.acceptInvite(null, { id: CLASS_ID }, teacherContext),
+    ).resolves.toEqual({ id: CLASS_ID, invitedUserIds: [TEACHER_PRISMA_ID] });
+    expect(prismaMock.class.update).not.toHaveBeenCalled();
+  });
+
+  it("adds the user to the invited list", async () => {
+    prismaMock.class.findUnique.mockResolvedValue({ id: CLASS_ID, invitedUserIds: [] });
+    prismaMock.class.update.mockResolvedValue({
+      id: CLASS_ID,
+      invitedUserIds: [TEACHER_PRISMA_ID],
     });
 
-    prisma.class.findUnique.mockResolvedValueOnce(null);
-    await expect(classMutationResolvers.acceptInvite(null, { id: "missing" }, ctx)).rejects.toThrow(
-      "Not found",
-    );
+    await expect(
+      classMutationResolvers.acceptInvite(null, { id: CLASS_ID }, teacherContext),
+    ).resolves.toEqual({ id: CLASS_ID, invitedUserIds: [TEACHER_PRISMA_ID] });
+    expect(prismaMock.class.update).toHaveBeenCalledWith({
+      where: { id: CLASS_ID },
+      data: { invitedUserIds: { push: TEACHER_PRISMA_ID } },
+    });
   });
 });

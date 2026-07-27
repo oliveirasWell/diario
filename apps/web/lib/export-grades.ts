@@ -1,4 +1,5 @@
-import * as XLSX from "xlsx";
+import { averageScore, scoreOutOfTen } from "@/lib/grade-average";
+import { downloadSheet, type SheetRow } from "@/lib/xlsx-sheet";
 
 export type ExportGradeEval = { id: string; title: string; maxScore: number };
 type ExportEnrollment = {
@@ -8,61 +9,58 @@ type ExportEnrollment = {
 };
 type ExportGrade = { enrollmentId: string; evaluationId: string; score: number };
 
-export function exportGradesToXlsx(opts: {
+export function exportGradesToXlsx(options: {
   className: string;
   evaluations: ExportGradeEval[];
   enrollments: ExportEnrollment[];
   grades: ExportGrade[];
 }) {
-  const { className, evaluations, enrollments, grades } = opts;
+  const { className, evaluations, enrollments, grades } = options;
 
-  const rows = buildGradeRows({ evaluations, enrollments, grades });
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  const colWidths = [{ wch: 24 }, ...evaluations.map(() => ({ wch: 10 })), { wch: 8 }, { wch: 10 }];
-  (ws as any)["!cols"] = colWidths;
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Notas");
-  const fileName = `${className || "turma"}-notas.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  downloadSheet({
+    rows: buildGradeRows({ evaluations, enrollments, grades }),
+    sheetName: "Notas",
+    fileName: `${className || "turma"}-notas.xlsx`,
+    columnWidths: [24, ...evaluations.map(() => 10), 8, 10],
+  });
 }
 
-export function buildGradeRows(opts: {
+export function buildGradeRows(options: {
   evaluations: ExportGradeEval[];
   enrollments: ExportEnrollment[];
   grades: ExportGrade[];
-}) {
-  const { evaluations, enrollments, grades } = opts;
-  const idx = new Map<string, number>();
-  for (const g of grades) {
-    idx.set(`${g.enrollmentId}|${g.evaluationId}`, g.score);
-  }
+}): SheetRow[] {
+  const { evaluations, enrollments, grades } = options;
+  const scoreByCell = new Map(
+    grades.map((grade) => [`${grade.enrollmentId}|${grade.evaluationId}`, grade.score]),
+  );
 
-  const header = ["Aluno", ...evaluations.map((e) => e.title), "Média", "Conceito"];
-  const rows: (string | number)[][] = [header];
+  const header = [
+    "Aluno",
+    ...evaluations.map((evaluation) => evaluation.title),
+    "Média",
+    "Conceito",
+  ];
 
-  for (const enr of enrollments) {
-    const row: (string | number)[] = [enr.student.name];
-    const normalizedScores: number[] = [];
-    for (const ev of evaluations) {
-      const s = idx.get(`${enr.id}|${ev.id}`);
-      if (typeof s === "number") {
-        row.push(s);
-        const max = ev.maxScore || 10;
-        normalizedScores.push((s / max) * 10);
-      } else {
-        row.push("");
-      }
-    }
-    const avg = normalizedScores.length
-      ? Number((normalizedScores.reduce((a, b) => a + b, 0) / normalizedScores.length).toFixed(1))
-      : "";
-    row.push(avg as any);
-    row.push(enr.concept ?? "");
-    rows.push(row);
-  }
+  return [
+    header,
+    ...enrollments.map((enrollment) => {
+      const scores = evaluations.map((evaluation) => ({
+        value: scoreByCell.get(`${enrollment.id}|${evaluation.id}`),
+        maxScore: evaluation.maxScore,
+      }));
+      const average = averageScore(
+        scores.flatMap((score) =>
+          score.value == null ? [] : [scoreOutOfTen(score.value, score.maxScore)],
+        ),
+      );
 
-  return rows;
+      return [
+        enrollment.student.name,
+        ...scores.map((score) => score.value ?? ""),
+        average ?? "",
+        enrollment.concept ?? "",
+      ];
+    }),
+  ];
 }

@@ -1,135 +1,147 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { anonymousContext, teacherContext } from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
 import { enrollmentMutationResolvers, enrollmentQueryResolvers } from "./enrollment";
 
-const prisma = vi.hoisted(() => ({
-  $transaction: vi.fn(),
-  attendanceRecord: { deleteMany: vi.fn() },
-  class: { findFirst: vi.fn() },
-  enrollment: {
-    create: vi.fn(),
-    delete: vi.fn(),
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    findUniqueOrThrow: vi.fn(),
-    update: vi.fn(),
-  },
-  grade: { deleteMany: vi.fn() },
-  student: { create: vi.fn(), update: vi.fn() },
-}));
+const CLASS_ID = "class-1";
+const ENROLLMENT_ID = "enrollment-1";
+const STUDENT_ID = "student-1";
 
-vi.mock("../prisma", () => ({
-  getPrisma: async () => prisma,
-}));
-
-const ctx = { user: { id: "next-1", prismaUserId: "u1" } } as any;
-const anon = { user: null } as any;
-
-beforeEach(() => {
-  vi.resetAllMocks();
-  prisma.$transaction.mockImplementation(async (fn: (tx: any) => unknown) => fn(prisma));
-});
-
-describe("enrollment resolvers", () => {
-  it("queries enrollments", async () => {
+describe("enrollmentQueryResolvers.enrollments", () => {
+  it("returns nothing for anonymous users", async () => {
     await expect(
-      enrollmentQueryResolvers.enrollments(null, { classId: "class-1" }, anon),
+      enrollmentQueryResolvers.enrollments(null, { classId: CLASS_ID }, anonymousContext),
     ).resolves.toEqual([]);
-
-    prisma.enrollment.findMany.mockResolvedValueOnce([{ id: "enrollment-1" }]);
-    await expect(
-      enrollmentQueryResolvers.enrollments(null, { classId: "class-1" }, ctx),
-    ).resolves.toEqual([{ id: "enrollment-1" }]);
   });
 
-  it("creates enrollment with normalized email", async () => {
-    prisma.class.findFirst.mockResolvedValue({ id: "class-1" });
-    prisma.student.create.mockResolvedValueOnce({ id: "student-1" });
-    prisma.enrollment.create.mockResolvedValueOnce({ id: "enrollment-1" });
+  it("returns the enrollments of an accessible class", async () => {
+    prismaMock.enrollment.findMany.mockResolvedValue([{ id: ENROLLMENT_ID }]);
+
+    await expect(
+      enrollmentQueryResolvers.enrollments(null, { classId: CLASS_ID }, teacherContext),
+    ).resolves.toEqual([{ id: ENROLLMENT_ID }]);
+  });
+});
+
+describe("enrollmentMutationResolvers.createAndEnroll", () => {
+  it("trims and lowercases the student email", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+    prismaMock.student.create.mockResolvedValue({ id: STUDENT_ID });
+    prismaMock.enrollment.create.mockResolvedValue({ id: ENROLLMENT_ID });
 
     await expect(
       enrollmentMutationResolvers.createAndEnroll(
         null,
-        { classId: "class-1", name: "Ana", email: " ANA@EXAMPLE.COM " },
-        ctx,
+        { classId: CLASS_ID, name: "Ana", email: " ANA@EXAMPLE.COM " },
+        teacherContext,
       ),
-    ).resolves.toEqual({ id: "enrollment-1" });
-    expect(prisma.student.create).toHaveBeenCalledWith({
+    ).resolves.toEqual({ id: ENROLLMENT_ID });
+    expect(prismaMock.student.create).toHaveBeenCalledWith({
       data: { name: "Ana", email: "ana@example.com" },
     });
   });
+});
 
-  it("unenrolls students", async () => {
-    prisma.enrollment.findFirst.mockResolvedValueOnce({
-      id: "enrollment-1",
-      studentId: "student-1",
+describe("enrollmentMutationResolvers.unenrollStudent", () => {
+  it("deletes the attendance and grades before the enrollment", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue({
+      id: ENROLLMENT_ID,
+      studentId: STUDENT_ID,
     });
+
     await expect(
-      enrollmentMutationResolvers.unenrollStudent(null, { enrollmentId: "enrollment-1" }, ctx),
+      enrollmentMutationResolvers.unenrollStudent(
+        null,
+        { enrollmentId: ENROLLMENT_ID },
+        teacherContext,
+      ),
     ).resolves.toBe(true);
-    expect(prisma.attendanceRecord.deleteMany).toHaveBeenCalledWith({
-      where: { enrollmentId: "enrollment-1" },
-    });
-    expect(prisma.enrollment.delete).toHaveBeenCalledWith({ where: { id: "enrollment-1" } });
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce(null);
-    await expect(
-      enrollmentMutationResolvers.unenrollStudent(null, { enrollmentId: "missing" }, ctx),
-    ).rejects.toThrow("Not found");
+    expect(prismaMock.attendanceRecord.deleteMany).toHaveBeenCalledWith({
+      where: { enrollmentId: ENROLLMENT_ID },
+    });
+    expect(prismaMock.enrollment.delete).toHaveBeenCalledWith({ where: { id: ENROLLMENT_ID } });
   });
 
-  it("renames students", async () => {
+  it("rejects an enrollment outside the accessible classes", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue(null);
+
+    await expect(
+      enrollmentMutationResolvers.unenrollStudent(
+        null,
+        { enrollmentId: "missing" },
+        teacherContext,
+      ),
+    ).rejects.toThrow("Not found");
+  });
+});
+
+describe("enrollmentMutationResolvers.renameStudent", () => {
+  it("rejects a blank name", async () => {
     await expect(
       enrollmentMutationResolvers.renameStudent(
         null,
-        { enrollmentId: "enrollment-1", name: " " },
-        ctx,
+        { enrollmentId: ENROLLMENT_ID, name: " " },
+        teacherContext,
       ),
     ).rejects.toThrow("Nome é obrigatório");
+  });
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce({
-      id: "enrollment-1",
-      studentId: "student-1",
+  it("trims the new name", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue({
+      id: ENROLLMENT_ID,
+      studentId: STUDENT_ID,
     });
-    prisma.enrollment.findUniqueOrThrow.mockResolvedValueOnce({ id: "enrollment-1" });
+    prismaMock.enrollment.findUniqueOrThrow.mockResolvedValue({ id: ENROLLMENT_ID });
+
     await expect(
       enrollmentMutationResolvers.renameStudent(
         null,
-        { enrollmentId: "enrollment-1", name: "  Bia " },
-        ctx,
+        { enrollmentId: ENROLLMENT_ID, name: "  Bia " },
+        teacherContext,
       ),
-    ).resolves.toEqual({ id: "enrollment-1" });
-    expect(prisma.student.update).toHaveBeenCalledWith({
-      where: { id: "student-1" },
+    ).resolves.toEqual({ id: ENROLLMENT_ID });
+    expect(prismaMock.student.update).toHaveBeenCalledWith({
+      where: { id: STUDENT_ID },
       data: { name: "Bia" },
     });
+  });
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce(null);
+  it("rejects an enrollment outside the accessible classes", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue(null);
+
     await expect(
       enrollmentMutationResolvers.renameStudent(
         null,
         { enrollmentId: "missing", name: "Bia" },
-        ctx,
+        teacherContext,
       ),
     ).rejects.toThrow("Not found");
   });
+});
 
-  it("sets enrollment concepts", async () => {
-    prisma.enrollment.findFirst.mockResolvedValueOnce({ id: "enrollment-1" });
-    prisma.enrollment.update.mockResolvedValueOnce({ id: "enrollment-1", concept: null });
+describe("enrollmentMutationResolvers.setEnrollmentConcept", () => {
+  it("clears the concept when it is null", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue({ id: ENROLLMENT_ID });
+    prismaMock.enrollment.update.mockResolvedValue({ id: ENROLLMENT_ID, concept: null });
+
     await expect(
       enrollmentMutationResolvers.setEnrollmentConcept(
         null,
-        { enrollmentId: "enrollment-1", concept: null },
-        ctx,
+        { enrollmentId: ENROLLMENT_ID, concept: null },
+        teacherContext,
       ),
-    ).resolves.toEqual({ id: "enrollment-1", concept: null });
+    ).resolves.toEqual({ id: ENROLLMENT_ID, concept: null });
+  });
 
-    prisma.enrollment.findFirst.mockResolvedValueOnce(null);
+  it("rejects an enrollment outside the accessible classes", async () => {
+    prismaMock.enrollment.findFirst.mockResolvedValue(null);
+
     await expect(
       enrollmentMutationResolvers.setEnrollmentConcept(
         null,
         { enrollmentId: "missing", concept: "A" },
-        ctx,
+        teacherContext,
       ),
     ).rejects.toThrow("Not found");
   });

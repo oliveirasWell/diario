@@ -1,27 +1,19 @@
 import { createYoga } from "graphql-yoga";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { TEACHER_NEXT_AUTH_ID, TEACHER_OWNER_IDS, TEACHER_PRISMA_ID } from "@/test/graphql-context";
+import { prismaMock } from "@/test/prisma-mock";
 import { createGraphQLSchema } from "./create-schema";
 
-const prisma = vi.hoisted(() => ({
-  class: {
-    create: vi.fn(),
-    findMany: vi.fn(),
-  },
-}));
+const CLASS_ID = "class-1";
 
-vi.mock("@diario/db", () => ({ prisma }));
-
-function yoga(user: unknown) {
-  return createYoga({
+async function postGraphQL(source: string, variables = {}, user: unknown = null) {
+  const yoga = createYoga({
     schema: createGraphQLSchema(),
     graphqlEndpoint: "/api/graphql",
     context: () => ({ user }),
     maskedErrors: false,
   });
-}
-
-async function postGraphQL(source: string, variables = {}, user: unknown = null) {
-  const res = await yoga(user).handleRequest(
+  const response = await yoga.handleRequest(
     new Request("http://test.local/api/graphql", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -29,15 +21,10 @@ async function postGraphQL(source: string, variables = {}, user: unknown = null)
     }),
     {},
   );
-  return res.json();
+  return response.json();
 }
 
 describe("GraphQL integration", () => {
-  beforeEach(() => {
-    prisma.class.create.mockReset();
-    prisma.class.findMany.mockReset();
-  });
-
   it("rejects authenticated-only mutations without NextAuth user", async () => {
     const body = await postGraphQL(`mutation { createClass(name: "Math", year: 2026) { id } }`);
 
@@ -45,25 +32,29 @@ describe("GraphQL integration", () => {
   });
 
   it("creates class for prisma user", async () => {
-    prisma.class.create.mockResolvedValueOnce({
-      id: "class-1",
+    prismaMock.class.create.mockResolvedValue({
+      id: CLASS_ID,
       name: "Math",
       year: 2026,
-      ownerId: "u1",
+      ownerId: TEACHER_PRISMA_ID,
     });
 
     const body = await postGraphQL(
       `mutation { createClass(name: "Math", year: 2026) { id name ownerId } }`,
       {},
-      { prismaUserId: "u1" },
+      { prismaUserId: TEACHER_PRISMA_ID },
     );
 
-    expect(body.data.createClass).toEqual({ id: "class-1", name: "Math", ownerId: "u1" });
-    expect(prisma.class.create).toHaveBeenCalledWith({
+    expect(body.data.createClass).toEqual({
+      id: CLASS_ID,
+      name: "Math",
+      ownerId: TEACHER_PRISMA_ID,
+    });
+    expect(prismaMock.class.create).toHaveBeenCalledWith({
       data: {
         name: "Math",
         year: 2026,
-        ownerId: "u1",
+        ownerId: TEACHER_PRISMA_ID,
         daysOfWeek: [],
         startDate: null,
         endDate: null,
@@ -72,22 +63,25 @@ describe("GraphQL integration", () => {
   });
 
   it("lists classes visible to auth ids", async () => {
-    prisma.class.findMany.mockResolvedValueOnce([
-      { id: "class-1", name: "Math", year: 2026, ownerId: "u1" },
+    prismaMock.class.findMany.mockResolvedValue([
+      { id: CLASS_ID, name: "Math", year: 2026, ownerId: TEACHER_PRISMA_ID },
     ]);
 
     const body = await postGraphQL(
       `query { classes { id name } }`,
       {},
-      { id: "next-1", prismaUserId: "u1" },
+      {
+        id: TEACHER_NEXT_AUTH_ID,
+        prismaUserId: TEACHER_PRISMA_ID,
+      },
     );
 
-    expect(body.data.classes).toEqual([{ id: "class-1", name: "Math" }]);
-    expect(prisma.class.findMany).toHaveBeenCalledWith({
+    expect(body.data.classes).toEqual([{ id: CLASS_ID, name: "Math" }]);
+    expect(prismaMock.class.findMany).toHaveBeenCalledWith({
       where: {
         OR: [
-          { ownerId: { in: ["u1", "next-1"] } },
-          { invitedUserIds: { hasSome: ["u1", "next-1"] } },
+          { ownerId: { in: TEACHER_OWNER_IDS } },
+          { invitedUserIds: { hasSome: TEACHER_OWNER_IDS } },
         ],
       },
     });

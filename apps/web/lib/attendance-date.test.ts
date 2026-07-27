@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { attendanceDayKey, normalizeAttendanceDate, sessionDayBounds } from "./attendance-date";
+import {
+  attendanceDayKey,
+  eachDayBetween,
+  normalizeAttendanceDate,
+  sessionDayBounds,
+} from "./attendance-date";
 
 describe("attendance-date", () => {
   it("normalizes date-like values to UTC day keys", () => {
@@ -10,6 +15,19 @@ describe("attendance-date", () => {
     expect(normalizeAttendanceDate("2026-06-25T23:45:00.000Z").toISOString()).toBe(
       "2026-06-25T12:00:00.000Z",
     );
+  });
+
+  it("walks every day of an inclusive range", () => {
+    const days = eachDayBetween(
+      new Date("2026-06-25T00:00:00.000Z"),
+      new Date("2026-06-27T00:00:00.000Z"),
+    );
+
+    expect(days.map((day) => attendanceDayKey(day))).toEqual([
+      "2026-06-25",
+      "2026-06-26",
+      "2026-06-27",
+    ]);
   });
 
   it("builds inclusive session bounds", () => {

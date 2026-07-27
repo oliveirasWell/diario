@@ -1,5 +1,11 @@
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited, requireOwnerStrict } from "../auth";
+import {
+  ownedOrInvitedWhere,
+  ownerIdsFrom,
+  requireOwnerIds,
+  requireOwnedOrInvited,
+  requireOwnerStrict,
+} from "../auth";
 import { getPrisma } from "../prisma";
 import type {
   MutationCreateClassArgs,
@@ -39,11 +45,7 @@ export const classQueryResolvers = {
       return [];
     }
     const prisma = await getPrisma();
-    return prisma.class.findMany({
-      where: {
-        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
-      },
-    });
+    return prisma.class.findMany({ where: ownedOrInvitedWhere(ownerIds) });
   },
 
   class: async (_: unknown, { id }: QueryClassArgs, ctx: GraphQLContext) => {
@@ -52,12 +54,7 @@ export const classQueryResolvers = {
       return null;
     }
     const prisma = await getPrisma();
-    return prisma.class.findFirst({
-      where: {
-        id,
-        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
-      },
-    });
+    return prisma.class.findFirst({ where: { id, ...ownedOrInvitedWhere(ownerIds) } });
   },
 
   classInviteInfo: async (_: unknown, { id }: { id: string }) => {

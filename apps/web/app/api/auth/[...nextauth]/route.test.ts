@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { prismaMock } from "@/test/prisma-mock";
 import { authOptions } from "./route";
-
-const userUpsert = vi.hoisted(() => vi.fn());
 
 vi.mock("next-auth", () => ({
   default: vi.fn(() => vi.fn()),
@@ -15,55 +14,46 @@ vi.mock("@next-auth/mongodb-adapter", () => ({
 vi.mock("@/lib/mongodb", () => ({
   default: vi.fn(() => Promise.resolve({})),
 }));
-vi.mock("@diario/db", () => ({
-  prisma: {
-    user: {
-      upsert: userUpsert,
-    },
-  },
-}));
+vi.mock("@diario/db", () => ({ prisma: prismaMock }));
 
-const email = "a@example.com";
+const EMAIL = "a@example.com";
+const PRISMA_USER_ID = "prisma-1";
 
 describe("NextAuth callbacks", () => {
-  beforeEach(() => {
-    userUpsert.mockReset();
-  });
-
   it("stores prisma user id in JWT", async () => {
-    userUpsert.mockResolvedValueOnce({ id: "prisma-1" });
+    prismaMock.user.upsert.mockResolvedValue({ id: PRISMA_USER_ID });
 
     const token = await authOptions.callbacks!.jwt!({
-      token: { email },
-      user: { email, name: "Ana", image: "avatar.png" } as any,
+      token: { email: EMAIL },
+      user: { email: EMAIL, name: "Ana", image: "avatar.png" } as any,
     } as any);
 
-    expect(token.prismaUserId).toBe("prisma-1");
-    expect(userUpsert).toHaveBeenCalledWith({
-      where: { email },
+    expect(token.prismaUserId).toBe(PRISMA_USER_ID);
+    expect(prismaMock.user.upsert).toHaveBeenCalledWith({
+      where: { email: EMAIL },
       update: { name: "Ana", image: "avatar.png" },
-      create: { email, name: "Ana", image: "avatar.png" },
+      create: { email: EMAIL, name: "Ana", image: "avatar.png" },
     });
   });
 
   it("keeps auth working when prisma sync fails", async () => {
-    userUpsert.mockRejectedValueOnce(new Error("db down"));
+    prismaMock.user.upsert.mockRejectedValue(new Error("db down"));
 
     const token = await authOptions.callbacks!.jwt!({
-      token: { email },
-      user: { email } as any,
+      token: { email: EMAIL },
+      user: { email: EMAIL } as any,
     } as any);
 
-    expect(token).toEqual({ email });
+    expect(token).toEqual({ email: EMAIL });
   });
 
   it("copies auth ids into session", async () => {
     const session = await authOptions.callbacks!.session!({
-      session: { user: { email } },
-      token: { sub: "next-1", prismaUserId: "prisma-1" },
+      session: { user: { email: EMAIL } },
+      token: { sub: "next-1", prismaUserId: PRISMA_USER_ID },
     } as any);
 
-    expect(session.user).toMatchObject({ id: "next-1", prismaUserId: "prisma-1" });
+    expect(session.user).toMatchObject({ id: "next-1", prismaUserId: PRISMA_USER_ID });
   });
 
   it("keeps sessions without user untouched", async () => {

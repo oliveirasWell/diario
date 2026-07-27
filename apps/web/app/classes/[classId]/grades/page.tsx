@@ -22,6 +22,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { exportGradesToXlsx } from "@/lib/export-grades";
+import { averageScore, scoreOutOfTen } from "@/lib/grade-average";
 
 function GradeInput({
   score,
@@ -206,22 +207,15 @@ export default function GradesPage() {
                   ))}
                   <TableCell>
                     {(() => {
-                      const scores = (evals ?? [])
-                        .map((ev) => {
-                          const s = gradeIndex.get(`${e.id}|${ev.id}`);
-                          if (s == null) {
-                            return null;
-                          }
-                          const max = ev.maxScore ?? 10;
-                          return (s / max) * 10;
-                        })
-                        .filter((v): v is number => v != null);
-                      const avg = scores.length
-                        ? scores.reduce((a, b) => a + b, 0) / scores.length
-                        : null;
+                      const average = averageScore(
+                        (evals ?? []).flatMap((ev) => {
+                          const score = gradeIndex.get(`${e.id}|${ev.id}`);
+                          return score == null ? [] : [scoreOutOfTen(score, ev.maxScore ?? 10)];
+                        }),
+                      );
                       return (
                         <div className="min-w-[64px] text-sm">
-                          {avg != null ? avg.toFixed(1) : "—"}
+                          {average != null ? average.toFixed(1) : "—"}
                         </div>
                       );
                     })()}

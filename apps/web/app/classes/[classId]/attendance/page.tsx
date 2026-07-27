@@ -296,7 +296,7 @@ export default function AttendancePage() {
                               current ? STATUS_CLASS[current] : "hover:bg-muted/40",
                             )}
                             onClick={() =>
-                              attendance.cycle(current, { date: d, enrollmentId: e.id })
+                              attendance.cycleStatus(current, { date: d, enrollmentId: e.id })
                             }
                           >
                             {current ? STATUS_LABEL[current] : "—"}

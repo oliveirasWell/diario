@@ -6,6 +6,15 @@ export function normalizeAttendanceDate(date: Date | string) {
   return new Date(`${attendanceDayKey(date)}T12:00:00.000Z`);
 }
 
+export function eachDayBetween(start: Date, end: Date) {
+  const oneDayMs = 24 * 60 * 60 * 1000;
+  const days: Date[] = [];
+  for (let day = new Date(start); day <= end; day = new Date(day.getTime() + oneDayMs)) {
+    days.push(new Date(day));
+  }
+  return days;
+}
+
 export function sessionDayBounds(date: Date | string) {
   const dayKey = attendanceDayKey(date);
   return {

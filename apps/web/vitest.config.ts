@@ -7,6 +7,7 @@ export default defineConfig({
   test: {
     environment: "node",
     exclude: ["node_modules/**", "e2e/**"],
+    setupFiles: ["./test/prisma-mock.ts"],
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
@@ -18,6 +19,7 @@ export default defineConfig({
         "lib/graphql-client.ts",
         "lib/query-options.ts",
         "lib/mongodb.ts",
+        "lib/graphql/prisma.ts",
         "lib/sentry-config.ts",
         "lib/capture-unexpected.ts",
         "lib/log.ts",
