@@ -4,6 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
+import { GoogleIcon } from "./google-icon";
 
 export function LoginClient() {
   const params = useSearchParams();
@@ -19,9 +20,16 @@ export function LoginClient() {
   }, [status, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="max-w-sm w-full space-y-6 text-center">
-        <Button onClick={() => signIn("google", { callbackUrl })}>Entrar com Google</Button>
+    <div className="relative z-10 row-start-2 flex min-h-[35svh] items-center justify-center bg-background p-8 shadow-2xl md:col-start-2 md:row-auto md:min-h-screen md:p-6 md:shadow-none">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight">Web Diário</h1>
+          <p className="text-sm text-muted-foreground">Entre para acessar suas turmas.</p>
+        </div>
+        <Button className="h-12 px-6 text-base" onClick={() => signIn("google", { callbackUrl })}>
+          <GoogleIcon />
+          Entrar com Google
+        </Button>
       </div>
     </div>
   );
