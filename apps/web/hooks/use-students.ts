@@ -24,6 +24,7 @@ export const useCreateAndEnrollMutation = (classId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 };
@@ -38,6 +39,7 @@ export const useUnenrollStudentMutation = (classId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.enrollments(classId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 };

@@ -53,6 +53,20 @@ export type Class = {
   year: Scalars['Int']['output'];
 };
 
+export type ClassGradeRow = {
+  __typename?: 'ClassGradeRow';
+  concept?: Maybe<Scalars['String']['output']>;
+  enrollmentId: Scalars['ID']['output'];
+  grades: Array<Grade>;
+  student: Student;
+};
+
+export type ClassGrades = {
+  __typename?: 'ClassGrades';
+  evaluations: Array<Evaluation>;
+  rows: Array<ClassGradeRow>;
+};
+
 export type ClassInviteInfo = {
   __typename?: 'ClassInviteInfo';
   id: Scalars['ID']['output'];
@@ -227,7 +241,7 @@ export type Query = {
   classes: Array<Class>;
   enrollments: Array<Enrollment>;
   evaluations: Array<Evaluation>;
-  gradesByClass: Array<Grade>;
+  gradesByClass: ClassGrades;
 };
 
 

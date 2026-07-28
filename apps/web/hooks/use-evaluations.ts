@@ -26,6 +26,7 @@ export function useCreateEvaluationMutation(classId: string) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 }
@@ -39,6 +40,7 @@ export const useRenameEvaluationMutation = (classId: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.grades(classId) });
     },
   });
 };

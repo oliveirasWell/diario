@@ -1,8 +1,6 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvaluationsQuery } from "@/hooks/use-evaluations";
-import { useEnrollments } from "@/hooks/use-attendance";
 import { useGradesByClass, useSetConcept, useUpsertGrade } from "@/hooks/use-grades";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { sortByStudentName } from "@/lib/utils";
@@ -64,49 +62,37 @@ function GradeInput({
   );
 }
 
+function scoreForRow(
+  row: { grades: { evaluationId: string; score: number }[] },
+  evaluationId: string,
+) {
+  return row.grades.find((g) => g.evaluationId === evaluationId)?.score;
+}
+
 export default function GradesPage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const {
-    data: evals,
-    isLoading: loadingE,
-    isError: errorE,
-    error: errE,
-  } = useEvaluationsQuery(classId);
-  const {
-    data: enrolls,
-    isLoading: loadingEn,
-    isError: errorEn,
-    error: errEn,
-  } = useEnrollments(classId);
-  const { data: grades, isError: errorG, error: errG } = useGradesByClass(classId);
+  const { evaluations, rows, isLoading, isError, error } = useGradesByClass(classId);
   const upsert = useUpsertGrade();
   const setConcept = useSetConcept();
 
-  const queryError = errorE ? errE : errorEn ? errEn : errorG ? errG : null;
   const mutationError = upsert.errorMessage ?? setConcept.errorMessage;
 
   const [q, setQ] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const list = useMemo(() => {
-    const base = enrolls ?? [];
+    const base = rows ?? [];
     const filtered = q
-      ? base.filter((e) => e.student.name.toLowerCase().includes(q.toLowerCase()))
+      ? base.filter((row) => row.student.name.toLowerCase().includes(q.toLowerCase()))
       : base;
     return sortByStudentName(filtered, sortDir);
-  }, [enrolls, q, sortDir]);
-
-  const gradeIndex = useMemo(() => {
-    const m = new Map<string, number>();
-    (grades ?? []).forEach((g) => m.set(`${g.enrollmentId}|${g.evaluationId}`, g.score));
-    return m;
-  }, [grades]);
+  }, [rows, q, sortDir]);
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {queryError && (
+      {isError && error && (
         <p className="text-sm text-destructive" role="alert">
-          {formatGraphqlError(queryError)}
+          {formatGraphqlError(error)}
         </p>
       )}
       {mutationError && (
@@ -127,26 +113,17 @@ export default function GradesPage() {
           size="sm"
           className="ml-auto"
           onClick={() => {
-            if (!evals || !enrolls) {
+            if (!evaluations || !rows) {
               return;
             }
             exportGradesToXlsx({
               className: String(classId),
-              evaluations: evals.map((ev) => ({
+              evaluations: evaluations.map((ev) => ({
                 id: ev.id,
                 title: ev.title,
                 maxScore: ev.maxScore ?? 10,
               })),
-              enrollments: (list ?? []).map((e) => ({
-                id: e.id,
-                student: { id: e.student.id, name: e.student.name },
-                concept: (e as any).concept ?? null,
-              })),
-              grades: (grades ?? []).map((g) => ({
-                enrollmentId: g.enrollmentId,
-                evaluationId: g.evaluationId,
-                score: g.score,
-              })),
+              rows: list,
             });
           }}
         >
@@ -154,7 +131,7 @@ export default function GradesPage() {
         </Button>
       </div>
 
-      {loadingE || loadingEn ? (
+      {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando…</div>
       ) : (
         <TableContainer>
@@ -174,7 +151,7 @@ export default function GradesPage() {
                     )}
                   </button>
                 </TablePinHead>
-                {evals?.map((ev) => (
+                {evaluations?.map((ev) => (
                   <TableHead key={ev.id}>{ev.title}</TableHead>
                 ))}
                 <TableHead>Média</TableHead>
@@ -182,22 +159,22 @@ export default function GradesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {list?.map((e) => (
-                <TableRow key={e.id}>
+              {list.map((row) => (
+                <TableRow key={row.enrollmentId}>
                   <TablePinCell>
-                    <span className="block w-40 truncate" title={e.student.name}>
-                      {e.student.name}
+                    <span className="block w-40 truncate" title={row.student.name}>
+                      {row.student.name}
                     </span>
                   </TablePinCell>
-                  {evals?.map((ev) => (
+                  {evaluations?.map((ev) => (
                     <TableCell key={ev.id}>
                       <GradeInput
-                        score={gradeIndex.get(`${e.id}|${ev.id}`)}
+                        score={scoreForRow(row, ev.id)}
                         maxScore={ev.maxScore ?? 10}
                         onSave={(num) =>
                           upsert.mutate({
                             classId,
-                            enrollmentId: e.id,
+                            enrollmentId: row.enrollmentId,
                             evaluationId: ev.id,
                             score: num,
                           })
@@ -208,8 +185,8 @@ export default function GradesPage() {
                   <TableCell>
                     {(() => {
                       const average = averageScore(
-                        (evals ?? []).flatMap((ev) => {
-                          const score = gradeIndex.get(`${e.id}|${ev.id}`);
+                        (evaluations ?? []).flatMap((ev) => {
+                          const score = scoreForRow(row, ev.id);
                           return score == null ? [] : [scoreOutOfTen(score, ev.maxScore ?? 10)];
                         }),
                       );
@@ -223,11 +200,11 @@ export default function GradesPage() {
                   <TableCell>
                     <select
                       className="h-10 min-w-[96px] bg-muted/40 px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                      value={(e as { concept?: string | null }).concept ?? ""}
+                      value={row.concept ?? ""}
                       onChange={(evn) =>
                         setConcept.mutate({
                           classId,
-                          enrollmentId: e.id,
+                          enrollmentId: row.enrollmentId,
                           concept: evn.currentTarget.value || null,
                         })
                       }
