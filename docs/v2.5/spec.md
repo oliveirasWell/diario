@@ -1,10 +1,10 @@
-# v2.5 — Editar nome de turma e de aluno
+# v2.5 — Editar nome de turma e de aluno (implementado)
 
-> Spec para implementação. Branch alvo: **`v2.5`** (a partir de `v2` / pós-merge v3).
+> Registro histórico da especificação implementada no commit `d499e95`. Não use este documento como plano de trabalho atual; consulte o código e a documentação raiz para o estado vigente.
 
 ## Problema
 
-Hoje só dá para **criar** e **remover** turmas/alunos. Erro de digitação no nome exige workaround ou recadastro. v2.5: editar nome inline na UI com modal, mesmo padrão do `ConfirmDeleteDialog`.
+Antes desta versão, só era possível **criar** e **remover** turmas e alunos. A v2.5 introduziu a edição de nome em modal, seguindo o padrão de `ConfirmDeleteDialog`.
 
 ## Objetivo
 
@@ -43,11 +43,11 @@ Espelhar o botão Remover existente — trocar só ícone, `title` e `onClick`:
 
 Alunos: idem com `title="Editar aluno"` / `"Remover aluno desta turma"`. **Editar à esquerda**, Remover à direita (ou ordem consistente nos dois panels).
 
-## Fora de escopo (v2.5)
+## Fora de escopo na v2.5
 
 - Editar ano da turma, email do aluno, cronograma.
 - Editar nome pelo header/breadcrumb.
-- Renomear avaliação.
+- Renomear avaliação (implementado posteriormente, fora desta versão).
 - Undo / histórico de alterações.
 - Editar aluno compartilhado entre turmas (hoje `createAndEnroll` cria `Student` novo por matrícula).
 
@@ -205,7 +205,7 @@ const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 
 ---
 
-## Arquivos tocados (checklist)
+## Arquivos implementados
 
 | Arquivo | Ação |
 |---------|------|
@@ -241,22 +241,6 @@ const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 - Opcional: component test `EditNameDialog` submit chama `onSave`.
 
 ---
-
-## Prompt para agente (próxima sessão)
-
-```
-Implementar v2.5 conforme docs/v2.5/spec.md:
-
-1. GraphQL renameClass + renameStudent com auth existente.
-2. Codegen + hooks useRenameClassMutation / useRenameStudentMutation.
-3. components/edit-name-dialog.tsx (padrão ConfirmDeleteDialog).
-4. classes-panel + students-panel: botão editar + modal.
-5. Invalidar caches corretos; migrar HeaderTitle para classQueryOptions se rápido.
-6. PT-BR, erros inline com &&, sem Sonner.
-7. typecheck + lint + build.
-
-Branch: v2.5 a partir de v2. Não incluir v4 import nem refactor R-01.
-```
 
 ---
 

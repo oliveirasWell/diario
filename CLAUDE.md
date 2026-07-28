@@ -4,7 +4,7 @@ Teacher dashboard: classes, students, attendance, grades, evaluations, class inv
 
 pnpm workspace + Turbo. `apps/web` (Next.js App Router + GraphQL API + UI), `packages/db` (Prisma/MongoDB wrapper, exported as `@diario/db`).
 
-Versions live in `package.json`, env vars in `.env.example`, domain model in `packages/db/prisma/schema.prisma` and `apps/web/schema.graphql`.
+Versions live in `package.json`. The root `.env.example` is the source template for `pnpm env:sync`; package-specific templates live in `apps/web/.env.example` and `packages/db/.env.example`. Domain model lives in `packages/db/prisma/schema.prisma` and `apps/web/schema.graphql`.
 
 ## Architecture
 
