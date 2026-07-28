@@ -1,30 +1,34 @@
 import { queryOptions } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import {
-  AttendanceDatesDocument,
-  AttendanceRecordsDocument,
+  AttendanceBoardDocument,
   ClassDocument,
   ClassesDocument,
   EnrollmentsDocument,
   EvaluationsDocument,
   GradesByClassDocument,
 } from "@/src/gql/graphql";
-import type { AttendanceRecordsQuery } from "@/src/gql/graphql";
+import type { AttendanceBoardQuery } from "@/src/gql/graphql";
 
-export type AttendanceRecord = AttendanceRecordsQuery["attendanceRecords"][number];
+export type AttendanceRecord = AttendanceBoardQuery["attendanceRecords"][number];
+export type AttendanceBoardEnrollment = AttendanceBoardQuery["enrollments"][number];
+export type AttendanceBoard = {
+  attendanceDates: Date[];
+  enrollments: AttendanceBoardEnrollment[];
+  attendanceRecords: AttendanceRecord[];
+};
 
 export const queryKeys = {
   classes: () => ["classes"] as const,
   class: (classId: string) => ["class", classId] as const,
   enrollments: (classId: string) => ["enrollments", classId] as const,
-  attendanceDates: (classId: string, from?: string, to?: string) =>
-    ["attendanceDates", classId, from, to] as const,
-  attendanceRecords: (classId: string) => ["attendanceRecords", classId] as const,
+  attendanceBoard: (classId: string, from?: string, to?: string) =>
+    ["attendanceBoard", classId, from, to] as const,
   evaluations: (classId: string) => ["evaluations", classId] as const,
   grades: (classId: string) => ["grades", classId] as const,
 };
 
-export function classesQueryOptions() {
+export const classesQueryOptions = () => {
   return queryOptions({
     queryKey: queryKeys.classes(),
     queryFn: async () => {
@@ -34,9 +38,9 @@ export function classesQueryOptions() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
-}
+};
 
-export function classQueryOptions(classId: string) {
+export const classQueryOptions = (classId: string) => {
   return queryOptions({
     queryKey: queryKeys.class(classId),
     queryFn: async () => {
@@ -47,9 +51,9 @@ export function classQueryOptions(classId: string) {
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
-}
+};
 
-export function enrollmentsQueryOptions(classId: string) {
+export const enrollmentsQueryOptions = (classId: string) => {
   return queryOptions({
     queryKey: queryKeys.enrollments(classId),
     queryFn: async () => {
@@ -60,35 +64,26 @@ export function enrollmentsQueryOptions(classId: string) {
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
-}
+};
 
-export function attendanceDatesQueryOptions(classId: string, from?: string, to?: string) {
+export const attendanceBoardQueryOptions = (classId: string, from?: string, to?: string) => {
   return queryOptions({
-    queryKey: queryKeys.attendanceDates(classId, from, to),
-    queryFn: async () => {
-      const data = await gqlRequest(AttendanceDatesDocument, { classId, from, to });
-      return data.attendanceDates.map((d) => new Date(d));
-    },
-    enabled: !!classId,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-  });
-}
-
-export function attendanceRecordsQueryOptions(classId: string, from?: string, to?: string) {
-  return queryOptions({
-    queryKey: queryKeys.attendanceRecords(classId),
-    queryFn: async () => {
-      const data = await gqlRequest(AttendanceRecordsDocument, { classId, from, to });
-      return data.attendanceRecords;
+    queryKey: queryKeys.attendanceBoard(classId, from, to),
+    queryFn: async (): Promise<AttendanceBoard> => {
+      const data = await gqlRequest(AttendanceBoardDocument, { classId, from, to });
+      return {
+        attendanceDates: data.attendanceDates.map((date) => new Date(date)),
+        enrollments: data.enrollments,
+        attendanceRecords: data.attendanceRecords,
+      };
     },
     enabled: !!classId,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });
-}
+};
 
-export function evaluationsQueryOptions(classId: string) {
+export const evaluationsQueryOptions = (classId: string) => {
   return queryOptions({
     queryKey: queryKeys.evaluations(classId),
     queryFn: async () => {
@@ -99,9 +94,9 @@ export function evaluationsQueryOptions(classId: string) {
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
-}
+};
 
-export function gradesQueryOptions(classId: string) {
+export const gradesQueryOptions = (classId: string) => {
   return queryOptions({
     queryKey: queryKeys.grades(classId),
     queryFn: async () => {
@@ -112,4 +107,4 @@ export function gradesQueryOptions(classId: string) {
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
-}
+};

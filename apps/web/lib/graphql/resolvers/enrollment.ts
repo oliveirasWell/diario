@@ -1,6 +1,7 @@
 import type { GraphQLContext } from "../context";
 import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
+import { createGraphQLError } from "graphql-yoga";
 import type {
   MutationCreateAndEnrollArgs,
   MutationRenameStudentArgs,
@@ -63,7 +64,7 @@ export const enrollmentMutationResolvers = {
       },
     });
     if (!found) {
-      throw new Error("Not found");
+      throw createGraphQLError("Not found");
     }
 
     // Delete dependent data (grades, attendance) before removing enrollment
@@ -80,7 +81,7 @@ export const enrollmentMutationResolvers = {
     const ownerIds = requireOwnerIds(ctx);
     const name = args.name.trim();
     if (!name) {
-      throw new Error("Nome é obrigatório");
+      throw createGraphQLError("Nome é obrigatório");
     }
     const prisma = await getPrisma();
     const found = await prisma.enrollment.findFirst({
@@ -92,7 +93,7 @@ export const enrollmentMutationResolvers = {
       },
     });
     if (!found) {
-      throw new Error("Not found");
+      throw createGraphQLError("Not found");
     }
     await prisma.student.update({
       where: { id: found.studentId },
@@ -120,7 +121,7 @@ export const enrollmentMutationResolvers = {
       },
     });
     if (!enr) {
-      throw new Error("Not found");
+      throw createGraphQLError("Not found");
     }
     return prisma.enrollment.update({
       where: { id: enrollmentId },

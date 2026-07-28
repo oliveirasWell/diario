@@ -11,7 +11,7 @@ const { handleRequest } = createYoga({
   schema: createGraphQLSchema(),
   graphqlEndpoint: "/api/graphql",
   context: createGraphQLContext,
-  maskedErrors: process.env.NODE_ENV !== "development",
+  maskedErrors: { errorMessage: "Algo deu errado. Tente novamente." },
 });
 
 async function toGlobalResponse(res: Response): Promise<Response> {

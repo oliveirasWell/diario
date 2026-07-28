@@ -38,7 +38,7 @@ export default function ClassConfigPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.class(classId) });
-      qc.invalidateQueries({ queryKey: queryKeys.attendanceDates(classId) });
+      qc.invalidateQueries({ queryKey: queryKeys.attendanceBoard(classId) });
     },
   });
 

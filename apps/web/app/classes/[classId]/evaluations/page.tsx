@@ -5,6 +5,7 @@ import {
   useEvaluationsQuery,
   useCreateEvaluationMutation,
   useDeleteEvaluationMutation,
+  useRenameEvaluationMutation,
 } from "@/hooks/use-evaluations";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { Controller, useForm } from "react-hook-form";
@@ -13,6 +14,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDeleteDialog } from "@/components/confirm-delete-dialog";
+import { EditNameDialog } from "@/components/edit-name-dialog";
 import { useState } from "react";
 import {
   Table,
@@ -27,7 +29,7 @@ import {
 const schema = z.object({ title: z.string().trim().min(1, "Informe um título") });
 
 type FormValues = z.infer<typeof schema>;
-type DeleteTarget = { id: string; title: string };
+type EvaluationTarget = { id: string; title: string };
 
 export default function EvaluationsPage() {
   const params = useParams();
@@ -35,7 +37,9 @@ export default function EvaluationsPage() {
   const { data, isLoading, isError, error } = useEvaluationsQuery(classId);
   const createEval = useCreateEvaluationMutation(classId);
   const deleteEval = useDeleteEvaluationMutation(classId);
-  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const renameEvaluation = useRenameEvaluationMutation(classId);
+  const [deleteTarget, setDeleteTarget] = useState<EvaluationTarget | null>(null);
+  const [editTarget, setEditTarget] = useState<EvaluationTarget | null>(null);
 
   const {
     control,
@@ -63,6 +67,18 @@ export default function EvaluationsPage() {
     try {
       await deleteEval.mutateAsync(deleteTarget.id);
       setDeleteTarget(null);
+    } catch {
+      // errorMessage shown inline
+    }
+  };
+
+  const onRename = async (title: string) => {
+    if (!editTarget) {
+      return;
+    }
+    try {
+      await renameEvaluation.mutateAsync({ id: editTarget.id, title });
+      setEditTarget(null);
     } catch {
       // errorMessage shown inline
     }
@@ -116,15 +132,26 @@ export default function EvaluationsPage() {
                   <TableCell>{ev.title}</TableCell>
                   <TableCell>{new Date(ev.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      title="Remover avaliação"
-                      onClick={() => setDeleteTarget({ id: ev.id, title: ev.title })}
-                    >
-                      🗑️
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="Editar avaliação"
+                        onClick={() => setEditTarget({ id: ev.id, title: ev.title })}
+                      >
+                        ✏️
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        title="Remover avaliação"
+                        onClick={() => setDeleteTarget({ id: ev.id, title: ev.title })}
+                      >
+                        🗑️
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -132,6 +159,23 @@ export default function EvaluationsPage() {
           </Table>
         </TableContainer>
       )}
+
+      <EditNameDialog
+        key={editTarget?.id ?? "closed"}
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditTarget(null);
+            renameEvaluation.clearError();
+          }
+        }}
+        title="Editar avaliação"
+        label="Título"
+        initialName={editTarget?.title ?? ""}
+        onSave={onRename}
+        isPending={renameEvaluation.isPending}
+        errorMessage={renameEvaluation.errorMessage}
+      />
 
       <ConfirmDeleteDialog
         open={deleteTarget !== null}

@@ -9,72 +9,69 @@ import { toPrismaAttendanceStatus, PrismaAttendanceStatus } from "@/lib/graphql/
 import type { GraphQLContext } from "../context";
 import { ownedOrInvitedWhere, ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
+import { createGraphQLError } from "graphql-yoga";
 import type {
   MutationExcludeAttendanceDateArgs,
-  MutationMarkAllPresentArgs,
   MutationMarkAttendanceArgs,
-  MutationMarkEnrollmentPresentForDatesArgs,
+  MutationMarkPresentArgs,
   QueryAttendanceDatesArgs,
   QueryAttendanceRecordsArgs,
 } from "@/src/gql/schema";
 
 type AttendanceStore = Pick<Prisma.TransactionClient, "attendanceSession" | "attendanceRecord">;
 
-async function findOrCreateSessions(
+// Sessions are always stored at midday UTC, so a day is matched by equality.
+const findOrCreateSessions = async (
   store: AttendanceStore,
   classId: string,
   dates: (Date | string)[],
-) {
-  const dayKeys = Array.from(new Set(dates.map((date) => attendanceDayKey(date)))).sort();
-  if (!dayKeys.length) {
+) => {
+  const dayKeys = Array.from(new Set(dates.map((date) => attendanceDayKey(date))));
+  const wanted = dayKeys.map((dayKey) => normalizeAttendanceDate(dayKey));
+  if (!wanted.length) {
     return [];
   }
 
-  const sessions = await store.attendanceSession.findMany({
-    where: {
-      classId,
-      date: {
-        gte: sessionDayBounds(dayKeys[0]).gte,
-        lte: sessionDayBounds(dayKeys[dayKeys.length - 1]).lte,
-      },
-    },
+  const found = await store.attendanceSession.findMany({
+    where: { classId, date: { in: wanted } },
+  });
+  if (found.length === wanted.length) {
+    return found;
+  }
+
+  const foundDates = new Set(found.map((session) => session.date.getTime()));
+  await store.attendanceSession.createMany({
+    data: wanted
+      .filter((date) => !foundDates.has(date.getTime()))
+      .map((date) => ({ classId, date })),
   });
 
-  const requested = new Set(dayKeys);
-  const found = sessions.filter((session) => requested.has(attendanceDayKey(session.date)));
-  const foundDayKeys = new Set(found.map((session) => attendanceDayKey(session.date)));
-  const created = await Promise.all(
-    dayKeys
-      .filter((dayKey) => !foundDayKeys.has(dayKey))
-      .map((dayKey) =>
-        store.attendanceSession.create({
-          data: { classId, date: normalizeAttendanceDate(dayKey) },
-        }),
-      ),
-  );
+  // createMany returns no ids on MongoDB, hence the re-read.
+  return store.attendanceSession.findMany({ where: { classId, date: { in: wanted } } });
+};
 
-  return [...found, ...created];
-}
-
-async function findOrCreateSession(store: AttendanceStore, classId: string, date: Date | string) {
+const findOrCreateSession = async (
+  store: AttendanceStore,
+  classId: string,
+  date: Date | string,
+) => {
   const [session] = await findOrCreateSessions(store, classId, [date]);
   return session;
-}
+};
 
-function setAttendanceStatus(
+const setAttendanceStatus = (
   store: AttendanceStore,
   sessionId: string,
   enrollmentId: string,
   status: PrismaAttendanceStatus,
-) {
-  return store.attendanceRecord.upsert({
+) =>
+  store.attendanceRecord.upsert({
     where: { sessionId_enrollmentId: { sessionId, enrollmentId } },
     update: { status },
     create: { sessionId, enrollmentId, status },
   });
-}
 
-function sessionDateRangeWhere(from?: string | null, to?: string | null) {
+const sessionDateRangeWhere = (from?: string | null, to?: string | null) => {
   if (!from && !to) {
     return {};
   }
@@ -84,7 +81,7 @@ function sessionDateRangeWhere(from?: string | null, to?: string | null) {
       ...(to ? { lte: new Date(to) } : {}),
     },
   };
-}
+};
 
 export const attendanceQueryResolvers = {
   attendanceDates: async (_: unknown, args: QueryAttendanceDatesArgs, context: GraphQLContext) => {
@@ -184,48 +181,58 @@ export const attendanceMutationResolvers = {
     return true;
   },
 
-  markAllPresent: async (_: unknown, args: MutationMarkAllPresentArgs, context: GraphQLContext) => {
+  markPresent: async (_: unknown, args: MutationMarkPresentArgs, context: GraphQLContext) => {
     const ownerIds = requireOwnerIds(context);
     await requireOwnedOrInvited(args.classId, ownerIds);
-    const prisma = await getPrisma();
-
-    // Fora de transação: cada upsert é idempotente, e uma turma grande não cabe
-    // no timeout de 5s de uma transação interativa.
-    const session = await findOrCreateSession(prisma, args.classId, args.date);
-    const enrollments = await prisma.enrollment.findMany({ where: { classId: args.classId } });
-    await Promise.all(
-      enrollments.map((enrollment) =>
-        setAttendanceStatus(prisma, session.id, enrollment.id, PrismaAttendanceStatus.PRESENT),
-      ),
-    );
-
-    return true;
-  },
-
-  markEnrollmentPresentForDates: async (
-    _: unknown,
-    args: MutationMarkEnrollmentPresentForDatesArgs,
-    context: GraphQLContext,
-  ) => {
-    const ownerIds = requireOwnerIds(context);
-    await requireOwnedOrInvited(args.classId, ownerIds);
-    const prisma = await getPrisma();
-
-    const enrollment = await prisma.enrollment.findFirst({
-      where: { id: args.enrollmentId, classId: args.classId },
-    });
-    if (!enrollment) {
-      throw new Error("Not found");
+    if (!args.dates.length) {
+      return true;
     }
+    const prisma = await getPrisma();
 
-    // Fora de transação: cada upsert é idempotente, e um semestre inteiro de datas
-    // não cabe no timeout de 5s de uma transação interativa.
-    const sessions = await findOrCreateSessions(prisma, args.classId, args.dates);
-    await Promise.all(
-      sessions.map((session) =>
-        setAttendanceStatus(prisma, session.id, args.enrollmentId, PrismaAttendanceStatus.PRESENT),
-      ),
-    );
+    await prisma.$transaction(async (transaction) => {
+      const enrollments = await transaction.enrollment.findMany({
+        where: args.enrollmentIds?.length
+          ? { id: { in: args.enrollmentIds }, classId: args.classId }
+          : { classId: args.classId },
+      });
+      if (args.enrollmentIds?.length && enrollments.length !== args.enrollmentIds.length) {
+        throw createGraphQLError("Not found");
+      }
+      const enrollmentIds = enrollments.map((enrollment) => enrollment.id);
+      if (!enrollmentIds.length) {
+        return;
+      }
+
+      const sessions = await findOrCreateSessions(transaction, args.classId, args.dates);
+      const sessionIds = sessions.map((session) => session.id);
+
+      const existing = await transaction.attendanceRecord.findMany({
+        where: { sessionId: { in: sessionIds }, enrollmentId: { in: enrollmentIds } },
+        select: { sessionId: true, enrollmentId: true },
+      });
+      const existingCells = new Set(
+        existing.map((record) => `${record.sessionId}|${record.enrollmentId}`),
+      );
+
+      await transaction.attendanceRecord.updateMany({
+        where: { sessionId: { in: sessionIds }, enrollmentId: { in: enrollmentIds } },
+        data: { status: PrismaAttendanceStatus.PRESENT },
+      });
+
+      const missing = sessionIds.flatMap((sessionId) =>
+        enrollmentIds
+          .filter((enrollmentId) => !existingCells.has(`${sessionId}|${enrollmentId}`))
+          .map((enrollmentId) => ({
+            sessionId,
+            enrollmentId,
+            status: PrismaAttendanceStatus.PRESENT,
+          })),
+      );
+      // An empty createMany throws on MongoDB ("No documents provided to insert_many").
+      if (missing.length) {
+        await transaction.attendanceRecord.createMany({ data: missing });
+      }
+    });
 
     return true;
   },

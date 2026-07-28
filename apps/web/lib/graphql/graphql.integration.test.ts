@@ -5,13 +5,22 @@ import { prismaMock } from "@/test/prisma-mock";
 import { createGraphQLSchema } from "./create-schema";
 
 const CLASS_ID = "class-1";
+const ENROLLMENT_ID = "enrollment-1";
+const SESSION_ID = "session-1";
+const teacher = { id: TEACHER_NEXT_AUTH_ID, prismaUserId: TEACHER_PRISMA_ID };
+const GENERIC_ERROR = "Algo deu errado. Tente novamente.";
 
-async function postGraphQL(source: string, variables = {}, user: unknown = null) {
+const postGraphQL = async (
+  source: string,
+  variables = {},
+  user: unknown = null,
+  maskedErrors: Parameters<typeof createYoga>[0]["maskedErrors"] = false,
+) => {
   const yoga = createYoga({
     schema: createGraphQLSchema(),
     graphqlEndpoint: "/api/graphql",
     context: () => ({ user }),
-    maskedErrors: false,
+    maskedErrors,
   });
   const response = await yoga.handleRequest(
     new Request("http://test.local/api/graphql", {
@@ -22,7 +31,7 @@ async function postGraphQL(source: string, variables = {}, user: unknown = null)
     {},
   );
   return response.json();
-}
+};
 
 describe("GraphQL integration", () => {
   it("rejects authenticated-only mutations without NextAuth user", async () => {
@@ -67,14 +76,7 @@ describe("GraphQL integration", () => {
       { id: CLASS_ID, name: "Math", year: 2026, ownerId: TEACHER_PRISMA_ID },
     ]);
 
-    const body = await postGraphQL(
-      `query { classes { id name } }`,
-      {},
-      {
-        id: TEACHER_NEXT_AUTH_ID,
-        prismaUserId: TEACHER_PRISMA_ID,
-      },
-    );
+    const body = await postGraphQL(`query { classes { id name } }`, {}, teacher);
 
     expect(body.data.classes).toEqual([{ id: CLASS_ID, name: "Math" }]);
     expect(prismaMock.class.findMany).toHaveBeenCalledWith({
@@ -84,6 +86,76 @@ describe("GraphQL integration", () => {
           { invitedUserIds: { hasSome: TEACHER_OWNER_IDS } },
         ],
       },
+    });
+  });
+
+  it("hides unexpected server failures from the client", async () => {
+    prismaMock.class.findFirst.mockRejectedValue(new Error("No documents provided to insert_many"));
+
+    const body = await postGraphQL(
+      `mutation { renameClass(id: "${CLASS_ID}", name: "Math") { id } }`,
+      {},
+      teacher,
+      { errorMessage: GENERIC_ERROR },
+    );
+
+    expect(body.errors?.[0]?.message).toBe(GENERIC_ERROR);
+  });
+
+  it("still shows validation messages to the client", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({ id: CLASS_ID });
+
+    const body = await postGraphQL(
+      `mutation { renameClass(id: "${CLASS_ID}", name: " ") { id } }`,
+      {},
+      teacher,
+      { errorMessage: GENERIC_ERROR },
+    );
+
+    expect(body.errors?.[0]?.message).toBe("Nome é obrigatório");
+  });
+
+  it("loads dates, students and records in a single response", async () => {
+    prismaMock.class.findFirst.mockResolvedValue({
+      id: CLASS_ID,
+      daysOfWeek: [1],
+      startDate: new Date("2026-01-05T00:00:00.000Z"),
+      endDate: new Date("2026-01-05T00:00:00.000Z"),
+    });
+    prismaMock.enrollment.findMany.mockResolvedValue([
+      { id: ENROLLMENT_ID, student: { id: "student-1", name: "Ana" } },
+    ]);
+    prismaMock.attendanceSession.findMany.mockResolvedValue([
+      {
+        id: SESSION_ID,
+        date: new Date("2026-01-05T12:00:00.000Z"),
+        records: [{ id: "record-1", enrollmentId: ENROLLMENT_ID, status: "PRESENT" }],
+      },
+    ]);
+
+    const body = await postGraphQL(
+      `query AttendanceBoard($classId: ID!) {
+        attendanceDates(classId: $classId)
+        enrollments(classId: $classId) { id student { id name } }
+        attendanceRecords(classId: $classId) {
+          id enrollmentId status session { id date }
+        }
+      }`,
+      { classId: CLASS_ID },
+      teacher,
+    );
+
+    expect(body.data).toEqual({
+      attendanceDates: ["2026-01-05T00:00:00.000Z"],
+      enrollments: [{ id: ENROLLMENT_ID, student: { id: "student-1", name: "Ana" } }],
+      attendanceRecords: [
+        {
+          id: "record-1",
+          enrollmentId: ENROLLMENT_ID,
+          status: "PRESENT",
+          session: { id: SESSION_ID, date: "2026-01-05T12:00:00.000Z" },
+        },
+      ],
     });
   });
 });

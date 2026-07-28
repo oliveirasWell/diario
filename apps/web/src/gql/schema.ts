@@ -98,10 +98,10 @@ export type Mutation = {
   deleteClass: Scalars['Boolean']['output'];
   deleteEvaluation: Scalars['Boolean']['output'];
   excludeAttendanceDate: Scalars['Boolean']['output'];
-  markAllPresent: Scalars['Boolean']['output'];
   markAttendance: Scalars['Boolean']['output'];
-  markEnrollmentPresentForDates: Scalars['Boolean']['output'];
+  markPresent: Scalars['Boolean']['output'];
   renameClass: Class;
+  renameEvaluation: Evaluation;
   renameStudent: Enrollment;
   setEnrollmentConcept: Enrollment;
   unenrollStudent: Scalars['Boolean']['output'];
@@ -160,12 +160,6 @@ export type MutationExcludeAttendanceDateArgs = {
 };
 
 
-export type MutationMarkAllPresentArgs = {
-  classId: Scalars['ID']['input'];
-  date: Scalars['DateTime']['input'];
-};
-
-
 export type MutationMarkAttendanceArgs = {
   classId: Scalars['ID']['input'];
   date: Scalars['DateTime']['input'];
@@ -174,16 +168,22 @@ export type MutationMarkAttendanceArgs = {
 };
 
 
-export type MutationMarkEnrollmentPresentForDatesArgs = {
+export type MutationMarkPresentArgs = {
   classId: Scalars['ID']['input'];
   dates: Array<Scalars['DateTime']['input']>;
-  enrollmentId: Scalars['ID']['input'];
+  enrollmentIds?: InputMaybe<Array<Scalars['ID']['input']>>;
 };
 
 
 export type MutationRenameClassArgs = {
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
+};
+
+
+export type MutationRenameEvaluationArgs = {
+  id: Scalars['ID']['input'];
+  title: Scalars['String']['input'];
 };
 
 
