@@ -1,22 +1,22 @@
-# v2.5 — Editar nome de turma e de aluno
+# v2.5 — Rename classes and students (implemented)
 
-> Spec para implementação. Branch alvo: **`v2.5`** (a partir de `v2` / pós-merge v3).
+> Historical record of the specification implemented in commit `d499e95`. Do not use this document as an active work plan; consult the code and root documentation for the current state.
 
-## Problema
+## Problem
 
-Hoje só dá para **criar** e **remover** turmas/alunos. Erro de digitação no nome exige workaround ou recadastro. v2.5: editar nome inline na UI com modal, mesmo padrão do `ConfirmDeleteDialog`.
+Before this version, classes and students could only be **created** and **removed**. v2.5 introduced name editing in a modal, following the `ConfirmDeleteDialog` pattern.
 
-## Objetivo
+## Goals
 
-1. **Botão Editar** na coluna Ações — **mesmo padrão visual do Remover** (`Button variant="ghost" size="icon"`), lado a lado.
-2. Botão **não** abre inline edit na linha — só **dispara modal** (`EditNameDialog`), igual delete dispara `ConfirmDeleteDialog`.
-3. Modal genérico com input de nome + Salvar/Cancelar.
-4. Duas mutations GraphQL novas, auth igual ao resto (`requireOwnedClass` / enrollment owned).
-5. Erros inline no modal (`{errorMessage && <p />}`), PT-BR, sem Sonner.
+1. An **Edit button** in the Actions column — using the same visual pattern as Remove (`Button variant="ghost" size="icon"`), placed side by side.
+2. The button does **not** open inline editing on the row; it only **opens a modal** (`EditNameDialog`), just as delete opens `ConfirmDeleteDialog`.
+3. A generic modal with a name input and Save/Cancel actions.
+4. Two new GraphQL mutations, with the existing authorization model (`requireOwnedClass` / owned enrollment).
+5. Inline modal errors (`{errorMessage && <p />}`), in Brazilian Portuguese, without Sonner.
 
-## Padrão do botão (obrigatório)
+## Required button pattern
 
-Espelhar o botão Remover existente — trocar só ícone, `title` e `onClick`:
+Mirror the existing Remove button; change only its icon, `title`, and `onClick`:
 
 ```tsx
 <div className="text-right flex justify-end gap-1">
@@ -41,49 +41,50 @@ Espelhar o botão Remover existente — trocar só ícone, `title` e `onClick`:
 </div>
 ```
 
-Alunos: idem com `title="Editar aluno"` / `"Remover aluno desta turma"`. **Editar à esquerda**, Remover à direita (ou ordem consistente nos dois panels).
+Students follow the same pattern, using `title="Editar aluno"` / `"Remover aluno desta turma"`. **Edit goes on the left** and Remove on the right, or use a consistent order in both panels.
 
-## Fora de escopo (v2.5)
+## Out of scope in v2.5
 
-- Editar ano da turma, email do aluno, cronograma.
-- Editar nome pelo header/breadcrumb.
-- Renomear avaliação.
-- Undo / histórico de alterações.
-- Editar aluno compartilhado entre turmas (hoje `createAndEnroll` cria `Student` novo por matrícula).
+- Editing a class year, student email, or schedule.
+- Editing a name through the header or breadcrumb.
+- Renaming evaluations (implemented later, outside this version).
+- Undo or change history.
+- Editing a student shared between classes (`createAndEnroll` currently creates a new `Student` for each enrollment).
 
 ---
 
 ## UX
 
-### Turmas — `classes-panel.tsx`
+### Classes — `classes-panel.tsx`
 
-| Elemento | Comportamento |
-|----------|---------------|
-| Coluna Ações | `flex gap-1`: ✏️ Editar + 🗑️ Remover — **mesmo `Button ghost icon`** |
-| Clique Editar | `setEditTarget(...)` → abre `EditNameDialog` |
-| Título modal | `Editar turma` |
-| Input | Nome atual pré-preenchido |
-| Salvar | `renameClass` → fecha modal → lista atualiza |
-| Cancelar | Fecha modal, `clearError` |
+| Element | Behavior |
+| --- | --- |
+| Actions column | `flex gap-1`: ✏️ Edit + 🗑️ Remove — the same `Button` ghost/icon pattern |
+| Edit click | `setEditTarget(...)` → opens `EditNameDialog` |
+| Modal title | `Editar turma` |
+| Input | Current name pre-filled |
+| Save | `renameClass` → modal closes → list refreshes |
+| Cancel | Closes the modal and calls `clearError` |
 
-### Alunos — `students-panel.tsx`
+### Students — `students-panel.tsx`
 
-| Elemento | Comportamento |
-|----------|---------------|
-| Coluna Ações | ✏️ + 🗑️ — **mesmo componente/padrão do Remover** |
-| Clique Editar | `setEditTarget({ id: e.id, name: e.student.name })` → modal |
-| Título modal | `Editar aluno` |
-| Salvar | `renameStudent` via `enrollmentId` |
+| Element | Behavior |
+| --- | --- |
+| Actions column | ✏️ + 🗑️ — same component and pattern as Remove |
+| Edit click | `setEditTarget({ id: e.id, name: e.student.name })` → modal |
+| Modal title | `Editar aluno` |
+| Input | Current name pre-filled |
+| Save | `renameStudent` through `enrollmentId` |
 
-**Validação client:** `z.string().min(1, "Nome é obrigatório")` — mesmo zod do create.
+**Client validation:** `z.string().min(1, "Nome é obrigatório")` — the same Zod validation used for creation.
 
-**Loading:** botão Salvar disabled + label `Salvando…` durante mutation.
+**Loading:** the Save button is disabled and shows `Salvando…` during the mutation.
 
 ---
 
-## Componente UI genérico
+## Generic UI component
 
-Criar `components/edit-name-dialog.tsx` — espelha `ConfirmDeleteDialog`:
+Create `components/edit-name-dialog.tsx`, mirroring `ConfirmDeleteDialog`:
 
 ```typescript
 type EditNameDialogProps = {
@@ -92,21 +93,21 @@ type EditNameDialogProps = {
   title: string;
   description?: React.ReactNode;
   initialName: string;
-  label?: string;              // default "Nome"
+  label?: string; // default: "Nome"
   onSave: (name: string) => void | Promise<void>;
   isPending?: boolean;
   errorMessage?: string | null;
-  confirmLabel?: string;       // default "Salvar"
-  cancelLabel?: string;        // default "Cancelar"
+  confirmLabel?: string; // default: "Salvar"
+  cancelLabel?: string; // default: "Cancelar"
 };
 ```
 
-- `DialogContent showCloseButton={false}` — igual delete.
-- Input controlado; reset para `initialName` quando `open` vira true.
-- Enter no input → submit (opcional, nice-to-have).
-- Footer: Cancelar (ghost) + Salvar (default, **não** destructive).
+- `DialogContent showCloseButton={false}` — just like delete.
+- The input is controlled and resets to `initialName` when `open` becomes true.
+- Pressing Enter in the input submits the form (optional, nice to have).
+- Footer: Cancel (ghost) + Save (default, **not** destructive).
 
-**Não** generalizar além de nome nesta versão — evitar `EditFormDialog` abstrato demais.
+Do **not** generalize beyond name editing in this version; avoid an over-abstracted `EditFormDialog`.
 
 ---
 
@@ -116,7 +117,7 @@ type EditNameDialogProps = {
 
 ```graphql
 type Mutation {
-  # ...existentes
+  # ...existing fields
   renameClass(id: ID!, name: String!): Class!
   renameStudent(enrollmentId: ID!, name: String!): Enrollment!
 }
@@ -128,15 +129,15 @@ type Mutation {
 
 - `requireOwnerIds` + `requireOwnedClass(id)`
 - `prisma.class.update({ where: { id }, data: { name: trimmed } })`
-- Rejeitar nome vazio (trim → throw `Error("Nome é obrigatório")`)
+- Reject an empty name (trim → throw `Error("Nome é obrigatório")`)
 
-**`renameStudent`** — `lib/graphql/resolvers/enrollment.ts` (ou `student.ts` se preferir split)
+**`renameStudent`** — `lib/graphql/resolvers/enrollment.ts` (or `student.ts` if splitting is preferred)
 
 - `requireOwnerIds`
 - `enrollment.findFirst({ id: enrollmentId, class: { ownerId: { in: ownerIds } } })`
-- Se não achar → `Not found`
+- If it is not found → `Not found`
 - `prisma.student.update({ where: { id: enrollment.studentId }, data: { name: trimmed } })`
-- Retornar enrollment com `include: { student: true }` (shape igual `createAndEnroll`)
+- Return the enrollment with `include: { student: true }` (the same shape as `createAndEnroll`)
 
 ### Documents (`lib/gql-documents.ts`)
 
@@ -157,7 +158,7 @@ mutation RenameStudent($enrollmentId: ID!, $name: String!) {
 }
 ```
 
-Codegen → `pnpm codegen`.
+Run code generation with `pnpm codegen`.
 
 ---
 
@@ -179,90 +180,72 @@ export function useRenameStudentMutation(classId: string) {
   // onSuccess: invalidate
   //   queryKeys.enrollments(classId)
   //   queryKeys.grades(classId)      — rows[].student.name
-  //   queryKeys.attendanceRecords(classId) — se cache tiver nomes (hoje não; só enrollmentId)
+  //   queryKeys.attendanceRecords(classId) — if the cache contains names (it currently only contains enrollmentId)
 }
 ```
 
-Invalidação mínima v2.5: `enrollments` + `classes` + `class(classId)` se header cache existir.
+The minimum v2.5 invalidation is `enrollments` + `classes` + `class(classId)` when a header cache exists.
 
-**Header:** `header-title.tsx` faz fetch avulso com `HdrClassDocument` — após rename turma, invalidar manualmente ou refetch: adicionar invalidação `queryKeys.class(id)` e migrar header para `useQuery(classQueryOptions)` **opcional v2.5.1**; MVP: invalidar + `window` refetch no header via key `["class", classId]` se header migrar depois.
+**Header:** `header-title.tsx` performs a standalone fetch with `HdrClassDocument`. After renaming a class, invalidate manually or refetch: add `queryKeys.class(id)` invalidation and migrate the header to `useQuery(classQueryOptions)` in **optional v2.5.1**. The MVP can invalidate and refetch the header through the `['class', classId]` key if the header is migrated later.
 
-**Recomendação MVP:** invalidar `queryKeys.class(classId)` e trocar `HeaderTitle` para `useQuery(classQueryOptions(classId))` no mesmo PR — evita nome stale no breadcrumb.
+**MVP recommendation:** invalidate `queryKeys.class(classId)` and move `HeaderTitle` to `useQuery(classQueryOptions(classId))` in the same PR to avoid a stale breadcrumb name.
 
 ---
 
-## Estado local nos panels
+## Local panel state
 
-Mesmo padrão do delete:
+Use the same pattern as delete:
 
 ```typescript
 type EditTarget = { id: string; name: string };
 const [editTarget, setEditTarget] = useState<EditTarget | null>(null);
 ```
 
-- Turma: `{ id: classId, name: c.name }`
-- Aluno: `{ id: enrollmentId, name: e.student.name }`
+- Class: `{ id: classId, name: c.name }`
+- Student: `{ id: enrollmentId, name: e.student.name }`
 
 ---
 
-## Arquivos tocados (checklist)
+## Implemented files
 
-| Arquivo | Ação |
-|---------|------|
-| `schema.graphql` | +2 mutations |
+| File | Change |
+| --- | --- |
+| `schema.graphql` | Two new mutations |
 | `lib/graphql/resolvers/class.ts` | `renameClass` |
 | `lib/graphql/resolvers/enrollment.ts` | `renameStudent` |
-| `lib/gql-documents.ts` | +2 documents |
-| `src/gql/*` | codegen |
-| `components/edit-name-dialog.tsx` | **novo** |
-| `components/classes-panel.tsx` | botão + modal |
-| `components/students-panel.tsx` | botão + modal |
+| `lib/gql-documents.ts` | Two new documents |
+| `src/gql/*` | Code generation |
+| `components/edit-name-dialog.tsx` | New component |
+| `components/classes-panel.tsx` | Edit button and modal |
+| `components/students-panel.tsx` | Edit button and modal |
 | `hooks/use-classes.ts` | `useRenameClassMutation` |
 | `hooks/use-students.ts` | `useRenameStudentMutation` |
-| `components/header-title.tsx` | (recomendado) usar `classQueryOptions` |
+| `components/header-title.tsx` | Recommended: use `classQueryOptions` |
 
 ---
 
-## Critérios de aceite
+## Acceptance criteria
 
-1. Turmas: editar nome → lista `/classes` mostra novo nome sem refresh manual.
-2. Alunos: editar nome → tabela alunos + página notas (`gradesByClass.rows[].student.name`) refletem após save.
-3. Nome vazio → erro inline no modal, sem request.
-4. Turma/aluno de outro usuário → mutation falha, erro inline.
-5. Modal cancelar → não persiste, limpa erro da mutation.
-6. `pnpm typecheck`, `lint`, `build` verdes.
-
----
-
-## Testes (mínimo)
-
-- Unit resolver: `renameClass` unauthorized → throw; trim nome.
-- Unit resolver: `renameStudent` enrollment alheio → Not found.
-- Opcional: component test `EditNameDialog` submit chama `onSave`.
+1. Classes: after editing a name, the `/classes` list shows the new name without a manual refresh.
+2. Students: after editing a name, the students table and grades page (`gradesByClass.rows[].student.name`) update after saving.
+3. An empty name shows an inline modal error without a request.
+4. A class or student owned by another user causes the mutation to fail with an inline error.
+5. Cancelling the modal does not persist changes and clears the mutation error.
+6. `pnpm typecheck`, `lint`, and `build` pass.
 
 ---
 
-## Prompt para agente (próxima sessão)
+## Minimum tests
 
-```
-Implementar v2.5 conforme docs/v2.5/spec.md:
-
-1. GraphQL renameClass + renameStudent com auth existente.
-2. Codegen + hooks useRenameClassMutation / useRenameStudentMutation.
-3. components/edit-name-dialog.tsx (padrão ConfirmDeleteDialog).
-4. classes-panel + students-panel: botão editar + modal.
-5. Invalidar caches corretos; migrar HeaderTitle para classQueryOptions se rápido.
-6. PT-BR, erros inline com &&, sem Sonner.
-7. typecheck + lint + build.
-
-Branch: v2.5 a partir de v2. Não incluir v4 import nem refactor R-01.
-```
+- Resolver unit test: `renameClass` rejects unauthorized access and trims the name.
+- Resolver unit test: `renameStudent` returns Not found for another user's enrollment.
+- Optional: `EditNameDialog` component test verifies that submit calls `onSave`.
 
 ---
 
-## Referências
+## References
 
 - Delete modal: `components/confirm-delete-dialog.tsx`
-- Create turma modal: `components/classes-panel.tsx` (Dialog + react-hook-form)
-- Auth: `lib/graphql/auth.ts`
+- Class creation modal: `components/classes-panel.tsx` (Dialog + react-hook-form)
+- Authorization: `lib/graphql/auth.ts`
 - Query keys: `lib/query-options.ts`
