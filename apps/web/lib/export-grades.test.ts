@@ -9,10 +9,16 @@ describe("buildGradeRows", () => {
           { id: "eval-1", title: "P1", maxScore: 10 },
           { id: "eval-2", title: "P2", maxScore: 20 },
         ],
-        enrollments: [{ id: "enr-1", student: { id: "stu-1", name: "Ana" }, concept: "A" }],
-        grades: [
-          { enrollmentId: "enr-1", evaluationId: "eval-1", score: 8 },
-          { enrollmentId: "enr-1", evaluationId: "eval-2", score: 10 },
+        rows: [
+          {
+            enrollmentId: "enr-1",
+            student: { id: "stu-1", name: "Ana" },
+            concept: "A",
+            grades: [
+              { evaluationId: "eval-1", score: 8 },
+              { evaluationId: "eval-2", score: 10 },
+            ],
+          },
         ],
       }),
     ).toEqual([
@@ -30,8 +36,14 @@ describe("buildGradeRows", () => {
     expect(
       buildGradeRows({
         evaluations: [{ id: "eval-1", title: "P1", maxScore: 0 }],
-        enrollments: [{ id: "enr-1", student: { id: "stu-1", name: "Ana" }, concept: null }],
-        grades: [],
+        rows: [
+          {
+            enrollmentId: "enr-1",
+            student: { id: "stu-1", name: "Ana" },
+            concept: null,
+            grades: [],
+          },
+        ],
       }),
     ).toEqual(expectedRows);
   });

@@ -38,8 +38,13 @@ describe("XLSX exports", () => {
     exportGradesToXlsx({
       className: "Turma A",
       evaluations: [{ id: "eval-1", title: "P1", maxScore: 10 }],
-      enrollments: [{ id: "enr-1", student: { id: "stu-1", name: "Ana" } }],
-      grades: [{ enrollmentId: "enr-1", evaluationId: "eval-1", score: 8 }],
+      rows: [
+        {
+          enrollmentId: "enr-1",
+          student: { id: "stu-1", name: "Ana" },
+          grades: [{ evaluationId: "eval-1", score: 8 }],
+        },
+      ],
     });
 
     expect(xlsx.writeFile).toHaveBeenCalledWith(expect.anything(), "Turma A-notas.xlsx");
