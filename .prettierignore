@@ -6,10 +6,12 @@ build
 .turbo
 .cache
 coverage
+test-results
 pnpm-lock.yaml
 apps/**/.next
 apps/**/dist
 apps/**/build
+apps/**/test-results
 apps/**/node_modules
 packages/**/node_modules
 packages/**/dist

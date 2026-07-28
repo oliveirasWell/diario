@@ -45,7 +45,7 @@ export function EditNameDialog({
   const handleSave = async () => {
     const trimmed = name.trim();
     if (!trimmed) {
-      setValidationError("Nome é obrigatório");
+      setValidationError(`${label} é obrigatório`);
       return;
     }
     setValidationError(null);

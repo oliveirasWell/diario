@@ -1,40 +1,57 @@
-import * as XLSX from "xlsx";
 import { attendanceDayKey } from "@/lib/attendance-date";
+import { downloadSheet, type SheetRow } from "@/lib/xlsx-sheet";
 import { AttendanceStatus } from "@/src/gql/schema";
-const LABELS: Record<AttendanceStatus, string> = {
+
+const STATUS_LABELS: Record<AttendanceStatus, string> = {
   [AttendanceStatus.Present]: "Presente",
   [AttendanceStatus.Absent]: "Falta",
   [AttendanceStatus.Late]: "Atraso",
 };
 
-export function exportAttendanceToXlsx(opts: {
+type ExportEnrollment = { id: string; student: { id: string; name: string } };
+type ExportRecord = {
+  enrollmentId: string;
+  status: AttendanceStatus;
+  session: { date: string };
+};
+
+export function exportAttendanceToXlsx(options: {
   className: string;
   dates: Date[];
-  enrollments: { id: string; student: { id: string; name: string } }[];
-  records: { enrollmentId: string; status: AttendanceStatus; session: { date: string } }[];
+  enrollments: ExportEnrollment[];
+  records: ExportRecord[];
 }) {
-  const { className, dates, enrollments, records } = opts;
+  const { className, dates, enrollments, records } = options;
 
-  const recMap = new Map<string, AttendanceStatus>();
-  for (const r of records) {
-    recMap.set(`${r.enrollmentId}|${attendanceDayKey(r.session.date)}`, r.status);
-  }
+  downloadSheet({
+    rows: buildAttendanceRows({ dates, enrollments, records }),
+    sheetName: "Presencas",
+    fileName: `${className || "turma"}-presencas.xlsx`,
+  });
+}
 
-  const header = ["Aluno", ...dates.map((d) => attendanceDayKey(d))];
-  const rows: (string | number)[][] = [header];
+export function buildAttendanceRows(options: {
+  dates: Date[];
+  enrollments: ExportEnrollment[];
+  records: ExportRecord[];
+}): SheetRow[] {
+  const { dates, enrollments, records } = options;
+  const statusByCell = new Map(
+    records.map((record) => [
+      `${record.enrollmentId}|${attendanceDayKey(record.session.date)}`,
+      record.status,
+    ]),
+  );
+  const dayKeys = dates.map((date) => attendanceDayKey(date));
 
-  for (const e of enrollments) {
-    const row: (string | number)[] = [e.student.name];
-    for (const d of dates) {
-      const k = `${e.id}|${attendanceDayKey(d)}`;
-      const s = recMap.get(k);
-      row.push(s ? LABELS[s] : "");
-    }
-    rows.push(row);
-  }
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Presencas");
-  XLSX.writeFile(wb, `${className || "turma"}-presencas.xlsx`);
+  return [
+    ["Aluno", ...dayKeys],
+    ...enrollments.map((enrollment) => [
+      enrollment.student.name,
+      ...dayKeys.map((dayKey) => {
+        const status = statusByCell.get(`${enrollment.id}|${dayKey}`);
+        return status ? STATUS_LABELS[status] : "";
+      }),
+    ]),
+  ];
 }

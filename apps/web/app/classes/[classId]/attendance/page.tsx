@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useAttendanceDates,
-  useAttendanceMutation,
-  useAttendanceRecords,
-  useEnrollments,
-} from "@/hooks/use-attendance";
+import { useAttendanceBoard, useAttendanceMutation } from "@/hooks/use-attendance";
 import { attendanceDayKey } from "@/lib/attendance-date";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -53,19 +48,10 @@ const STATUS_CLASS: Record<AttendanceStatus, string> = {
 export default function AttendancePage() {
   const params = useParams();
   const classId = params?.classId as string;
-  const {
-    data: dates,
-    isLoading: isLoadingDates,
-    isError: errorDates,
-    error: errDates,
-  } = useAttendanceDates(classId);
-  const {
-    data: enrollments,
-    isLoading: isLoadingEnroll,
-    isError: errorEnroll,
-    error: errEnroll,
-  } = useEnrollments(classId);
-  const { data: records, isError: errorRecords, error: errRecords } = useAttendanceRecords(classId);
+  const { data: board, isLoading, isError, error } = useAttendanceBoard(classId);
+  const dates = board?.attendanceDates;
+  const enrollments = board?.enrollments;
+  const records = board?.attendanceRecords;
   const attendance = useAttendanceMutation(classId);
   const excludeDate = useExcludeAttendanceDate(classId);
   const [hidePast, setHidePast] = useState(false);
@@ -130,13 +116,7 @@ export default function AttendancePage() {
     });
   };
 
-  const queryError = errorDates
-    ? errDates
-    : errorEnroll
-      ? errEnroll
-      : errorRecords
-        ? errRecords
-        : null;
+  const queryError = isError ? error : null;
   const mutationError = attendance.errorMessage ?? excludeDate.errorMessage;
 
   return (
@@ -151,7 +131,7 @@ export default function AttendancePage() {
           {mutationError}
         </p>
       )}
-      {isLoadingDates || isLoadingEnroll ? (
+      {isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando presenças…</div>
       ) : !dates?.length ? (
         <p className="text-sm text-muted-foreground">
@@ -239,7 +219,9 @@ export default function AttendancePage() {
                               <MoreVertical className="size-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => attendance.markAllPresent(d)}>
+                              <DropdownMenuItem
+                                onClick={() => attendance.markPresent({ dates: [d] })}
+                              >
                                 Marcar todos Presente
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -267,12 +249,13 @@ export default function AttendancePage() {
                           variant="ghost"
                           size="icon"
                           className="shrink-0"
-                          title="Marcar semana toda Presente"
-                          onClick={() => {
-                            visibleDates.forEach((d) =>
-                              attendance.markPresent({ date: d, enrollmentId: e.id }),
-                            );
-                          }}
+                          title="Marcar todos os dias Presente"
+                          onClick={() =>
+                            attendance.markPresent({
+                              dates: visibleDates,
+                              enrollmentIds: [e.id],
+                            })
+                          }
                         >
                           ✅
                         </Button>
@@ -295,7 +278,7 @@ export default function AttendancePage() {
                               current ? STATUS_CLASS[current] : "hover:bg-muted/40",
                             )}
                             onClick={() =>
-                              attendance.cycle(current, { date: d, enrollmentId: e.id })
+                              attendance.cycleStatus(current, { date: d, enrollmentId: e.id })
                             }
                           >
                             {current ? STATUS_LABEL[current] : "—"}

@@ -1,6 +1,13 @@
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited, requireOwnerStrict } from "../auth";
+import {
+  ownedOrInvitedWhere,
+  ownerIdsFrom,
+  requireOwnerIds,
+  requireOwnedOrInvited,
+  requireOwnerStrict,
+} from "../auth";
 import { getPrisma } from "../prisma";
+import { createGraphQLError } from "graphql-yoga";
 import type {
   MutationCreateClassArgs,
   MutationDeleteClassArgs,
@@ -39,11 +46,7 @@ export const classQueryResolvers = {
       return [];
     }
     const prisma = await getPrisma();
-    return prisma.class.findMany({
-      where: {
-        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
-      },
-    });
+    return prisma.class.findMany({ where: ownedOrInvitedWhere(ownerIds) });
   },
 
   class: async (_: unknown, { id }: QueryClassArgs, ctx: GraphQLContext) => {
@@ -52,12 +55,7 @@ export const classQueryResolvers = {
       return null;
     }
     const prisma = await getPrisma();
-    return prisma.class.findFirst({
-      where: {
-        id,
-        OR: [{ ownerId: { in: ownerIds } }, { invitedUserIds: { hasSome: ownerIds } }],
-      },
-    });
+    return prisma.class.findFirst({ where: { id, ...ownedOrInvitedWhere(ownerIds) } });
   },
 
   classInviteInfo: async (_: unknown, { id }: { id: string }) => {
@@ -76,7 +74,7 @@ export const classMutationResolvers = {
   createClass: async (_: unknown, args: MutationCreateClassArgs, ctx: GraphQLContext) => {
     const ownerId = ctx.user?.prismaUserId;
     if (!ownerId) {
-      throw new Error("Unauthorized");
+      throw createGraphQLError("Unauthorized");
     }
     const prisma = await getPrisma();
     return prisma.class.create({
@@ -114,7 +112,7 @@ export const classMutationResolvers = {
     await requireOwnedOrInvited(args.id, ownerIds);
     const name = args.name.trim();
     if (!name) {
-      throw new Error("Nome é obrigatório");
+      throw createGraphQLError("Nome é obrigatório");
     }
     const prisma = await getPrisma();
     return prisma.class.update({
@@ -155,7 +153,7 @@ export const classMutationResolvers = {
     const prisma = await getPrisma();
     const c = await prisma.class.findUnique({ where: { id } });
     if (!c) {
-      throw new Error("Not found");
+      throw createGraphQLError("Not found");
     }
     // ponytail: idempotent — if already invited, just return class.
     const alreadyInvited = c.invitedUserIds?.some((uid) => ownerIds.includes(uid)) ?? false;
