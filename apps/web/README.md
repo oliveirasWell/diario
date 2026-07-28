@@ -1,14 +1,14 @@
-# Aplicação web do diario
+# diario web application
 
-Esta é a aplicação Next.js do monorepo. Ela contém a interface, rotas App Router, autenticação NextAuth e a API GraphQL.
+This is the monorepo's Next.js application. It contains the UI, App Router routes, NextAuth authentication, and GraphQL API.
 
-Use os comandos a partir da raiz do repositório, onde estão a configuração do workspace e os arquivos de ambiente:
+Run commands from the repository root, where the workspace configuration and environment files live:
 
 ```bash
 pnpm env:sync
 pnpm dev:web
 ```
 
-Abra [http://localhost:3000](http://localhost:3000). Consulte o [README da raiz](../../README.md) para requisitos, configuração do MongoDB e OAuth, geração do Prisma/GraphQL e comandos de testes.
+Open [http://localhost:3000](http://localhost:3000). See the [root README](../../README.md) for requirements, MongoDB and OAuth setup, Prisma/GraphQL generation, and test commands.
 
-`src/gql/` contém código gerado. Após alterar o schema ou os documentos GraphQL, execute `pnpm codegen:web` na raiz em vez de editar esses arquivos manualmente.
+`src/gql/` contains generated code. After changing the schema or GraphQL documents, run `pnpm codegen:web` from the root instead of editing those files manually.
