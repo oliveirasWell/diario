@@ -1,10 +1,11 @@
 import type { GraphQLContext } from "../context";
-import { ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
+import { ownedOrInvitedWhere, ownerIdsFrom, requireOwnerIds, requireOwnedOrInvited } from "../auth";
 import { getPrisma } from "../prisma";
 import { createGraphQLError } from "graphql-yoga";
 import type {
   MutationCreateEvaluationArgs,
   MutationDeleteEvaluationArgs,
+  MutationRenameEvaluationArgs,
   QueryEvaluationsArgs,
 } from "@/src/gql/schema";
 
@@ -38,6 +39,25 @@ export const evaluationMutationResolvers = {
         weight: args.weight ?? 1,
         maxScore: args.maxScore,
       },
+    });
+  },
+
+  renameEvaluation: async (_: unknown, args: MutationRenameEvaluationArgs, ctx: GraphQLContext) => {
+    const ownerIds = requireOwnerIds(ctx);
+    const title = args.title.trim();
+    if (!title) {
+      throw createGraphQLError("Título é obrigatório");
+    }
+    const prisma = await getPrisma();
+    const evaluation = await prisma.evaluation.findFirst({
+      where: { id: args.id, class: ownedOrInvitedWhere(ownerIds) },
+    });
+    if (!evaluation) {
+      throw createGraphQLError("Not found");
+    }
+    return prisma.evaluation.update({
+      where: { id: args.id },
+      data: { title },
     });
   },
 

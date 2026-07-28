@@ -101,6 +101,7 @@ export type Mutation = {
   markAttendance: Scalars['Boolean']['output'];
   markPresent: Scalars['Boolean']['output'];
   renameClass: Class;
+  renameEvaluation: Evaluation;
   renameStudent: Enrollment;
   setEnrollmentConcept: Enrollment;
   unenrollStudent: Scalars['Boolean']['output'];
@@ -177,6 +178,12 @@ export type MutationMarkPresentArgs = {
 export type MutationRenameClassArgs = {
   id: Scalars['ID']['input'];
   name: Scalars['String']['input'];
+};
+
+
+export type MutationRenameEvaluationArgs = {
+  id: Scalars['ID']['input'];
+  title: Scalars['String']['input'];
 };
 
 
