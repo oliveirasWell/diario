@@ -16,18 +16,12 @@ This is a pnpm/Turbo monorepo with:
 
 ## Local setup
 
-Install dependencies and create the root environment file:
-
 ```bash
 pnpm install
-cp .env.example .env.local
-```
-
-Set at least `MONGODB_URI`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` in `.env.local`. The root file is the source of truth; synchronize it to the application and Prisma with:
-
-```bash
 pnpm env:sync
 ```
+
+The first `pnpm env:sync` creates `.env.local` from `.env.example` and stops. Set at least `MONGODB_URI`, `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, and `GOOGLE_CLIENT_SECRET` there — the root file is the source of truth — then run `pnpm env:sync` again to propagate the values to the application and Prisma.
 
 To prepare the database and GraphQL types in a new installation, run:
 
@@ -43,7 +37,7 @@ This command approves Prisma binaries, generates the client, applies the schema 
 pnpm dev:web
 ```
 
-Open [http://localhost:3000](http://localhost:3000). `pnpm dev` starts every application in the workspace. `pnpm dev:local` installs dependencies, prepares Prisma when possible, and starts the web application; by default, it refuses to use a database named `diario` to reduce the risk of accidentally using the production database.
+Open [http://localhost:3000](http://localhost:3000). `pnpm dev` starts every application in the workspace. `pnpm dev:local` installs dependencies, prepares Prisma when possible, and starts the web application; by default, it refuses to use a database named `diario` to reduce the risk of accidentally using the production database. Set `ALLOW_PROD_DB_DEV=1` to override that check.
 
 ## Quality checks and code generation
 
