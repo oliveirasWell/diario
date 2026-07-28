@@ -185,6 +185,15 @@ export const CreateEvaluationDocument = graphql(`
   }
 `);
 
+export const RenameEvaluationDocument = graphql(`
+  mutation RenameEvaluation($id: ID!, $title: String!) {
+    renameEvaluation(id: $id, title: $title) {
+      id
+      title
+    }
+  }
+`);
+
 export const DeleteEvaluationDocument = graphql(`
   mutation DelEval($id: ID!) {
     deleteEvaluation(id: $id)

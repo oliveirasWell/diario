@@ -4,7 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { gqlRequest } from "@/lib/graphql-client";
 import { useAppMutation } from "@/hooks/use-app-mutation";
 import { evaluationsQueryOptions, queryKeys } from "@/lib/query-options";
-import { CreateEvaluationDocument, DelEvalDocument } from "@/src/gql/graphql";
+import {
+  CreateEvaluationDocument,
+  DelEvalDocument,
+  RenameEvaluationDocument,
+} from "@/src/gql/graphql";
 import type { Evaluation } from "@/src/gql/schema";
 
 export type { Evaluation };
@@ -25,6 +29,19 @@ export function useCreateEvaluationMutation(classId: string) {
     },
   });
 }
+
+export const useRenameEvaluationMutation = (classId: string) => {
+  const queryClient = useQueryClient();
+  return useAppMutation({
+    mutationFn: async (input: { id: string; title: string }) => {
+      const data = await gqlRequest(RenameEvaluationDocument, input);
+      return data.renameEvaluation;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.evaluations(classId) });
+    },
+  });
+};
 
 export function useDeleteEvaluationMutation(classId: string) {
   const qc = useQueryClient();

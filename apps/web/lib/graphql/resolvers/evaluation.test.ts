@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { anonymousContext, teacherContext } from "@/test/graphql-context";
+import { anonymousContext, teacherContext, TEACHER_OWNER_IDS } from "@/test/graphql-context";
 import { prismaMock } from "@/test/prisma-mock";
 import { evaluationMutationResolvers, evaluationQueryResolvers } from "./evaluation";
 
@@ -37,6 +37,60 @@ describe("evaluationMutationResolvers.createEvaluation", () => {
     expect(prismaMock.evaluation.create).toHaveBeenCalledWith({
       data: { classId: CLASS_ID, title: "P1", weight: 1, maxScore: 10 },
     });
+  });
+});
+
+describe("evaluationMutationResolvers.renameEvaluation", () => {
+  it("renames an evaluation from an owned or invited class", async () => {
+    prismaMock.evaluation.findFirst.mockResolvedValue({ id: EVALUATION_ID });
+    prismaMock.evaluation.update.mockResolvedValue({ id: EVALUATION_ID, title: "Prova 1" });
+
+    await expect(
+      evaluationMutationResolvers.renameEvaluation(
+        null,
+        { id: EVALUATION_ID, title: " Prova 1 " },
+        teacherContext,
+      ),
+    ).resolves.toEqual({ id: EVALUATION_ID, title: "Prova 1" });
+    expect(prismaMock.evaluation.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: EVALUATION_ID,
+        class: {
+          OR: [
+            { ownerId: { in: TEACHER_OWNER_IDS } },
+            { invitedUserIds: { hasSome: TEACHER_OWNER_IDS } },
+          ],
+        },
+      },
+    });
+    expect(prismaMock.evaluation.update).toHaveBeenCalledWith({
+      where: { id: EVALUATION_ID },
+      data: { title: "Prova 1" },
+    });
+  });
+
+  it("rejects an empty title without updating the evaluation", async () => {
+    await expect(
+      evaluationMutationResolvers.renameEvaluation(
+        null,
+        { id: EVALUATION_ID, title: " " },
+        teacherContext,
+      ),
+    ).rejects.toThrow("Título é obrigatório");
+    expect(prismaMock.evaluation.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects evaluations outside the accessible classes", async () => {
+    prismaMock.evaluation.findFirst.mockResolvedValue(null);
+
+    await expect(
+      evaluationMutationResolvers.renameEvaluation(
+        null,
+        { id: EVALUATION_ID, title: "Prova 1" },
+        teacherContext,
+      ),
+    ).rejects.toThrow("Not found");
+    expect(prismaMock.evaluation.update).not.toHaveBeenCalled();
   });
 });
 
