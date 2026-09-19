@@ -272,6 +272,8 @@ export const MapDataDocument = graphql(`
         location {
           id
           code
+          kind
+          name
         }
         classGroup {
           id
@@ -312,6 +314,8 @@ export const AssignClassGroupDocument = graphql(`
       location {
         id
         code
+        kind
+        name
       }
       classGroup {
         id

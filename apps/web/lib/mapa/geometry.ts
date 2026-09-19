@@ -188,3 +188,19 @@ export const navEdges: NavEdge[] = [
 /** The nav graph node representing a room/POI, e.g. "room_07"/"poi_wc". */
 export const navNodeIdForLocation = (locationCode: string, kind: "ROOM" | "POI"): NavNodeId =>
   kind === "ROOM" ? `room_${locationCode}` : `poi_${locationCode}`;
+
+export type PixelRect = { x: number; y: number; width: number; height: number };
+
+/** Converts a location's normalized (0-1) geometry to pixel coordinates in the floor plan's native size. */
+export const toPixelRect = (geometry: LocationGeometry): PixelRect => ({
+  x: geometry.x * IMG_W,
+  y: geometry.y * IMG_H,
+  width: geometry.width * IMG_W,
+  height: geometry.height * IMG_H,
+});
+
+/** The pixel center of a location's rect — used to anchor route markers and labels. */
+export const toPixelCenter = (geometry: LocationGeometry): [number, number] => {
+  const rect = toPixelRect(geometry);
+  return [rect.x + rect.width / 2, rect.y + rect.height / 2];
+};
