@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DAYS, PERIODS } from "@/lib/mapa/constants";
 import { useCreateSubjectMutation } from "@/hooks/mapa/use-map-mutations";
+import { NATIVE_SELECT_CLASS_NAME } from "./constants";
 import type { MapLesson, MapSubject, MapTeacher } from "./types";
 
 const ADD_SUBJECT_VALUE = "__add__";
@@ -29,6 +30,7 @@ type CellEditorDialogProps = {
   isSaving: boolean;
   isClearing: boolean;
   saveError: string | null;
+  clearError: string | null;
 };
 
 export const CellEditorDialog = ({
@@ -43,10 +45,12 @@ export const CellEditorDialog = ({
   isSaving,
   isClearing,
   saveError,
+  clearError,
 }: CellEditorDialogProps) => {
   const [subjectId, setSubjectId] = useState(lesson?.subject.id ?? "");
   const [isAddingSubject, setIsAddingSubject] = useState(false);
   const [newSubjectName, setNewSubjectName] = useState("");
+  const [justCreatedSubject, setJustCreatedSubject] = useState<MapSubject | null>(null);
   const [teacherName, setTeacherName] = useState(lesson?.teacher.name ?? "");
 
   const createSubject = useCreateSubjectMutation();
@@ -54,11 +58,19 @@ export const CellEditorDialog = ({
   const dayLabel = DAYS.find((day) => day.id === weekday)?.full ?? weekday;
   const periodLabel = PERIODS[period - 1] ?? String(period);
 
-  // The lesson's current subject may not be in `subjects` if it was renamed/removed elsewhere.
-  const availableSubjects =
-    lesson && !subjects.some((subject) => subject.id === lesson.subject.id)
-      ? [...subjects, lesson.subject]
-      : subjects;
+  // The lesson's current subject may not be in `subjects` if it was renamed/removed
+  // elsewhere, and a subject just created inline isn't in `subjects` yet either — the
+  // mapData refetch triggered by createSubject hasn't landed. Both are added locally so
+  // Salvar doesn't sit disabled while waiting on the network.
+  const availableSubjects = [
+    ...subjects,
+    ...(lesson && !subjects.some((subject) => subject.id === lesson.subject.id)
+      ? [lesson.subject]
+      : []),
+    ...(justCreatedSubject && !subjects.some((subject) => subject.id === justCreatedSubject.id)
+      ? [justCreatedSubject]
+      : []),
+  ];
 
   const handleAddSubject = () => {
     const name = newSubjectName.trim();
@@ -69,6 +81,7 @@ export const CellEditorDialog = ({
       { name },
       {
         onSuccess: (subject) => {
+          setJustCreatedSubject(subject);
           setSubjectId(subject.id);
           setIsAddingSubject(false);
           setNewSubjectName("");
@@ -94,11 +107,14 @@ export const CellEditorDialog = ({
             <Label htmlFor="cell-subject">Disciplina</Label>
             <select
               id="cell-subject"
-              className="h-8 w-full bg-muted/40 px-2.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+              className={`w-full ${NATIVE_SELECT_CLASS_NAME}`}
               value={isAddingSubject ? ADD_SUBJECT_VALUE : subjectId}
               onChange={(event) => {
                 if (event.target.value === ADD_SUBJECT_VALUE) {
                   setIsAddingSubject(true);
+                  // Cleared so a stray Salvar click can't silently save the previously
+                  // selected subject instead of the one being typed below.
+                  setSubjectId("");
                 } else {
                   setIsAddingSubject(false);
                   setSubjectId(event.target.value);
@@ -163,9 +179,9 @@ export const CellEditorDialog = ({
             </datalist>
           </div>
 
-          {saveError && (
+          {(saveError || clearError) && (
             <p className="text-sm text-destructive" role="alert">
-              {saveError}
+              {saveError || clearError}
             </p>
           )}
         </div>

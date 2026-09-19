@@ -11,6 +11,7 @@ import { DAYS, GRADE_OPTIONS, PERIODS, SECTION_OPTIONS, SHIFTS } from "@/lib/map
 import { cn } from "@/lib/utils";
 import type { Shift, Weekday } from "@/src/gql/schema";
 import { CellEditorDialog } from "./cell-editor-dialog";
+import { NATIVE_SELECT_CLASS_NAME } from "./constants";
 import type { MapRoomShift, MapSubject, MapTeacher } from "./types";
 
 type RoomScheduleProps = {
@@ -69,7 +70,7 @@ export const RoomSchedule = ({ locationId, roomShifts, subjects, teachers }: Roo
       <div className="flex flex-wrap items-center gap-2">
         <select
           aria-label="Série"
-          className="h-8 bg-muted/40 px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+          className={NATIVE_SELECT_CLASS_NAME}
           value={grade}
           onChange={(event) => assignClassGroupIfComplete(event.target.value, section)}
         >
@@ -84,7 +85,7 @@ export const RoomSchedule = ({ locationId, roomShifts, subjects, teachers }: Roo
         </select>
         <select
           aria-label="Turma"
-          className="h-8 bg-muted/40 px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
+          className={NATIVE_SELECT_CLASS_NAME}
           value={section}
           onChange={(event) => assignClassGroupIfComplete(grade, event.target.value)}
         >
@@ -169,6 +170,7 @@ export const RoomSchedule = ({ locationId, roomShifts, subjects, teachers }: Roo
           isSaving={saveLessonCell.isPending}
           isClearing={clearLessonCell.isPending}
           saveError={saveLessonCell.errorMessage}
+          clearError={clearLessonCell.errorMessage}
           onSave={({ subjectName, teacherName }) => {
             saveLessonCell.mutate(
               {
