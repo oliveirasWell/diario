@@ -257,6 +257,118 @@ export const CreateInviteLinkDocument = graphql(`
   }
 `);
 
+export const MapDataDocument = graphql(`
+  query MapData {
+    mapData {
+      locations {
+        id
+        code
+        kind
+        name
+      }
+      roomShifts {
+        id
+        shift
+        location {
+          id
+          code
+        }
+        classGroup {
+          id
+          grade
+          section
+        }
+        lessons {
+          id
+          weekday
+          period
+          subject {
+            id
+            name
+          }
+          teacher {
+            id
+            name
+          }
+        }
+      }
+      subjects {
+        id
+        name
+      }
+      teachers {
+        id
+        name
+      }
+    }
+  }
+`);
+
+export const AssignClassGroupDocument = graphql(`
+  mutation AssignClassGroup($locationId: ID!, $shift: Shift!, $grade: String!, $section: String!) {
+    assignClassGroup(locationId: $locationId, shift: $shift, grade: $grade, section: $section) {
+      id
+      shift
+      location {
+        id
+        code
+      }
+      classGroup {
+        id
+        grade
+        section
+      }
+    }
+  }
+`);
+
+export const SaveLessonCellDocument = graphql(`
+  mutation SaveLessonCell(
+    $locationId: ID!
+    $shift: Shift!
+    $weekday: Weekday!
+    $period: Int!
+    $subjectName: String!
+    $teacherName: String!
+  ) {
+    saveLessonCell(
+      locationId: $locationId
+      shift: $shift
+      weekday: $weekday
+      period: $period
+      subjectName: $subjectName
+      teacherName: $teacherName
+    ) {
+      id
+      weekday
+      period
+      subject {
+        id
+        name
+      }
+      teacher {
+        id
+        name
+      }
+    }
+  }
+`);
+
+export const ClearLessonCellDocument = graphql(`
+  mutation ClearLessonCell($locationId: ID!, $shift: Shift!, $weekday: Weekday!, $period: Int!) {
+    clearLessonCell(locationId: $locationId, shift: $shift, weekday: $weekday, period: $period)
+  }
+`);
+
+export const CreateSubjectDocument = graphql(`
+  mutation CreateSubject($name: String!) {
+    createSubject(name: $name) {
+      id
+      name
+    }
+  }
+`);
+
 export const UpdateClassScheduleDocument = graphql(`
   mutation UpdateClassSchedule(
     $id: ID!
