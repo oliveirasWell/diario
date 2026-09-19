@@ -67,8 +67,16 @@ describe("mapMutationResolvers.assignClassGroup", () => {
   });
 
   it("reuses an existing class group instead of creating a duplicate", async () => {
-    prismaMock.classGroup.findFirst.mockResolvedValue({ id: CLASS_GROUP_ID, grade: "9º", section: "A" });
-    prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID, locationId: LOCATION_ID, shift: "MATUTINO" });
+    prismaMock.classGroup.findFirst.mockResolvedValue({
+      id: CLASS_GROUP_ID,
+      grade: "9º",
+      section: "A",
+    });
+    prismaMock.roomShift.findFirst.mockResolvedValue({
+      id: ROOM_SHIFT_ID,
+      locationId: LOCATION_ID,
+      shift: "MATUTINO",
+    });
     prismaMock.roomShift.update.mockResolvedValue({ id: ROOM_SHIFT_ID });
 
     await mapMutationResolvers.assignClassGroup(null, args, teacherContext);
@@ -81,7 +89,11 @@ describe("mapMutationResolvers.assignClassGroup", () => {
 
   it("creates the class group when it doesn't exist yet", async () => {
     prismaMock.classGroup.findFirst.mockResolvedValue(null);
-    prismaMock.classGroup.create.mockResolvedValue({ id: CLASS_GROUP_ID, grade: "9º", section: "A" });
+    prismaMock.classGroup.create.mockResolvedValue({
+      id: CLASS_GROUP_ID,
+      grade: "9º",
+      section: "A",
+    });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
     prismaMock.roomShift.update.mockResolvedValue({ id: ROOM_SHIFT_ID });
 
@@ -108,7 +120,10 @@ describe("mapMutationResolvers.assignClassGroup", () => {
   it("sets the room shift's class group", async () => {
     prismaMock.classGroup.findFirst.mockResolvedValue({ id: CLASS_GROUP_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.roomShift.update.mockResolvedValue({ id: ROOM_SHIFT_ID, classGroupId: CLASS_GROUP_ID });
+    prismaMock.roomShift.update.mockResolvedValue({
+      id: ROOM_SHIFT_ID,
+      classGroupId: CLASS_GROUP_ID,
+    });
 
     await mapMutationResolvers.assignClassGroup(null, args, teacherContext);
 
@@ -150,14 +165,24 @@ describe("mapMutationResolvers.saveLessonCell", () => {
   });
 
   it("reuses an existing subject case-insensitively instead of creating a duplicate", async () => {
-    prismaMock.subject.findFirst.mockResolvedValue({ id: SUBJECT_ID, name: "Inglês", normalizedName: "inglês" });
+    prismaMock.subject.findFirst.mockResolvedValue({
+      id: SUBJECT_ID,
+      name: "Inglês",
+      normalizedName: "inglês",
+    });
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
     prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
 
-    await mapMutationResolvers.saveLessonCell(null, { ...args, subjectName: "INGLÊS" }, teacherContext);
+    await mapMutationResolvers.saveLessonCell(
+      null,
+      { ...args, subjectName: "INGLÊS" },
+      teacherContext,
+    );
 
-    expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({ where: { normalizedName: "inglês" } });
+    expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({
+      where: { normalizedName: "inglês" },
+    });
     expect(prismaMock.subject.create).not.toHaveBeenCalled();
   });
 
@@ -177,13 +202,23 @@ describe("mapMutationResolvers.saveLessonCell", () => {
 
   it("reuses an existing teacher case-insensitively instead of creating a duplicate", async () => {
     prismaMock.subject.findFirst.mockResolvedValue({ id: SUBJECT_ID });
-    prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID, name: "Prof. Ana", normalizedName: "prof. ana" });
+    prismaMock.teacher.findFirst.mockResolvedValue({
+      id: TEACHER_ID,
+      name: "Prof. Ana",
+      normalizedName: "prof. ana",
+    });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
     prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
 
-    await mapMutationResolvers.saveLessonCell(null, { ...args, teacherName: "prof. ana" }, teacherContext);
+    await mapMutationResolvers.saveLessonCell(
+      null,
+      { ...args, teacherName: "prof. ana" },
+      teacherContext,
+    );
 
-    expect(prismaMock.teacher.findFirst).toHaveBeenCalledWith({ where: { normalizedName: "prof. ana" } });
+    expect(prismaMock.teacher.findFirst).toHaveBeenCalledWith({
+      where: { normalizedName: "prof. ana" },
+    });
     expect(prismaMock.teacher.create).not.toHaveBeenCalled();
   });
 
@@ -255,15 +290,17 @@ describe("mapMutationResolvers.clearLessonCell", () => {
   const args = { locationId: LOCATION_ID, shift: Shift.Matutino, weekday: Weekday.Seg, period: 1 };
 
   it("rejects anonymous users", async () => {
-    await expect(mapMutationResolvers.clearLessonCell(null, args, anonymousContext)).rejects.toThrow(
-      "Unauthorized",
-    );
+    await expect(
+      mapMutationResolvers.clearLessonCell(null, args, anonymousContext),
+    ).rejects.toThrow("Unauthorized");
   });
 
   it("is a no-op when the room shift doesn't exist yet", async () => {
     prismaMock.roomShift.findFirst.mockResolvedValue(null);
 
-    await expect(mapMutationResolvers.clearLessonCell(null, args, teacherContext)).resolves.toBe(true);
+    await expect(mapMutationResolvers.clearLessonCell(null, args, teacherContext)).resolves.toBe(
+      true,
+    );
     expect(prismaMock.lesson.deleteMany).not.toHaveBeenCalled();
   });
 
@@ -271,7 +308,9 @@ describe("mapMutationResolvers.clearLessonCell", () => {
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
     prismaMock.lesson.deleteMany.mockResolvedValue({ count: 1 });
 
-    await expect(mapMutationResolvers.clearLessonCell(null, args, teacherContext)).resolves.toBe(true);
+    await expect(mapMutationResolvers.clearLessonCell(null, args, teacherContext)).resolves.toBe(
+      true,
+    );
     expect(prismaMock.lesson.deleteMany).toHaveBeenCalledWith({
       where: { roomShiftId: ROOM_SHIFT_ID, weekday: "SEG", period: 1 },
     });
@@ -296,7 +335,9 @@ describe("mapMutationResolvers.createSubject", () => {
 
     await mapMutationResolvers.createSubject(null, { name: "FILOSOFIA" }, teacherContext);
 
-    expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({ where: { normalizedName: "filosofia" } });
+    expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({
+      where: { normalizedName: "filosofia" },
+    });
     expect(prismaMock.subject.create).not.toHaveBeenCalled();
   });
 
