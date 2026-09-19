@@ -47,7 +47,12 @@ export const RoomLabelsLayer = ({ roomShifts }: RoomLabelsLayerProps) => {
                     height={LABEL_HEIGHT}
                     fill={style?.background ?? "#ffd93d"}
                   />
-                  <text x={3} y={LABEL_HEIGHT - 3} fontSize={8} fill={style?.foreground ?? "#5c4a00"}>
+                  <text
+                    x={3}
+                    y={LABEL_HEIGHT - 3}
+                    fontSize={8}
+                    fill={style?.foreground ?? "#5c4a00"}
+                  >
                     {roomShift.classGroup?.grade} {roomShift.classGroup?.section}
                   </text>
                 </g>

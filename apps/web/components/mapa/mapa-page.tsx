@@ -28,7 +28,11 @@ export const MapaPage = () => {
           <HotspotLayer wasDragging={panZoom.wasDragging} />
           {data ? <RoomLabelsLayer roomShifts={data.roomShifts} /> : null}
         </MapStage>
-        <MapControls onZoomIn={panZoom.zoomIn} onZoomOut={panZoom.zoomOut} onReset={panZoom.reset} />
+        <MapControls
+          onZoomIn={panZoom.zoomIn}
+          onZoomOut={panZoom.zoomOut}
+          onReset={panZoom.reset}
+        />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-sm text-muted-foreground">
             Carregando mapa...

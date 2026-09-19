@@ -59,12 +59,14 @@ describe("geometry", () => {
   });
 
   it("converts normalized geometry to pixel coordinates", () => {
-    expect(toPixelRect({ code: "x", name: "X", x: 0.5, y: 0.25, width: 0.1, height: 0.2 })).toEqual({
-      x: 0.5 * IMG_W,
-      y: 0.25 * IMG_H,
-      width: 0.1 * IMG_W,
-      height: 0.2 * IMG_H,
-    });
+    expect(toPixelRect({ code: "x", name: "X", x: 0.5, y: 0.25, width: 0.1, height: 0.2 })).toEqual(
+      {
+        x: 0.5 * IMG_W,
+        y: 0.25 * IMG_H,
+        width: 0.1 * IMG_W,
+        height: 0.2 * IMG_H,
+      },
+    );
   });
 
   it("gives the pixel center of a location's rect", () => {
