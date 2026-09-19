@@ -115,11 +115,7 @@ export const mapMutationResolvers = {
     });
   },
 
-  saveLessonCell: async (
-    _: unknown,
-    args: MutationSaveLessonCellArgs,
-    context: GraphQLContext,
-  ) => {
+  saveLessonCell: async (_: unknown, args: MutationSaveLessonCellArgs, context: GraphQLContext) => {
     requireAuthenticatedUser(context);
     const subjectName = args.subjectName.trim();
     const teacherName = args.teacherName.trim();
