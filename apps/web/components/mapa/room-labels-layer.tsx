@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { SHIFTS } from "@/lib/mapa/constants";
 import { rooms, toPixelRect } from "@/lib/mapa/geometry";
 import type { MapDataQuery } from "@/src/gql/graphql";
@@ -13,8 +14,14 @@ type RoomLabelsLayerProps = {
   roomShifts: MapRoomShifts;
 };
 
-/** Class-group badges stacked over each occupied room — the reference prototype's `#roomLabelsLayer`. */
-export const RoomLabelsLayer = ({ roomShifts }: RoomLabelsLayerProps) => {
+/**
+ * Class-group badges stacked over each occupied room — the reference
+ * prototype's `#roomLabelsLayer`. Memoized: `roomShifts` stays referentially
+ * stable while panning/zooming (TanStack Query keeps the same reference
+ * until the query itself refetches), so this skips rebuilding the grouping
+ * and re-rendering on every pointermove.
+ */
+export const RoomLabelsLayer = memo(function RoomLabelsLayer({ roomShifts }: RoomLabelsLayerProps) {
   const assignedByRoom = new Map<string, MapRoomShifts>();
   for (const roomShift of roomShifts) {
     if (!roomShift.classGroup) {
@@ -63,4 +70,4 @@ export const RoomLabelsLayer = ({ roomShifts }: RoomLabelsLayerProps) => {
       })}
     </g>
   );
-};
+});

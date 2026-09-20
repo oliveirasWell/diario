@@ -16,6 +16,15 @@ type PointerRecord = { x: number; y: number };
  * and single-touch), wheel zoom, two-finger pinch zoom, and a drag-vs-click
  * threshold so a pan gesture ending over a hotspot doesn't open it.
  *
+ * Deliberately does NOT use `setPointerCapture` on the container. Capturing
+ * the pointer there retargets the synthesized `click` event to the
+ * container itself once a gesture starts — even for a plain tap — which
+ * silently swallowed clicks on hotspot rects nested inside. Instead, a
+ * gesture starts on the container's pointerdown but is tracked via
+ * window-level pointermove/pointerup listeners (matching the prototype's
+ * original window mousemove/mouseup approach), so a simple click on a
+ * hotspot is left alone to bubble and fire natively.
+ *
  * Takes the container ref rather than creating one, so the returned value
  * never mixes a ref together with derived render data (React Compiler
  * treats any object holding a ref as ref-like, and then flags every other
@@ -112,31 +121,8 @@ export const usePanZoom = (
     [containerRef, zoomAt],
   );
 
-  const handlePointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      containerRef.current?.setPointerCapture(event.pointerId);
-      pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      movedSinceDown.current = 0;
-
-      if (pointers.current.size === 1) {
-        dragOrigin.current = {
-          x: event.clientX,
-          y: event.clientY,
-          viewX: viewRef.current.x,
-          viewY: viewRef.current.y,
-        };
-      } else if (pointers.current.size === 2) {
-        dragOrigin.current = null;
-        const [a, b] = Array.from(pointers.current.values());
-        pinchStartDistance.current = Math.hypot(a.x - b.x, a.y - b.y);
-        pinchStartScale.current = viewRef.current.scale;
-      }
-    },
-    [containerRef],
-  );
-
-  const handlePointerMove = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
+  const trackPointerMove = useCallback(
+    (event: PointerEvent) => {
       if (!pointers.current.has(event.pointerId)) {
         return;
       }
@@ -175,19 +161,63 @@ export const usePanZoom = (
     [containerRef, clampPan, minScale, maxScale],
   );
 
-  const endGesture = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
-      containerRef.current?.releasePointerCapture(event.pointerId);
-      pointers.current.delete(event.pointerId);
-      if (pointers.current.size < 2) {
-        pinchStartDistance.current = null;
-      }
-      if (pointers.current.size === 0) {
-        dragOrigin.current = null;
-      }
-    },
-    [containerRef],
+  const endGesture = useCallback((event: PointerEvent) => {
+    pointers.current.delete(event.pointerId);
+    if (pointers.current.size < 2) {
+      pinchStartDistance.current = null;
+    }
+    if (pointers.current.size === 0) {
+      dragOrigin.current = null;
+    }
+  }, []);
+
+  // `latest` always holds the freshest trackPointerMove/endGesture closures,
+  // called from the permanently-stable window listener refs below.
+  const latest = useRef({ trackPointerMove, endGesture });
+  useEffect(() => {
+    latest.current = { trackPointerMove, endGesture };
+  }, [trackPointerMove, endGesture]);
+
+  // Created once (useRef's initializer only runs on mount) so these never
+  // change identity — required for add/removeEventListener to target the
+  // same function — while always calling the freshest logic via `latest`.
+  const windowPointerMoveRef = useRef((event: PointerEvent) =>
+    latest.current.trackPointerMove(event),
   );
+  const windowPointerUpRef = useRef((event: PointerEvent) => {
+    latest.current.endGesture(event);
+    if (pointers.current.size === 0) {
+      window.removeEventListener("pointermove", windowPointerMoveRef.current);
+      window.removeEventListener("pointerup", windowPointerUpRef.current);
+      window.removeEventListener("pointercancel", windowPointerUpRef.current);
+    }
+  });
+
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const isFirstPointer = pointers.current.size === 0;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    movedSinceDown.current = 0;
+
+    if (pointers.current.size === 1) {
+      dragOrigin.current = {
+        x: event.clientX,
+        y: event.clientY,
+        viewX: viewRef.current.x,
+        viewY: viewRef.current.y,
+      };
+    } else if (pointers.current.size === 2) {
+      dragOrigin.current = null;
+      const [a, b] = Array.from(pointers.current.values());
+      pinchStartDistance.current = Math.hypot(a.x - b.x, a.y - b.y);
+      pinchStartScale.current = viewRef.current.scale;
+    }
+
+    if (isFirstPointer) {
+      window.addEventListener("pointermove", windowPointerMoveRef.current);
+      window.addEventListener("pointerup", windowPointerUpRef.current);
+      window.addEventListener("pointercancel", windowPointerUpRef.current);
+    }
+  }, []);
 
   const handleWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
@@ -230,18 +260,20 @@ export const usePanZoom = (
     [view.x, view.y, view.scale],
   );
 
+  // Stable identities (not inline arrows) so consumers like MapControls can
+  // be memoized without their props changing reference every render.
+  const zoomIn = useCallback(() => zoomAtViewportCenter(ZOOM_STEP), [zoomAtViewportCenter]);
+  const zoomOut = useCallback(() => zoomAtViewportCenter(1 / ZOOM_STEP), [zoomAtViewportCenter]);
+
   return {
     transform,
     scale: view.scale,
     handlers: {
       onPointerDown: handlePointerDown,
-      onPointerMove: handlePointerMove,
-      onPointerUp: endGesture,
-      onPointerCancel: endGesture,
       onWheel: handleWheel,
     },
-    zoomIn: () => zoomAtViewportCenter(ZOOM_STEP),
-    zoomOut: () => zoomAtViewportCenter(1 / ZOOM_STEP),
+    zoomIn,
+    zoomOut,
     reset: fitToScreen,
     centerOn,
     wasDragging,
