@@ -253,9 +253,7 @@ export const RoomSchedule = ({
                             <span className="mapa-schedule-subj">{lesson.subject.name}</span>
                             <span className="mapa-schedule-teach">{lesson.teacher.name}</span>
                           </>
-                        ) : (
-                          "+"
-                        )}
+                        ) : null}
                       </td>
                     );
                   })}

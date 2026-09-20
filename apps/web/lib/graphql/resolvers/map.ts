@@ -2,6 +2,7 @@ import type { Prisma } from "@diario/db";
 import { createGraphQLError } from "graphql-yoga";
 import { toPrismaShift, toPrismaWeekday } from "@/lib/graphql/db-bridge";
 import { ownerIdsFrom, requireOwnerIds } from "@/lib/graphql/auth";
+import { ensureCampusLocations } from "@/lib/graphql/ensure-campus-locations";
 import { claimUnownedMapRecords } from "@/lib/graphql/map-owner-backfill";
 import { DEFAULT_SUBJECT_NAMES } from "@/lib/mapa/constants";
 import type {
@@ -130,7 +131,7 @@ const ensureDefaultSubjects = async (
 export const mapQueryResolvers = {
   mapData: async (_: unknown, __: unknown, context: GraphQLContext) => {
     const prisma = await getPrisma();
-    const locations = await prisma.location.findMany();
+    const locations = await ensureCampusLocations(prisma);
     const ownerIds = ownerIdsFrom(context);
     const ownerId = ownerIds[0];
     if (!ownerIds.length || !ownerId) {

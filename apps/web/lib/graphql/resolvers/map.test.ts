@@ -20,6 +20,20 @@ const LESSON_ID = "lesson-1";
 const OWNER_WHERE = { ownerId: { in: TEACHER_OWNER_IDS } };
 
 describe("mapQueryResolvers.mapData", () => {
+  it("ensures campus locations even for anonymous users", async () => {
+    const location = { id: LOCATION_ID, code: "07", kind: "ROOM", name: "Sala 07" };
+    prismaMock.location.findMany.mockResolvedValueOnce([]).mockResolvedValueOnce([location]);
+    prismaMock.location.create.mockResolvedValue(location);
+
+    await expect(mapQueryResolvers.mapData(null, {}, anonymousContext)).resolves.toEqual({
+      locations: [location],
+      roomShifts: [],
+      subjects: [],
+      teachers: [],
+    });
+    expect(prismaMock.location.create).toHaveBeenCalled();
+  });
+
   it("returns campus locations and empty user data for anonymous users", async () => {
     const location = { id: LOCATION_ID, code: "07", kind: "ROOM", name: "Sala 07" };
     prismaMock.location.findMany.mockResolvedValue([location]);

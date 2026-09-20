@@ -78,7 +78,8 @@ export const CellEditorDialog = ({
   };
 
   const selectedSubjectName = availableSubjects.find((subject) => subject.id === subjectId)?.name;
-  const canSave = Boolean(selectedSubjectName) && teacherName.trim().length > 0;
+  const subjectNameToSave = isAddingSubject ? newSubjectName.trim() : (selectedSubjectName ?? "");
+  const canSave = Boolean(subjectNameToSave) && teacherName.trim().length > 0;
   const busy = isSaving || isClearing;
 
   return (
@@ -112,15 +113,13 @@ export const CellEditorDialog = ({
             }
           }}
         >
-          <option value="" disabled>
-            {MAP_COPY.selectSubject}
-          </option>
+          <option value="">{MAP_COPY.emptySelect}</option>
           {availableSubjects.map((subject) => (
             <option key={subject.id} value={subject.id}>
               {subject.name}
             </option>
           ))}
-          <option value={ADD_SUBJECT_VALUE}>+ {MAP_COPY.addSubject}</option>
+          <option value={ADD_SUBJECT_VALUE}>＋ {MAP_COPY.addSubject}</option>
         </select>
 
         {isAddingSubject ? (
@@ -180,19 +179,17 @@ export const CellEditorDialog = ({
             className="mapa-cell-save"
             disabled={!canSave || busy}
             onClick={() => {
-              if (!selectedSubjectName) {
+              if (!subjectNameToSave) {
                 return;
               }
-              onSave({ subjectName: selectedSubjectName, teacherName: teacherName.trim() });
+              onSave({ subjectName: subjectNameToSave, teacherName: teacherName.trim() });
             }}
           >
             {MAP_COPY.saveLesson}
           </button>
-          {lesson ? (
-            <button type="button" className="mapa-cell-clear" onClick={onClear} disabled={busy}>
-              {MAP_COPY.clearLesson}
-            </button>
-          ) : null}
+          <button type="button" className="mapa-cell-clear" onClick={onClear} disabled={busy}>
+            {MAP_COPY.clearLesson}
+          </button>
         </div>
         <button type="button" className="mapa-cell-cancel" onClick={onClose} disabled={busy}>
           {MAP_COPY.cancelLesson}
