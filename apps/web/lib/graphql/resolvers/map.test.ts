@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { Shift, Weekday } from "@/src/gql/schema";
-import { anonymousContext, teacherContext } from "@/test/graphql-context";
+import {
+  anonymousContext,
+  teacherContext,
+  TEACHER_OWNER_IDS,
+  TEACHER_PRISMA_ID,
+} from "@/test/graphql-context";
 import { prismaMock } from "@/test/prisma-mock";
+import { MAP_OWNER_COLLECTIONS, ownerBackfillUpdateCommand } from "../map-owner-backfill";
 import { mapMutationResolvers, mapQueryResolvers } from "./map";
 
 const LOCATION_ID = "location-1";
@@ -11,6 +17,8 @@ const SUBJECT_ID = "subject-1";
 const TEACHER_ID = "teacher-1";
 const LESSON_ID = "lesson-1";
 
+const OWNER_WHERE = { ownerId: { in: TEACHER_OWNER_IDS } };
+
 describe("mapQueryResolvers.mapData", () => {
   it("returns empty data for anonymous users", async () => {
     await expect(mapQueryResolvers.mapData(null, {}, anonymousContext)).resolves.toEqual({
@@ -19,9 +27,10 @@ describe("mapQueryResolvers.mapData", () => {
       subjects: [],
       teachers: [],
     });
+    expect(prismaMock.$runCommandRaw).not.toHaveBeenCalled();
   });
 
-  it("reads all map data in one round trip for authenticated users", async () => {
+  it("reads this user's map data in one round trip", async () => {
     const location = { id: LOCATION_ID, code: "07", kind: "ROOM", name: "Sala 07" };
     const roomShift = { id: ROOM_SHIFT_ID, locationId: LOCATION_ID, shift: "MATUTINO" };
     const subject = { id: SUBJECT_ID, name: "Inglês", normalizedName: "inglês" };
@@ -38,12 +47,60 @@ describe("mapQueryResolvers.mapData", () => {
       teachers: [teacher],
     });
     expect(prismaMock.roomShift.findMany).toHaveBeenCalledWith({
+      where: OWNER_WHERE,
       include: {
         location: true,
         classGroup: true,
         lessons: { include: { subject: true, teacher: true } },
       },
     });
+    expect(prismaMock.subject.findMany).toHaveBeenCalledWith({ where: OWNER_WHERE });
+    expect(prismaMock.teacher.findMany).toHaveBeenCalledWith({ where: OWNER_WHERE });
+  });
+
+  it("claims map rows that still have no ownerId before reading", async () => {
+    prismaMock.location.findMany.mockResolvedValue([]);
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany.mockResolvedValue([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+
+    await mapQueryResolvers.mapData(null, {}, teacherContext);
+
+    expect(prismaMock.$runCommandRaw).toHaveBeenCalledTimes(MAP_OWNER_COLLECTIONS.length);
+    for (const collection of MAP_OWNER_COLLECTIONS) {
+      expect(prismaMock.$runCommandRaw).toHaveBeenCalledWith(
+        ownerBackfillUpdateCommand(collection, TEACHER_PRISMA_ID),
+      );
+    }
+  });
+
+  it("seeds the default subjects for a user who has none yet", async () => {
+    prismaMock.location.findMany.mockResolvedValue([]);
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+    prismaMock.subject.create.mockResolvedValue({ id: SUBJECT_ID });
+
+    const result = await mapQueryResolvers.mapData(null, {}, teacherContext);
+
+    expect(prismaMock.subject.create).toHaveBeenCalled();
+    expect(result.subjects).toEqual([{ id: SUBJECT_ID }]);
+  });
+
+  it("still returns subjects when default-subject creates race on the unique owner key", async () => {
+    prismaMock.location.findMany.mockResolvedValue([]);
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+    prismaMock.subject.create.mockRejectedValue({ code: "P2002" });
+
+    const result = await mapQueryResolvers.mapData(null, {}, teacherContext);
+
+    expect(result.subjects).toEqual([{ id: SUBJECT_ID }]);
   });
 });
 
@@ -83,7 +140,7 @@ describe("mapMutationResolvers.assignClassGroup", () => {
 
     expect(prismaMock.classGroup.create).not.toHaveBeenCalled();
     expect(prismaMock.classGroup.findFirst).toHaveBeenCalledWith({
-      where: { grade: "9º", section: "A" },
+      where: { grade: "9º", section: "A", ...OWNER_WHERE },
     });
   });
 
@@ -100,7 +157,7 @@ describe("mapMutationResolvers.assignClassGroup", () => {
     await mapMutationResolvers.assignClassGroup(null, args, teacherContext);
 
     expect(prismaMock.classGroup.create).toHaveBeenCalledWith({
-      data: { grade: "9º", section: "A" },
+      data: { grade: "9º", section: "A", ownerId: TEACHER_PRISMA_ID },
     });
   });
 
@@ -113,7 +170,7 @@ describe("mapMutationResolvers.assignClassGroup", () => {
     await mapMutationResolvers.assignClassGroup(null, args, teacherContext);
 
     expect(prismaMock.roomShift.create).toHaveBeenCalledWith({
-      data: { locationId: LOCATION_ID, shift: "MATUTINO" },
+      data: { locationId: LOCATION_ID, shift: "MATUTINO", ownerId: TEACHER_PRISMA_ID },
     });
   });
 
@@ -181,7 +238,7 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     );
 
     expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({
-      where: { normalizedName: "inglês" },
+      where: { normalizedName: "inglês", ...OWNER_WHERE },
     });
     expect(prismaMock.subject.create).not.toHaveBeenCalled();
   });
@@ -196,7 +253,7 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
     expect(prismaMock.subject.create).toHaveBeenCalledWith({
-      data: { name: "Inglês", normalizedName: "inglês" },
+      data: { name: "Inglês", normalizedName: "inglês", ownerId: TEACHER_PRISMA_ID },
     });
   });
 
@@ -217,7 +274,7 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     );
 
     expect(prismaMock.teacher.findFirst).toHaveBeenCalledWith({
-      where: { normalizedName: "prof. ana" },
+      where: { normalizedName: "prof. ana", ...OWNER_WHERE },
     });
     expect(prismaMock.teacher.create).not.toHaveBeenCalled();
   });
@@ -232,7 +289,7 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
     expect(prismaMock.roomShift.create).toHaveBeenCalledWith({
-      data: { locationId: LOCATION_ID, shift: "MATUTINO" },
+      data: { locationId: LOCATION_ID, shift: "MATUTINO", ownerId: TEACHER_PRISMA_ID },
     });
   });
 
@@ -246,7 +303,7 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
     expect(prismaMock.teacher.create).toHaveBeenCalledWith({
-      data: { name: "Prof. Ana", normalizedName: "prof. ana" },
+      data: { name: "Prof. Ana", normalizedName: "prof. ana", ownerId: TEACHER_PRISMA_ID },
     });
   });
 
@@ -336,7 +393,7 @@ describe("mapMutationResolvers.createSubject", () => {
     await mapMutationResolvers.createSubject(null, { name: "FILOSOFIA" }, teacherContext);
 
     expect(prismaMock.subject.findFirst).toHaveBeenCalledWith({
-      where: { normalizedName: "filosofia" },
+      where: { normalizedName: "filosofia", ...OWNER_WHERE },
     });
     expect(prismaMock.subject.create).not.toHaveBeenCalled();
   });
@@ -349,7 +406,7 @@ describe("mapMutationResolvers.createSubject", () => {
       mapMutationResolvers.createSubject(null, { name: "Filosofia" }, teacherContext),
     ).resolves.toEqual({ id: SUBJECT_ID, name: "Filosofia" });
     expect(prismaMock.subject.create).toHaveBeenCalledWith({
-      data: { name: "Filosofia", normalizedName: "filosofia" },
+      data: { name: "Filosofia", normalizedName: "filosofia", ownerId: TEACHER_PRISMA_ID },
     });
   });
 });

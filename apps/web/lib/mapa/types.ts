@@ -1,3 +1,5 @@
+export type LocationKindCode = "ROOM" | "POI";
+
 export type LocationGeometry = {
   code: string;
   name: string;
@@ -6,6 +8,8 @@ export type LocationGeometry = {
   width: number;
   height: number;
 };
+
+export type PlacedLocation = LocationGeometry & { kind: LocationKindCode };
 
 export type NavNodeId = string;
 

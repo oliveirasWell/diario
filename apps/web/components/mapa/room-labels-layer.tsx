@@ -12,6 +12,7 @@ type MapRoomShifts = MapDataQuery["mapData"]["roomShifts"];
 
 type RoomLabelsLayerProps = {
   roomShifts: MapRoomShifts;
+  onSelectLocation?: (code: string, shift: string) => void;
 };
 
 /**
@@ -21,7 +22,7 @@ type RoomLabelsLayerProps = {
  * until the query itself refetches), so this skips rebuilding the grouping
  * and re-rendering on every pointermove.
  */
-const RoomLabelsLayerComponent = ({ roomShifts }: RoomLabelsLayerProps) => {
+const RoomLabelsLayerComponent = ({ roomShifts, onSelectLocation }: RoomLabelsLayerProps) => {
   const assignedByRoom = new Map<string, MapRoomShifts>();
   for (const roomShift of roomShifts) {
     if (!roomShift.classGroup) {
@@ -47,7 +48,12 @@ const RoomLabelsLayerComponent = ({ roomShifts }: RoomLabelsLayerProps) => {
               return (
                 <g
                   key={roomShift.id}
+                  className="cursor-pointer"
                   transform={`translate(${rect.x + 2}, ${rect.y + 2 + index * (LABEL_HEIGHT + LABEL_GAP)})`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelectLocation?.(code, roomShift.shift);
+                  }}
                 >
                   <rect
                     width={Math.max(rect.width - 4, LABEL_HEIGHT)}

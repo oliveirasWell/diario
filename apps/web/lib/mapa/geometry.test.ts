@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   IMG_H,
   IMG_W,
+  findPlacedLocation,
+  isDecorativePoi,
+  isRoutableLocation,
   navEdges,
   navNodeIdForLocation,
   navNodes,
@@ -51,6 +54,18 @@ describe("geometry", () => {
     for (const poi of pois.filter((poi) => poi.code !== "lobby")) {
       expect(navNodes).toHaveProperty(navNodeIdForLocation(poi.code, "POI"));
     }
+  });
+
+  it("looks up a placed location by code", () => {
+    expect(findPlacedLocation("07")?.kind).toBe("ROOM");
+    expect(findPlacedLocation("biblioteca")?.kind).toBe("POI");
+  });
+
+  it("treats lobby as decorative and not routable", () => {
+    const lobby = findPlacedLocation("lobby");
+    expect(lobby).toBeDefined();
+    expect(isDecorativePoi("lobby")).toBe(true);
+    expect(lobby && isRoutableLocation(lobby)).toBe(false);
   });
 
   it("builds the nav node id from the location kind and code", () => {

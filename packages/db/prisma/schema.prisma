@@ -121,32 +121,40 @@ model Location {
 
 model Teacher {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId        String @db.ObjectId
   name           String
-  normalizedName String @unique
+  normalizedName String
 
   lessons Lesson[]
+
+  @@unique([ownerId, normalizedName])
 }
 
 model Subject {
   id             String @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId        String @db.ObjectId
   name           String
-  normalizedName String @unique
+  normalizedName String
 
   lessons Lesson[]
+
+  @@unique([ownerId, normalizedName])
 }
 
 model ClassGroup {
   id      String @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId String @db.ObjectId
   grade   String
   section String
 
   roomShifts RoomShift[]
 
-  @@unique([grade, section])
+  @@unique([ownerId, grade, section])
 }
 
 model RoomShift {
   id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  ownerId      String  @db.ObjectId
   locationId   String  @db.ObjectId
   shift        Shift
   classGroupId String? @db.ObjectId
@@ -155,7 +163,7 @@ model RoomShift {
   classGroup ClassGroup? @relation(fields: [classGroupId], references: [id])
   lessons    Lesson[]
 
-  @@unique([locationId, shift])
+  @@unique([ownerId, locationId, shift])
 }
 
 model Lesson {

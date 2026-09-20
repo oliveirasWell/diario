@@ -1,5 +1,6 @@
 import type { MapData } from "@/src/gql/schema";
-import { DAYS, PERIODS } from "./constants";
+import { DAYS, PERIODS, SEARCH_TAG } from "./constants";
+import { allLocations } from "./geometry";
 import { normalizeText } from "./normalize-text";
 import type { SearchIndexEntry } from "./types";
 
@@ -10,8 +11,8 @@ const dayLabel = (weekday: string): string =>
 
 const periodLabel = (period: number): string => PERIODS[period - 1] ?? String(period);
 
-const locationEntry = (location: MapData["locations"][number]): SearchIndexEntry => ({
-  tag: location.kind === "ROOM" ? "SALA" : "PONTO",
+const locationEntry = (location: (typeof allLocations)[number]): SearchIndexEntry => ({
+  tag: location.kind === "ROOM" ? SEARCH_TAG.room : SEARCH_TAG.poi,
   label: location.name,
   locationCode: location.code,
   term: normalizeText(location.name),
@@ -23,7 +24,7 @@ const classGroupEntry = (roomShift: MapData["roomShifts"][number]): SearchIndexE
   }
   const label = `${roomShift.classGroup.grade} ${roomShift.classGroup.section}`;
   return {
-    tag: "TURMA",
+    tag: SEARCH_TAG.classGroup,
     label,
     locationCode: roomShift.location.code,
     shift: roomShift.shift,
@@ -50,21 +51,21 @@ const lessonEntries = (roomShift: MapData["roomShifts"][number]): SearchIndexEnt
 
     return [
       {
-        tag: "AULA",
+        tag: SEARCH_TAG.lesson,
         label: `${lesson.subject.name} — ${lesson.teacher.name}`,
         locationCode: roomShift.location.code,
         shift: roomShift.shift,
         term,
       },
       {
-        tag: "DISCIPLINA",
+        tag: SEARCH_TAG.subject,
         label: lesson.subject.name,
         locationCode: roomShift.location.code,
         shift: roomShift.shift,
         term,
       },
       {
-        tag: "PROFESSOR",
+        tag: SEARCH_TAG.teacher,
         label: lesson.teacher.name,
         locationCode: roomShift.location.code,
         shift: roomShift.shift,
@@ -74,7 +75,7 @@ const lessonEntries = (roomShift: MapData["roomShifts"][number]): SearchIndexEnt
   });
 
 export const buildSearchIndex = (mapData: SearchableMapData): SearchIndexEntry[] => [
-  ...mapData.locations.map(locationEntry),
+  ...allLocations.map(locationEntry),
   ...mapData.roomShifts.flatMap((roomShift) => {
     const classGroup = classGroupEntry(roomShift);
     return [...(classGroup ? [classGroup] : []), ...lessonEntries(roomShift)];
