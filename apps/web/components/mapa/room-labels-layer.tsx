@@ -21,7 +21,7 @@ type RoomLabelsLayerProps = {
  * until the query itself refetches), so this skips rebuilding the grouping
  * and re-rendering on every pointermove.
  */
-export const RoomLabelsLayer = memo(function RoomLabelsLayer({ roomShifts }: RoomLabelsLayerProps) {
+const RoomLabelsLayerComponent = ({ roomShifts }: RoomLabelsLayerProps) => {
   const assignedByRoom = new Map<string, MapRoomShifts>();
   for (const roomShift of roomShifts) {
     if (!roomShift.classGroup) {
@@ -70,4 +70,7 @@ export const RoomLabelsLayer = memo(function RoomLabelsLayer({ roomShifts }: Roo
       })}
     </g>
   );
-});
+};
+RoomLabelsLayerComponent.displayName = "RoomLabelsLayer";
+
+export const RoomLabelsLayer = memo(RoomLabelsLayerComponent);

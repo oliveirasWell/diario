@@ -18,39 +18,40 @@ type HotspotLayerProps = {
  * panning/zooming (only the transform on a sibling layer changes), so this
  * skips re-rendering 32 rects on every pointermove.
  */
-export const HotspotLayer = memo(function HotspotLayer({
+const HotspotLayerComponent = ({
   activeCode,
   onSelectLocation,
   wasDragging,
-}: HotspotLayerProps) {
-  return (
-    <g>
-      {locations.map((location) => {
-        const rect = toPixelRect(location);
-        const isActive = location.code === activeCode;
-        return (
-          <rect
-            key={location.code}
-            x={rect.x}
-            y={rect.y}
-            width={rect.width}
-            height={rect.height}
-            className={
-              isActive
-                ? "cursor-pointer fill-[rgba(232,161,61,0.38)] stroke-[#e8a13d] stroke-2 transition-colors"
-                : "cursor-pointer fill-[rgba(47,111,179,0)] stroke-[rgba(47,111,179,0.9)] stroke-2 transition-colors hover:fill-[rgba(47,111,179,0.28)]"
+}: HotspotLayerProps) => (
+  <g>
+    {locations.map((location) => {
+      const rect = toPixelRect(location);
+      const isActive = location.code === activeCode;
+      return (
+        <rect
+          key={location.code}
+          x={rect.x}
+          y={rect.y}
+          width={rect.width}
+          height={rect.height}
+          className={
+            isActive
+              ? "cursor-pointer fill-[rgba(232,161,61,0.38)] stroke-[#e8a13d] stroke-2 transition-colors"
+              : "cursor-pointer fill-[rgba(47,111,179,0)] stroke-[rgba(47,111,179,0.9)] stroke-2 transition-colors hover:fill-[rgba(47,111,179,0.28)]"
+          }
+          onClick={() => {
+            if (wasDragging?.()) {
+              return;
             }
-            onClick={() => {
-              if (wasDragging?.()) {
-                return;
-              }
-              onSelectLocation?.(location.code);
-            }}
-          >
-            <title>{location.name}</title>
-          </rect>
-        );
-      })}
-    </g>
-  );
-});
+            onSelectLocation?.(location.code);
+          }}
+        >
+          <title>{location.name}</title>
+        </rect>
+      );
+    })}
+  </g>
+);
+HotspotLayerComponent.displayName = "HotspotLayer";
+
+export const HotspotLayer = memo(HotspotLayerComponent);

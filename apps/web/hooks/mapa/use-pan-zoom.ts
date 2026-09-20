@@ -219,6 +219,21 @@ export const usePanZoom = (
     }
   }, []);
 
+  // Safety net for a gesture still in progress when this unmounts (e.g. the
+  // user navigates away mid-drag) — removeEventListener is a no-op if these
+  // were never added, so this is safe to run unconditionally.
+  useEffect(() => {
+    // These never change after mount (see the useRef initializers above),
+    // but are still captured locally so the cleanup doesn't read `.current`.
+    const windowPointerMove = windowPointerMoveRef.current;
+    const windowPointerUp = windowPointerUpRef.current;
+    return () => {
+      window.removeEventListener("pointermove", windowPointerMove);
+      window.removeEventListener("pointerup", windowPointerUp);
+      window.removeEventListener("pointercancel", windowPointerUp);
+    };
+  }, []);
+
   const handleWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
       event.preventDefault();
