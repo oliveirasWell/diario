@@ -42,3 +42,66 @@ export const USER_MARKER_OPTIONS = [
 export const DEFAULT_USER_MARKER = "📍";
 
 export const DESTINATION_MARKER = "🎯";
+
+export const MAPA_PATH = "/mapa";
+export const CLASSES_PATH = "/classes";
+
+export const DECORATIVE_POI_CODES = ["lobby"] as const;
+
+export const DEFAULT_SUBJECT_NAMES = [
+  "Inglês",
+  "Matemática",
+  "Língua Portuguesa",
+  "História",
+  "Geografia",
+  "Ciências",
+  "Educação Física",
+  "Arte",
+] as const;
+
+export const SEARCH_TAG = {
+  room: "SALA",
+  poi: "LOCAL",
+  classGroup: "TURMA",
+  lesson: "AULA",
+  subject: "DISCIPLINA",
+  teacher: "PROFESSOR",
+} as const;
+
+export const MAP_COPY = {
+  title: "Mapa Escolar",
+  schoolName: "Ee Sidronio Antunes De Andrade",
+  navTurmas: "Turmas",
+  navMapa: "Mapa",
+  searchPlaceholder: "Buscar sala, turma, professor, disciplina...",
+  searchEmpty: "Nenhum resultado.",
+  hint: "Arraste para mover · pinça ou role para dar zoom",
+  loading: "Carregando mapa...",
+  howToGet: "Como chegar?",
+  howToGetHere: "Como chegar aqui",
+  navPanelTitle: "Como chegar?",
+  originLabel: "Origem",
+  destinationLabel: "Destino",
+  markerLabel: "Meu marcador",
+  showRoute: "Mostrar rota",
+  clearRoute: "Limpar rota",
+  close: "Fechar",
+  reset: "Reset",
+  zoomIn: "Aproximar",
+  zoomOut: "Afastar",
+  resetZoom: "Redefinir zoom",
+  poiDescription: "Ponto de interesse.",
+  roomTag: "Sala",
+  poiTag: "Local",
+  selectOriginDestination: "Selecione origem e destino.",
+  sameOriginDestination: "Origem e destino são iguais.",
+  routeFailed: "Não foi possível calcular uma rota entre esses locais.",
+  searchToast: (name: string) => `Toque em ${name} para ver informações e como chegar`,
+  searchPin: (name: string) => `📍 ${name}`,
+  routeSummary: (origin: string, destination: string) => `Rota: ${origin} → ${destination}`,
+} as const;
+
+export const WHEEL_ZOOM_FACTOR = 1.12;
+export const BUTTON_ZOOM_FACTOR = 1.3;
+export const MAX_SCALE_FACTOR = 6;
+export const DRAG_CLICK_THRESHOLD_PX = 6;

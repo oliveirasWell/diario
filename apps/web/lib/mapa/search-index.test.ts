@@ -30,8 +30,9 @@ const mapData = {
 describe("buildSearchIndex", () => {
   const index = buildSearchIndex(mapData);
 
-  it("indexes every location", () => {
-    expect(index.filter((entry) => entry.tag === "SALA" || entry.tag === "PONTO")).toHaveLength(2);
+  it("indexes every room and point of interest from the floor plan", () => {
+    expect(index.filter((entry) => entry.tag === "SALA")).toHaveLength(16);
+    expect(index.filter((entry) => entry.tag === "LOCAL")).toHaveLength(16);
   });
 
   it("indexes an assigned class group", () => {
@@ -73,7 +74,7 @@ describe("buildSearchIndex", () => {
 describe("matchSearchIndex", () => {
   const entries: SearchIndexEntry[] = [
     { tag: "SALA", label: "Sala 07", locationCode: "07", term: "sala 07" },
-    { tag: "PONTO", label: "Biblioteca", locationCode: "biblioteca", term: "biblioteca" },
+    { tag: "LOCAL", label: "Biblioteca", locationCode: "biblioteca", term: "biblioteca" },
     {
       tag: "DISCIPLINA",
       label: "Educação Física",

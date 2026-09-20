@@ -19,6 +19,7 @@ type RoomScheduleProps = {
   roomShifts: MapRoomShift[];
   subjects: MapSubject[];
   teachers: MapTeacher[];
+  initialShift?: string;
 };
 
 type ClassGroupSelectsProps = {
@@ -105,8 +106,14 @@ const ClassGroupSelects = ({
 };
 
 /** Shift tabs + grade/section assignment + the weekday x period lesson grid — the reference prototype's `#scheduleContainer`. */
-export const RoomSchedule = ({ locationId, roomShifts, subjects, teachers }: RoomScheduleProps) => {
-  const [currentShift, setCurrentShift] = useState<string>(SHIFTS[0].id);
+export const RoomSchedule = ({
+  locationId,
+  roomShifts,
+  subjects,
+  teachers,
+  initialShift,
+}: RoomScheduleProps) => {
+  const [currentShift, setCurrentShift] = useState<string>(initialShift ?? SHIFTS[0]?.id ?? "");
   const [openCell, setOpenCell] = useState<OpenCell | null>(null);
 
   const assignClassGroup = useAssignClassGroupMutation();

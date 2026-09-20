@@ -1,0 +1,264 @@
+.mapa-app {
+  position: fixed;
+  inset: 4rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  background: #f3ede3;
+  color: #1c2b4a;
+}
+
+.mapa-stage-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.mapa-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  cursor: grab;
+}
+
+.mapa-stage.is-dragging {
+  cursor: grabbing;
+}
+
+.mapa-stage svg {
+  display: block;
+  user-select: none;
+}
+
+.mapa-campus {
+  fill: #e7dcc8;
+}
+
+.mapa-location {
+  cursor: pointer;
+  stroke-width: 2;
+  transition:
+    fill 0.15s ease,
+    stroke 0.15s ease;
+  vector-effect: non-scaling-stroke;
+}
+
+.mapa-location-room {
+  fill: #fbf7f0;
+  stroke: #2f6fb3;
+}
+
+.mapa-location-poi {
+  fill: #d7e4f4;
+  stroke: #2f6fb3;
+}
+
+.mapa-location-green {
+  fill: #c5d9b8;
+  stroke: #5b7a4a;
+}
+
+.mapa-location-lobby {
+  fill: #efe6d6;
+  stroke: #cbb994;
+}
+
+.mapa-location:hover {
+  fill: rgba(47, 111, 179, 0.28);
+  stroke: rgba(47, 111, 179, 0.9);
+}
+
+.mapa-location.is-active {
+  fill: rgba(232, 161, 61, 0.38);
+  stroke: #e8a13d;
+  stroke-width: 4;
+}
+
+.mapa-location-label {
+  pointer-events: none;
+  fill: #1c2b4a;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.mapa-route-line {
+  fill: none;
+  stroke: #e8a13d;
+  stroke-width: 6;
+  stroke-dasharray: 2 14;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.mapa-route-marker-bg {
+  fill: #fff;
+  stroke: #1c2b4a;
+  stroke-width: 2;
+}
+
+.mapa-route-marker-text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.mapa-search {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  z-index: 16;
+  max-width: 420px;
+}
+
+.mapa-search input {
+  width: 100%;
+  border: 1px solid rgba(28, 43, 74, 0.18);
+  background: #fff;
+  color: #1c2b4a;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.mapa-search-results {
+  margin-top: 4px;
+  background: #fff;
+  border: 1px solid rgba(28, 43, 74, 0.18);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.mapa-search-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.mapa-search-item:hover {
+  background: rgba(47, 111, 179, 0.1);
+}
+
+.mapa-search-tag {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #2f6fb3;
+}
+
+.mapa-hint {
+  position: absolute;
+  left: 12px;
+  bottom: 20px;
+  z-index: 15;
+  font-size: 12px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.mapa-nav-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 44px;
+  z-index: 15;
+  border: 0;
+  background: #e8a13d;
+  color: #1c2b4a;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.mapa-toast {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  width: fit-content;
+  max-width: calc(100% - 28px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(20, 25, 35, 0.85);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 8px 8px 8px 14px;
+  z-index: 15;
+}
+
+.mapa-toast-close {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+}
+
+.mapa-search-pulse {
+  fill: rgba(232, 161, 61, 0.28);
+  stroke: #e8a13d;
+  stroke-width: 4;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+  animation: mapa-target-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes mapa-target-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapa-search-pulse {
+    animation: none;
+  }
+}
+
+.dark .mapa-app {
+  background: #14181f;
+  color: #f2f3f5;
+}
+
+.dark .mapa-campus {
+  fill: #1c232e;
+}
+
+.dark .mapa-location-room {
+  fill: #243044;
+  stroke: #7ea8d8;
+}
+
+.dark .mapa-location-poi {
+  fill: #243044;
+  stroke: #7ea8d8;
+}
+
+.dark .mapa-search input,
+.dark .mapa-search-results {
+  background: #1f2530;
+  color: #f2f3f5;
+  border-color: rgba(255, 255, 255, 0.12);
+}

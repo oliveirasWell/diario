@@ -1,12 +1,12 @@
-// Seeds the school map's fixed master data: the 16 rooms + 16 points of
-// interest (as Location) and the 8 subjects, extracted verbatim from
-// docs/mapa/index.html. Geometry (coordinates, nav graph) is NOT seeded here
+// Seeds the school map's shared floor-plan locations: the 16 rooms + 16
+// points of interest. Geometry (coordinates, nav graph) is NOT seeded here
 // — it stays in application code (apps/web/lib/mapa/geometry.ts), matched to
 // these rows by `code`. Idempotent: every row is upserted.
 //
-// Does NOT seed the HTML prototype's example data (class "5º A", "Prof.
-// Ana", one lesson in Sala 07) — that is illustrative only, per
-// docs/mapa/SPEC.md.
+// Subjects, teachers, class groups, room shifts and lessons belong to the
+// signed-in user and are created on demand — not seeded. Does NOT seed the
+// HTML prototype's example data (class "5º A", "Prof. Ana", one lesson in
+// Sala 07).
 
 const { PrismaClient } = require("@prisma/client");
 
@@ -50,19 +50,6 @@ const pois = [
   { code: "area_verde_3", name: "Área Verde" },
 ];
 
-const subjects = [
-  "Inglês",
-  "Matemática",
-  "Língua Portuguesa",
-  "História",
-  "Geografia",
-  "Ciências",
-  "Educação Física",
-  "Arte",
-];
-
-const normalize = (value) => value.trim().toLowerCase();
-
 const seedLocations = async () => {
   for (const room of rooms) {
     await prisma.location.upsert({
@@ -81,21 +68,8 @@ const seedLocations = async () => {
   }
 };
 
-const seedSubjects = async () => {
-  for (const name of subjects) {
-    const normalizedName = normalize(name);
-
-    await prisma.subject.upsert({
-      where: { normalizedName },
-      update: { name },
-      create: { name, normalizedName },
-    });
-  }
-};
-
 const main = async () => {
   await seedLocations();
-  await seedSubjects();
 };
 
 main()

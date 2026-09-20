@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { isE2ePublicPath } from "@/lib/auth/e2e-bypass";
 
 const PUBLIC_PATHS = ["/login", "/api/auth"];
 
@@ -9,7 +10,8 @@ export async function proxy(req: NextRequest) {
   if (
     PUBLIC_PATHS.some((p) => pathname.startsWith(p)) ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/favicon")
+    pathname.startsWith("/favicon") ||
+    isE2ePublicPath(pathname)
   ) {
     return NextResponse.next();
   }

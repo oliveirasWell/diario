@@ -3,7 +3,15 @@
 // coordinates and the navigation graph are app configuration, not database
 // rows — matched to Location.code at runtime. Do not derive these from the
 // database.
-import type { LocationGeometry, NavEdge, NavNodeId, NavNodes } from "./types";
+import type {
+  LocationGeometry,
+  LocationKindCode,
+  NavEdge,
+  NavNodeId,
+  NavNodes,
+  PlacedLocation,
+} from "./types";
+import { DECORATIVE_POI_CODES } from "./constants";
 
 export const IMG_W = 1155;
 export const IMG_H = 1362;
@@ -134,6 +142,10 @@ export const navNodes: NavNodes = {
   poi_area_verde_3: [700, 1060],
 };
 
+/** The nav graph node representing a room/POI, e.g. "room_07"/"poi_wc". */
+export const navNodeIdForLocation = (locationCode: string, kind: LocationKindCode): NavNodeId =>
+  kind === "ROOM" ? `room_${locationCode}` : `poi_${locationCode}`;
+
 export const navEdges: NavEdge[] = [
   ["spine_entrance", "spine_top"],
   ["spine_top", "spine_row1"],
@@ -185,9 +197,25 @@ export const navEdges: NavEdge[] = [
   ["lobby_south", "poi_area_verde_3"],
 ];
 
-/** The nav graph node representing a room/POI, e.g. "room_07"/"poi_wc". */
-export const navNodeIdForLocation = (locationCode: string, kind: "ROOM" | "POI"): NavNodeId =>
-  kind === "ROOM" ? `room_${locationCode}` : `poi_${locationCode}`;
+export const allLocations: PlacedLocation[] = [
+  ...rooms.map((room) => ({ ...room, kind: "ROOM" as const })),
+  ...pois.map((poi) => ({ ...poi, kind: "POI" as const })),
+];
+
+export const findPlacedLocation = (code: string): PlacedLocation | undefined =>
+  allLocations.find((location) => location.code === code);
+
+export const isDecorativePoi = (code: string): boolean =>
+  (DECORATIVE_POI_CODES as readonly string[]).includes(code);
+
+export const isRoutableLocation = (location: PlacedLocation): boolean => {
+  if (isDecorativePoi(location.code)) {
+    return false;
+  }
+  return navNodeIdForLocation(location.code, location.kind) in navNodes;
+};
+
+export const routableLocations = (): PlacedLocation[] => allLocations.filter(isRoutableLocation);
 
 export type PixelRect = { x: number; y: number; width: number; height: number };
 

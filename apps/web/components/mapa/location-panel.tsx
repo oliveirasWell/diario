@@ -1,40 +1,57 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MAP_COPY } from "@/lib/mapa/constants";
+import type { PlacedLocation } from "@/lib/mapa/types";
 import { RoomSchedule } from "./room-schedule";
 import type { MapLocation, MapRoomShift, MapSubject, MapTeacher } from "./types";
 
 type LocationPanelProps = {
-  location: MapLocation;
+  location: PlacedLocation;
+  dbLocation?: MapLocation;
   roomShifts: MapRoomShift[];
   subjects: MapSubject[];
   teachers: MapTeacher[];
+  initialShift?: string;
+  onRouteHere: (code: string) => void;
   onClose: () => void;
 };
 
-/** Room/POI info panel — the reference prototype's `#panel`. For a room, delegates the schedule grid to `RoomSchedule`. */
 export const LocationPanel = ({
   location,
+  dbLocation,
   roomShifts,
   subjects,
   teachers,
+  initialShift,
+  onRouteHere,
   onClose,
 }: LocationPanelProps) => (
   <Dialog open onOpenChange={(open) => !open && onClose()}>
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>{location.name}</DialogTitle>
+        <DialogTitle>
+          <span className="mr-2 text-xs font-bold tracking-wide text-primary uppercase">
+            {location.kind === "ROOM" ? MAP_COPY.roomTag : MAP_COPY.poiTag}
+          </span>
+          {location.name}
+        </DialogTitle>
       </DialogHeader>
-      {location.kind === "ROOM" ? (
+      <Button type="button" variant="secondary" onClick={() => onRouteHere(location.code)}>
+        {MAP_COPY.howToGetHere}
+      </Button>
+      {location.kind === "ROOM" && dbLocation ? (
         <RoomSchedule
-          locationId={location.id}
+          locationId={dbLocation.id}
           roomShifts={roomShifts}
           subjects={subjects}
           teachers={teachers}
+          initialShift={initialShift}
         />
-      ) : (
-        <p className="text-sm text-muted-foreground">Ponto de interesse.</p>
-      )}
+      ) : location.kind === "POI" ? (
+        <p className="text-sm text-muted-foreground">{MAP_COPY.poiDescription}</p>
+      ) : null}
     </DialogContent>
   </Dialog>
 );
