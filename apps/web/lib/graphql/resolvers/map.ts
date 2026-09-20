@@ -13,14 +13,12 @@ import type {
 import type { GraphQLContext } from "../context";
 import { getPrisma } from "../prisma";
 
-const emptyMapData = { locations: [], roomShifts: [], subjects: [], teachers: [] };
+const ownerWhere = (ownerIds: string[]) => ({ ownerId: { in: ownerIds } });
 
 type MapStore = Pick<
   Prisma.TransactionClient,
   "roomShift" | "classGroup" | "teacher" | "subject" | "lesson"
 >;
-
-const ownerWhere = (ownerIds: string[]) => ({ ownerId: { in: ownerIds } });
 
 const requireMapOwner = (context: GraphQLContext) => {
   const ownerIds = requireOwnerIds(context);
@@ -131,18 +129,15 @@ const ensureDefaultSubjects = async (
 
 export const mapQueryResolvers = {
   mapData: async (_: unknown, __: unknown, context: GraphQLContext) => {
-    const ownerIds = ownerIdsFrom(context);
-    if (!ownerIds.length) {
-      return emptyMapData;
-    }
-    const ownerId = ownerIds[0];
-    if (!ownerId) {
-      return emptyMapData;
-    }
     const prisma = await getPrisma();
+    const locations = await prisma.location.findMany();
+    const ownerIds = ownerIdsFrom(context);
+    const ownerId = ownerIds[0];
+    if (!ownerIds.length || !ownerId) {
+      return { locations, roomShifts: [], subjects: [], teachers: [] };
+    }
     await claimUnownedMapRecords(prisma, ownerId);
-    const [locations, roomShifts, existingSubjects, teachers] = await Promise.all([
-      prisma.location.findMany(),
+    const [roomShifts, existingSubjects, teachers] = await Promise.all([
       prisma.roomShift.findMany({
         where: ownerWhere(ownerIds),
         include: {

@@ -7,6 +7,8 @@ test("map page opens and a room click opens the panel", async ({ page }) => {
   await page.locator('[data-location-code="07"]').click();
   await expect(page.getByRole("heading", { name: "Sala 07" })).toBeVisible();
   await expect(page.getByRole("button", { name: MAP_COPY.howToGetHere })).toBeVisible();
+  await expect(page.getByLabel(MAP_COPY.gradeLabel, { exact: true })).toBeVisible();
+  await expect(page.getByLabel(MAP_COPY.sectionLabel, { exact: true })).toBeVisible();
 });
 
 test("search highlights a location before the panel opens", async ({ page }) => {

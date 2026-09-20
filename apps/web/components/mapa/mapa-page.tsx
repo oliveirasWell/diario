@@ -134,6 +134,7 @@ export const MapaPage = () => {
     setRoute(nextRoute);
     setRouteMessage(null);
     setIsNavOpen(false);
+    hideHint();
     const mid = nextRoute.points[Math.floor(nextRoute.points.length / 2)];
     if (mid) {
       panZoom.centerOn(mid.x, mid.y);
@@ -195,6 +196,12 @@ export const MapaPage = () => {
             ×
           </button>
         </div>
+      ) : null}
+
+      {route ? (
+        <p className="mapa-route-info" role="status">
+          {MAP_COPY.routeSummary(route.origin.name, route.destination.name)}
+        </p>
       ) : null}
 
       <button type="button" className="mapa-nav-btn" onClick={() => openNav()}>

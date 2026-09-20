@@ -1,24 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DAYS, PERIODS } from "@/lib/mapa/constants";
+import { DAYS, MAP_COPY, PERIODS } from "@/lib/mapa/constants";
 import { useCreateSubjectMutation } from "@/hooks/mapa/use-map-mutations";
-import { NATIVE_SELECT_CLASS_NAME } from "./constants";
 import type { MapLesson, MapSubject, MapTeacher } from "./types";
 
 const ADD_SUBJECT_VALUE = "__add__";
 
 type CellEditorDialogProps = {
+  roomName: string;
   weekday: string;
   period: number;
   lesson: MapLesson | undefined;
@@ -34,6 +24,7 @@ type CellEditorDialogProps = {
 };
 
 export const CellEditorDialog = ({
+  roomName,
   weekday,
   period,
   lesson,
@@ -55,13 +46,9 @@ export const CellEditorDialog = ({
 
   const createSubject = useCreateSubjectMutation();
 
-  const dayLabel = DAYS.find((day) => day.id === weekday)?.full ?? weekday;
+  const dayLabel = DAYS.find((day) => day.id === weekday)?.name ?? weekday;
   const periodLabel = PERIODS[period - 1] ?? String(period);
 
-  // The lesson's current subject may not be in `subjects` if it was renamed/removed
-  // elsewhere, and a subject just created inline isn't in `subjects` yet either — the
-  // mapData refetch triggered by createSubject hasn't landed. Both are added locally so
-  // Salvar doesn't sit disabled while waiting on the network.
   const availableSubjects = [
     ...subjects,
     ...(lesson && !subjects.some((subject) => subject.id === lesson.subject.id)
@@ -92,117 +79,106 @@ export const CellEditorDialog = ({
 
   const selectedSubjectName = availableSubjects.find((subject) => subject.id === subjectId)?.name;
   const canSave = Boolean(selectedSubjectName) && teacherName.trim().length > 0;
+  const busy = isSaving || isClearing;
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {dayLabel} · {periodLabel} período
-          </DialogTitle>
-        </DialogHeader>
+    <div
+      className="mapa-overlay mapa-cell-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div
+        className="mapa-cell-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mapa-cell-title"
+      >
+        <h2 id="mapa-cell-title">{MAP_COPY.cellTitle(roomName, dayLabel, periodLabel)}</h2>
+        <label htmlFor="cell-subject">{MAP_COPY.subjectLabel}</label>
+        <select
+          id="cell-subject"
+          className="mapa-select"
+          value={isAddingSubject ? ADD_SUBJECT_VALUE : subjectId}
+          onChange={(event) => {
+            if (event.target.value === ADD_SUBJECT_VALUE) {
+              setIsAddingSubject(true);
+              setSubjectId("");
+            } else {
+              setIsAddingSubject(false);
+              setSubjectId(event.target.value);
+            }
+          }}
+        >
+          <option value="" disabled>
+            {MAP_COPY.selectSubject}
+          </option>
+          {availableSubjects.map((subject) => (
+            <option key={subject.id} value={subject.id}>
+              {subject.name}
+            </option>
+          ))}
+          <option value={ADD_SUBJECT_VALUE}>+ {MAP_COPY.addSubject}</option>
+        </select>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cell-subject">Disciplina</Label>
-            <select
-              id="cell-subject"
-              className={`w-full ${NATIVE_SELECT_CLASS_NAME}`}
-              value={isAddingSubject ? ADD_SUBJECT_VALUE : subjectId}
-              onChange={(event) => {
-                if (event.target.value === ADD_SUBJECT_VALUE) {
-                  setIsAddingSubject(true);
-                  // Cleared so a stray Salvar click can't silently save the previously
-                  // selected subject instead of the one being typed below.
-                  setSubjectId("");
-                } else {
-                  setIsAddingSubject(false);
-                  setSubjectId(event.target.value);
+        {isAddingSubject ? (
+          <div className="mapa-inline-add">
+            <input
+              autoFocus
+              className="mapa-input"
+              placeholder={MAP_COPY.addSubjectPlaceholder}
+              value={newSubjectName}
+              onChange={(event) => setNewSubjectName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleAddSubject();
                 }
               }}
-            >
-              <option value="" disabled>
-                Selecione...
-              </option>
-              {availableSubjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-              <option value={ADD_SUBJECT_VALUE}>+ Adicionar nova disciplina</option>
-            </select>
-
-            {isAddingSubject && (
-              <div className="flex gap-1.5">
-                <Input
-                  autoFocus
-                  placeholder="Nome da disciplina"
-                  value={newSubjectName}
-                  onChange={(event) => setNewSubjectName(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      handleAddSubject();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={handleAddSubject}
-                  disabled={createSubject.isPending || !newSubjectName.trim()}
-                >
-                  Adicionar
-                </Button>
-              </div>
-            )}
-            {createSubject.errorMessage && (
-              <p className="text-sm text-destructive" role="alert">
-                {createSubject.errorMessage}
-              </p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="cell-teacher">Professor</Label>
-            <Input
-              id="cell-teacher"
-              list="mapa-teacher-options"
-              placeholder="Nome do professor"
-              value={teacherName}
-              onChange={(event) => setTeacherName(event.target.value)}
             />
-            <datalist id="mapa-teacher-options">
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.name} />
-              ))}
-            </datalist>
-          </div>
-
-          {(saveError || clearError) && (
-            <p className="text-sm text-destructive" role="alert">
-              {saveError || clearError}
-            </p>
-          )}
-        </div>
-
-        <DialogFooter>
-          {lesson && (
-            <Button
+            <button
               type="button"
-              variant="destructive"
-              onClick={onClear}
-              disabled={isSaving || isClearing}
+              onClick={handleAddSubject}
+              disabled={createSubject.isPending || !newSubjectName.trim()}
             >
-              Limpar
-            </Button>
-          )}
-          <Button type="button" variant="ghost" onClick={onClose} disabled={isSaving || isClearing}>
-            Cancelar
-          </Button>
-          <Button
+              {MAP_COPY.addSubjectConfirm}
+            </button>
+          </div>
+        ) : null}
+        {createSubject.errorMessage ? (
+          <p className="mapa-form-error" role="alert">
+            {createSubject.errorMessage}
+          </p>
+        ) : null}
+
+        <label htmlFor="cell-teacher">{MAP_COPY.teacherLabel}</label>
+        <input
+          id="cell-teacher"
+          className="mapa-input"
+          list="mapa-teacher-options"
+          placeholder={MAP_COPY.teacherPlaceholder}
+          value={teacherName}
+          onChange={(event) => setTeacherName(event.target.value)}
+        />
+        <datalist id="mapa-teacher-options">
+          {teachers.map((teacher) => (
+            <option key={teacher.id} value={teacher.name} />
+          ))}
+        </datalist>
+
+        {(saveError || clearError) && (
+          <p className="mapa-form-error" role="alert">
+            {saveError || clearError}
+          </p>
+        )}
+
+        <div className="mapa-cell-actions">
+          <button
             type="button"
-            disabled={!canSave || isSaving || isClearing}
+            className="mapa-cell-save"
+            disabled={!canSave || busy}
             onClick={() => {
               if (!selectedSubjectName) {
                 return;
@@ -210,10 +186,18 @@ export const CellEditorDialog = ({
               onSave({ subjectName: selectedSubjectName, teacherName: teacherName.trim() });
             }}
           >
-            Salvar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {MAP_COPY.saveLesson}
+          </button>
+          {lesson ? (
+            <button type="button" className="mapa-cell-clear" onClick={onClear} disabled={busy}>
+              {MAP_COPY.clearLesson}
+            </button>
+          ) : null}
+        </div>
+        <button type="button" className="mapa-cell-cancel" onClick={onClose} disabled={busy}>
+          {MAP_COPY.cancelLesson}
+        </button>
+      </div>
+    </div>
   );
 };

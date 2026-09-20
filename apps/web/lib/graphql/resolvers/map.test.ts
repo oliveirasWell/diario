@@ -20,9 +20,12 @@ const LESSON_ID = "lesson-1";
 const OWNER_WHERE = { ownerId: { in: TEACHER_OWNER_IDS } };
 
 describe("mapQueryResolvers.mapData", () => {
-  it("returns empty data for anonymous users", async () => {
+  it("returns campus locations and empty user data for anonymous users", async () => {
+    const location = { id: LOCATION_ID, code: "07", kind: "ROOM", name: "Sala 07" };
+    prismaMock.location.findMany.mockResolvedValue([location]);
+
     await expect(mapQueryResolvers.mapData(null, {}, anonymousContext)).resolves.toEqual({
-      locations: [],
+      locations: [location],
       roomShifts: [],
       subjects: [],
       teachers: [],

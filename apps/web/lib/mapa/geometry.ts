@@ -215,7 +215,13 @@ export const isRoutableLocation = (location: PlacedLocation): boolean => {
   return navNodeIdForLocation(location.code, location.kind) in navNodes;
 };
 
-export const routableLocations = (): PlacedLocation[] => allLocations.filter(isRoutableLocation);
+export const routableLocations = (): PlacedLocation[] =>
+  allLocations.filter(isRoutableLocation).sort((left, right) => {
+    if (left.kind !== right.kind) {
+      return left.kind === "POI" ? -1 : 1;
+    }
+    return left.name.localeCompare(right.name, "pt-BR", { numeric: true });
+  });
 
 export type PixelRect = { x: number; y: number; width: number; height: number };
 

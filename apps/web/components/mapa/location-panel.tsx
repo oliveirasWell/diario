@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MAP_COPY } from "@/lib/mapa/constants";
 import type { PlacedLocation } from "@/lib/mapa/types";
 import { RoomSchedule } from "./room-schedule";
@@ -28,29 +26,42 @@ export const LocationPanel = ({
   onRouteHere,
   onClose,
 }: LocationPanelProps) => (
-  <Dialog open onOpenChange={(open) => !open && onClose()}>
-    <DialogContent className="sm:max-w-2xl">
-      <DialogHeader>
-        <p className="text-xs font-bold tracking-wide text-primary uppercase" aria-hidden>
-          {location.kind === "ROOM" ? MAP_COPY.roomTag : MAP_COPY.poiTag}
-        </p>
-        <DialogTitle>{location.name}</DialogTitle>
-      </DialogHeader>
-      <Button type="button" variant="secondary" onClick={() => onRouteHere(location.code)}>
+  <div
+    className="mapa-overlay"
+    onClick={(event) => {
+      if (event.target === event.currentTarget) {
+        onClose();
+      }
+    }}
+  >
+    <div className="mapa-panel" role="dialog" aria-modal="true" aria-labelledby="mapa-panel-title">
+      <span className="mapa-panel-tag">
+        {location.kind === "ROOM" ? MAP_COPY.roomTag : MAP_COPY.poiTag}
+      </span>
+      <h2 id="mapa-panel-title">{location.name}</h2>
+      <button type="button" className="mapa-goto-nav" onClick={() => onRouteHere(location.code)}>
         {MAP_COPY.howToGetHere}
-      </Button>
-      {location.kind === "ROOM" && dbLocation ? (
-        <RoomSchedule
-          key={location.code}
-          locationId={dbLocation.id}
-          roomShifts={roomShifts}
-          subjects={subjects}
-          teachers={teachers}
-          initialShift={initialShift}
-        />
-      ) : location.kind === "POI" ? (
-        <p className="text-sm text-muted-foreground">{MAP_COPY.poiDescription}</p>
-      ) : null}
-    </DialogContent>
-  </Dialog>
+      </button>
+      {location.kind === "ROOM" ? (
+        <>
+          {!dbLocation ? <p className="mapa-seed-note">{MAP_COPY.seedLocations}</p> : null}
+          <RoomSchedule
+            key={location.code}
+            locationCode={location.code}
+            locationName={location.name}
+            locationId={dbLocation?.id}
+            roomShifts={roomShifts}
+            subjects={subjects}
+            teachers={teachers}
+            initialShift={initialShift}
+          />
+        </>
+      ) : (
+        <p>{MAP_COPY.poiDescription}</p>
+      )}
+      <button type="button" className="mapa-panel-close" onClick={onClose}>
+        {MAP_COPY.closePanel}
+      </button>
+    </div>
+  </div>
 );

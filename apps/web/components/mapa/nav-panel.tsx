@@ -1,18 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { DEFAULT_USER_MARKER, MAP_COPY, USER_MARKER_OPTIONS } from "@/lib/mapa/constants";
 import { routableLocations } from "@/lib/mapa/geometry";
-import { NATIVE_SELECT_CLASS_NAME } from "./constants";
 
 type NavPanelProps = {
   originCode: string;
@@ -43,78 +33,77 @@ export const NavPanel = ({
   const locations = routableLocations();
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{MAP_COPY.navPanelTitle}</DialogTitle>
-        </DialogHeader>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mapa-origin">{MAP_COPY.originLabel}</Label>
-            <select
-              id="mapa-origin"
-              className={NATIVE_SELECT_CLASS_NAME}
-              value={originCode}
-              onChange={(event) => onOriginChange(event.target.value)}
+    <div
+      className="mapa-overlay"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="mapa-panel" role="dialog" aria-modal="true" aria-labelledby="mapa-nav-title">
+        <h2 id="mapa-nav-title">{MAP_COPY.navPanelTitle}</h2>
+        <label htmlFor="mapa-origin">{MAP_COPY.originLabel}</label>
+        <select
+          id="mapa-origin"
+          className="mapa-select"
+          value={originCode}
+          onChange={(event) => onOriginChange(event.target.value)}
+        >
+          <option value="">{MAP_COPY.selectLocation}</option>
+          {locations.map((location) => (
+            <option key={location.code} value={location.code}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+        <label htmlFor="mapa-destination">{MAP_COPY.destinationLabel}</label>
+        <select
+          id="mapa-destination"
+          className="mapa-select"
+          value={destinationCode}
+          onChange={(event) => onDestinationChange(event.target.value)}
+        >
+          <option value="">{MAP_COPY.selectLocation}</option>
+          {locations.map((location) => (
+            <option key={location.code} value={location.code}>
+              {location.name}
+            </option>
+          ))}
+        </select>
+        <label>{MAP_COPY.markerLabel}</label>
+        <div className="mapa-emoji-picker">
+          {USER_MARKER_OPTIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={option === marker ? "mapa-emoji-opt is-selected" : "mapa-emoji-opt"}
+              onClick={() => {
+                setMarker(option);
+                onOriginMarkerChange(option);
+              }}
             >
-              <option value="" />
-              {locations.map((location) => (
-                <option key={location.code} value={location.code}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mapa-destination">{MAP_COPY.destinationLabel}</Label>
-            <select
-              id="mapa-destination"
-              className={NATIVE_SELECT_CLASS_NAME}
-              value={destinationCode}
-              onChange={(event) => onDestinationChange(event.target.value)}
-            >
-              <option value="" />
-              {locations.map((location) => (
-                <option key={location.code} value={location.code}>
-                  {location.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>{MAP_COPY.markerLabel}</Label>
-            <div className="flex flex-wrap gap-1">
-              {USER_MARKER_OPTIONS.map((option) => (
-                <Button
-                  key={option}
-                  type="button"
-                  size="sm"
-                  variant={option === marker ? "default" : "outline"}
-                  onClick={() => {
-                    setMarker(option);
-                    onOriginMarkerChange(option);
-                  }}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </div>
-          {infoMessage ? (
-            <p className="text-sm text-destructive" role="alert">
-              {infoMessage}
-            </p>
-          ) : null}
+              {option}
+            </button>
+          ))}
         </div>
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClearRoute}>
-            {MAP_COPY.clearRoute}
-          </Button>
-          <Button type="button" onClick={onShowRoute}>
+        {infoMessage ? (
+          <p className="mapa-form-error" role="alert">
+            {infoMessage}
+          </p>
+        ) : null}
+        <div className="mapa-nav-actions">
+          <button type="button" className="mapa-show-route" onClick={onShowRoute}>
             {MAP_COPY.showRoute}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </button>
+          <button type="button" className="mapa-clear-route" onClick={onClearRoute}>
+            {MAP_COPY.clearRoute}
+          </button>
+        </div>
+        <button type="button" className="mapa-panel-text-close" onClick={onClose}>
+          {MAP_COPY.closePanel}
+        </button>
+      </div>
+    </div>
   );
 };

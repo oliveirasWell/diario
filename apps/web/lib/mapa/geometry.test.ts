@@ -10,6 +10,7 @@ import {
   navNodes,
   pois,
   rooms,
+  routableLocations,
   toPixelCenter,
   toPixelRect,
 } from "./geometry";
@@ -95,5 +96,14 @@ describe("geometry", () => {
     });
     expect(centerX).toBeCloseTo((0.1 * IMG_W) / 2);
     expect(centerY).toBeCloseTo((0.2 * IMG_H) / 2);
+  });
+
+  it("lists routable locations with points of interest before rooms", () => {
+    const locations = routableLocations();
+    const firstRoom = locations.findIndex((location) => location.kind === "ROOM");
+    const lastPoi = locations.findLastIndex((location) => location.kind === "POI");
+    expect(firstRoom).toBeGreaterThan(-1);
+    expect(lastPoi).toBeGreaterThan(-1);
+    expect(lastPoi).toBeLessThan(firstRoom);
   });
 });
