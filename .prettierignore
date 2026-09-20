@@ -20,3 +20,4 @@ packages/**/build
 SECURITY.md
 LICENSE
 apps/web/src/gql/**
+docs/mapa/index.html

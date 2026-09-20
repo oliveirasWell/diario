@@ -109,3 +109,85 @@ enum AttendanceStatus {
   ABSENT
   LATE
 }
+
+model Location {
+  id   String       @id @default(auto()) @map("_id") @db.ObjectId
+  code String       @unique
+  kind LocationKind
+  name String
+
+  roomShifts RoomShift[]
+}
+
+model Teacher {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  normalizedName String @unique
+
+  lessons Lesson[]
+}
+
+model Subject {
+  id             String @id @default(auto()) @map("_id") @db.ObjectId
+  name           String
+  normalizedName String @unique
+
+  lessons Lesson[]
+}
+
+model ClassGroup {
+  id      String @id @default(auto()) @map("_id") @db.ObjectId
+  grade   String
+  section String
+
+  roomShifts RoomShift[]
+
+  @@unique([grade, section])
+}
+
+model RoomShift {
+  id           String  @id @default(auto()) @map("_id") @db.ObjectId
+  locationId   String  @db.ObjectId
+  shift        Shift
+  classGroupId String? @db.ObjectId
+
+  location   Location    @relation(fields: [locationId], references: [id])
+  classGroup ClassGroup? @relation(fields: [classGroupId], references: [id])
+  lessons    Lesson[]
+
+  @@unique([locationId, shift])
+}
+
+model Lesson {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  roomShiftId String  @db.ObjectId
+  weekday     Weekday
+  period      Int
+  subjectId   String  @db.ObjectId
+  teacherId   String  @db.ObjectId
+
+  roomShift RoomShift @relation(fields: [roomShiftId], references: [id])
+  subject   Subject   @relation(fields: [subjectId], references: [id])
+  teacher   Teacher   @relation(fields: [teacherId], references: [id])
+
+  @@unique([roomShiftId, weekday, period])
+}
+
+enum LocationKind {
+  ROOM
+  POI
+}
+
+enum Shift {
+  MATUTINO
+  VESPERTINO
+  NOTURNO
+}
+
+enum Weekday {
+  SEG
+  TER
+  QUA
+  QUI
+  SEX
+}

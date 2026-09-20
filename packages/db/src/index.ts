@@ -11,4 +11,11 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 // Avoid export * from CJS to satisfy Next bundler
-export { PrismaClient, Prisma, AttendanceStatus } from "@prisma/client";
+export {
+  PrismaClient,
+  Prisma,
+  AttendanceStatus,
+  LocationKind,
+  Shift,
+  Weekday,
+} from "@prisma/client";
