@@ -31,12 +31,10 @@ export const LocationPanel = ({
   <Dialog open onOpenChange={(open) => !open && onClose()}>
     <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
-        <DialogTitle>
-          <span className="mr-2 text-xs font-bold tracking-wide text-primary uppercase">
-            {location.kind === "ROOM" ? MAP_COPY.roomTag : MAP_COPY.poiTag}
-          </span>
-          {location.name}
-        </DialogTitle>
+        <p className="text-xs font-bold tracking-wide text-primary uppercase" aria-hidden>
+          {location.kind === "ROOM" ? MAP_COPY.roomTag : MAP_COPY.poiTag}
+        </p>
+        <DialogTitle>{location.name}</DialogTitle>
       </DialogHeader>
       <Button type="button" variant="secondary" onClick={() => onRouteHere(location.code)}>
         {MAP_COPY.howToGetHere}
