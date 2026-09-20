@@ -3,7 +3,7 @@ import { MAPA_PATH, MAP_COPY } from "../lib/mapa/constants";
 
 test("map page opens and a room click opens the panel", async ({ page }) => {
   await page.goto(MAPA_PATH);
-  await expect(page.getByRole("link", { name: MAP_COPY.navMapa })).toBeVisible();
+  await expect(page.getByRole("link", { name: MAP_COPY.navMapa })).toBeHidden();
   await page.locator('[data-location-code="07"]').click();
   await expect(page.getByRole("heading", { name: "Sala 07" })).toBeVisible();
   await expect(page.getByRole("button", { name: MAP_COPY.howToGetHere })).toBeVisible();
