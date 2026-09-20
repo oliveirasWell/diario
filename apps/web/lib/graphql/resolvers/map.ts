@@ -2,6 +2,7 @@ import type { Prisma } from "@diario/db";
 import { createGraphQLError } from "graphql-yoga";
 import { toPrismaShift, toPrismaWeekday } from "@/lib/graphql/db-bridge";
 import { ownerIdsFrom, requireOwnerIds } from "@/lib/graphql/auth";
+import { claimUnownedMapRecords } from "@/lib/graphql/map-owner-backfill";
 import { DEFAULT_SUBJECT_NAMES } from "@/lib/mapa/constants";
 import type {
   MutationAssignClassGroupArgs,
@@ -96,6 +97,13 @@ const findOrCreateTeacher = async (
   return store.teacher.create({ data: { name, normalizedName, ownerId } });
 };
 
+const isPrismaUniqueConflict = (error: unknown): boolean => {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return false;
+  }
+  return error.code === "P2002";
+};
+
 const ensureDefaultSubjects = async (
   store: MapStore,
   ownerIds: string[],
@@ -105,13 +113,19 @@ const ensureDefaultSubjects = async (
   if (existing.length) {
     return existing;
   }
-  await Promise.all(
-    DEFAULT_SUBJECT_NAMES.map((name) =>
-      store.subject.create({
-        data: { name, normalizedName: normalizeName(name), ownerId },
-      }),
-    ),
-  );
+  try {
+    await Promise.all(
+      DEFAULT_SUBJECT_NAMES.map((name) =>
+        store.subject.create({
+          data: { name, normalizedName: normalizeName(name), ownerId },
+        }),
+      ),
+    );
+  } catch (error) {
+    if (!isPrismaUniqueConflict(error)) {
+      throw error;
+    }
+  }
   return store.subject.findMany({ where: ownerWhere(ownerIds) });
 };
 
@@ -126,6 +140,7 @@ export const mapQueryResolvers = {
       return emptyMapData;
     }
     const prisma = await getPrisma();
+    await claimUnownedMapRecords(prisma, ownerId);
     const [locations, roomShifts, existingSubjects, teachers] = await Promise.all([
       prisma.location.findMany(),
       prisma.roomShift.findMany({

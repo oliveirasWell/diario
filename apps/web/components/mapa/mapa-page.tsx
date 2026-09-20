@@ -6,8 +6,9 @@ import { usePanZoom } from "@/hooks/mapa/use-pan-zoom";
 import { formatGraphqlError } from "@/lib/graphql-error";
 import { DEFAULT_USER_MARKER, MAP_COPY } from "@/lib/mapa/constants";
 import { findPlacedLocation, IMG_H, IMG_W, toPixelCenter } from "@/lib/mapa/geometry";
-import { buildSearchIndex, matchSearchIndex } from "@/lib/mapa/search-index";
+import { shiftForOpenedLocation } from "@/lib/mapa/open-location";
 import { buildRoute, type BuiltRoute } from "@/lib/mapa/route";
+import { buildSearchIndex, matchSearchIndex } from "@/lib/mapa/search-index";
 import type { SearchIndexEntry } from "@/lib/mapa/types";
 import { FloorPlanLayer } from "./floor-plan-layer";
 import { LocationPanel } from "./location-panel";
@@ -37,9 +38,10 @@ export const MapaPage = () => {
   });
 
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
-  const [selectedShift, setSelectedShift] = useState<string | undefined>(undefined);
+  const [panelShift, setPanelShift] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchTargetCode, setSearchTargetCode] = useState<string | null>(null);
+  const [searchTargetShift, setSearchTargetShift] = useState<string | undefined>(undefined);
   const [isNavOpen, setIsNavOpen] = useState(false);
   const [originCode, setOriginCode] = useState("");
   const [destinationCode, setDestinationCode] = useState("");
@@ -73,13 +75,23 @@ export const MapaPage = () => {
     }
   };
 
+  const clearSearchTarget = () => {
+    setSearchTargetCode(null);
+    setSearchTargetShift(undefined);
+  };
+
   const openLocation = (code: string, shift?: string) => {
     hideHint();
     setSelectedCode(code);
-    setSelectedShift(shift);
+    setPanelShift(shiftForOpenedLocation(shift, code, searchTargetCode, searchTargetShift));
     if (searchTargetCode === code) {
-      setSearchTargetCode(null);
+      clearSearchTarget();
     }
+  };
+
+  const closeLocation = () => {
+    setSelectedCode(null);
+    setPanelShift(undefined);
   };
 
   const handleSearchSelect = (entry: SearchIndexEntry) => {
@@ -89,8 +101,9 @@ export const MapaPage = () => {
     }
     setSearchQuery("");
     setSelectedCode(null);
+    setPanelShift(undefined);
     setSearchTargetCode(entry.locationCode);
-    setSelectedShift(entry.shift);
+    setSearchTargetShift(entry.shift);
     const [x, y] = toPixelCenter(location);
     panZoom.centerOn(x, y);
     hideHint();
@@ -101,7 +114,7 @@ export const MapaPage = () => {
       setDestinationCode(destination);
     }
     setIsNavOpen(true);
-    setSelectedCode(null);
+    closeLocation();
   };
 
   const showRoute = () => {
@@ -141,7 +154,7 @@ export const MapaPage = () => {
       >
         <FloorPlanLayer
           activeCode={selectedCode ?? searchTargetCode}
-          onSelectLocation={(code) => openLocation(code, selectedShift)}
+          onSelectLocation={(code) => openLocation(code)}
           wasDragging={panZoom.wasDragging}
         />
         {data ? (
@@ -154,7 +167,7 @@ export const MapaPage = () => {
         <SearchTargetLayer
           location={searchTarget}
           scale={panZoom.scale}
-          onSelect={(code) => openLocation(code, selectedShift)}
+          onSelect={(code) => openLocation(code)}
           wasDragging={panZoom.wasDragging}
         />
       </MapStage>
@@ -177,7 +190,7 @@ export const MapaPage = () => {
             type="button"
             className="mapa-toast-close"
             aria-label={MAP_COPY.close}
-            onClick={() => setSearchTargetCode(null)}
+            onClick={clearSearchTarget}
           >
             ×
           </button>
@@ -206,9 +219,9 @@ export const MapaPage = () => {
           roomShifts={selectedRoomShifts}
           subjects={data?.subjects ?? []}
           teachers={data?.teachers ?? []}
-          initialShift={selectedShift}
+          initialShift={panelShift}
           onRouteHere={openNav}
-          onClose={() => setSelectedCode(null)}
+          onClose={closeLocation}
         />
       ) : null}
 

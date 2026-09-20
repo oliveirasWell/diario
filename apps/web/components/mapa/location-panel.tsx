@@ -41,6 +41,7 @@ export const LocationPanel = ({
       </Button>
       {location.kind === "ROOM" && dbLocation ? (
         <RoomSchedule
+          key={location.code}
           locationId={dbLocation.id}
           roomShifts={roomShifts}
           subjects={subjects}

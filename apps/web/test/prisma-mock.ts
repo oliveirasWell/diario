@@ -1,7 +1,7 @@
 import { beforeEach, vi, type Mock } from "vitest";
 
 type ModelMock = Record<string, Mock>;
-type PrismaMock = Record<string, ModelMock> & { $transaction: Mock };
+type PrismaMock = Record<string, ModelMock> & { $transaction: Mock; $runCommandRaw: Mock };
 
 const spies: Mock[] = [];
 

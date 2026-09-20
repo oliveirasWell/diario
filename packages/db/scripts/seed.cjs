@@ -4,9 +4,10 @@
 // these rows by `code`. Idempotent: every row is upserted.
 //
 // Subjects, teachers, class groups, room shifts and lessons belong to the
-// signed-in user and are created on demand — not seeded. Does NOT seed the
-// HTML prototype's example data (class "5º A", "Prof. Ana", one lesson in
-// Sala 07).
+// signed-in user and are created on demand — not seeded. Pre-ownerId rows
+// from the first map release are claimed on the owner's first `mapData`
+// query. Does NOT seed the HTML prototype's example data (class "5º A",
+// "Prof. Ana", one lesson in Sala 07).
 
 const { PrismaClient } = require("@prisma/client");
 

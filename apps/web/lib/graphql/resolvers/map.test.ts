@@ -7,6 +7,7 @@ import {
   TEACHER_PRISMA_ID,
 } from "@/test/graphql-context";
 import { prismaMock } from "@/test/prisma-mock";
+import { MAP_OWNER_COLLECTIONS, ownerBackfillUpdateCommand } from "../map-owner-backfill";
 import { mapMutationResolvers, mapQueryResolvers } from "./map";
 
 const LOCATION_ID = "location-1";
@@ -26,6 +27,7 @@ describe("mapQueryResolvers.mapData", () => {
       subjects: [],
       teachers: [],
     });
+    expect(prismaMock.$runCommandRaw).not.toHaveBeenCalled();
   });
 
   it("reads this user's map data in one round trip", async () => {
@@ -56,6 +58,22 @@ describe("mapQueryResolvers.mapData", () => {
     expect(prismaMock.teacher.findMany).toHaveBeenCalledWith({ where: OWNER_WHERE });
   });
 
+  it("claims map rows that still have no ownerId before reading", async () => {
+    prismaMock.location.findMany.mockResolvedValue([]);
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany.mockResolvedValue([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+
+    await mapQueryResolvers.mapData(null, {}, teacherContext);
+
+    expect(prismaMock.$runCommandRaw).toHaveBeenCalledTimes(MAP_OWNER_COLLECTIONS.length);
+    for (const collection of MAP_OWNER_COLLECTIONS) {
+      expect(prismaMock.$runCommandRaw).toHaveBeenCalledWith(
+        ownerBackfillUpdateCommand(collection, TEACHER_PRISMA_ID),
+      );
+    }
+  });
+
   it("seeds the default subjects for a user who has none yet", async () => {
     prismaMock.location.findMany.mockResolvedValue([]);
     prismaMock.roomShift.findMany.mockResolvedValue([]);
@@ -68,6 +86,20 @@ describe("mapQueryResolvers.mapData", () => {
     const result = await mapQueryResolvers.mapData(null, {}, teacherContext);
 
     expect(prismaMock.subject.create).toHaveBeenCalled();
+    expect(result.subjects).toEqual([{ id: SUBJECT_ID }]);
+  });
+
+  it("still returns subjects when default-subject creates race on the unique owner key", async () => {
+    prismaMock.location.findMany.mockResolvedValue([]);
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+    prismaMock.subject.create.mockRejectedValue({ code: "P2002" });
+
+    const result = await mapQueryResolvers.mapData(null, {}, teacherContext);
+
     expect(result.subjects).toEqual([{ id: SUBJECT_ID }]);
   });
 });
