@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode, RefObject } from "react";
+import { FLOOR_PLAN_IMAGE_SRC } from "@/lib/mapa/constants";
 import { IMG_H, IMG_W } from "@/lib/mapa/geometry";
 
 type MapStageProps = {
@@ -17,7 +18,7 @@ export const MapStage = ({ containerRef, transform, isDragging, children }: MapS
       style={{ transform, width: IMG_W, height: IMG_H }}
     >
       <svg viewBox={`0 0 ${IMG_W} ${IMG_H}`} width={IMG_W} height={IMG_H}>
-        <rect className="mapa-campus" width={IMG_W} height={IMG_H} />
+        <image href={FLOOR_PLAN_IMAGE_SRC} width={IMG_W} height={IMG_H} />
         {children}
       </svg>
     </div>

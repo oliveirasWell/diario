@@ -5,7 +5,7 @@ import { SHIFTS } from "@/lib/mapa/constants";
 import { rooms, toPixelRect } from "@/lib/mapa/geometry";
 import type { MapDataQuery } from "@/src/gql/graphql";
 
-const LABEL_HEIGHT = 12;
+const LABEL_HEIGHT = 14;
 const LABEL_GAP = 2;
 
 type MapRoomShifts = MapDataQuery["mapData"]["roomShifts"];
@@ -41,29 +41,34 @@ const RoomLabelsLayerComponent = ({ roomShifts, onSelectLocation }: RoomLabelsLa
           return null;
         }
         const rect = toPixelRect(geometry);
+        const badgeWidth = Math.max(rect.width - 8, 30);
+        const centerX = rect.x + rect.width / 2;
         return (
           <g key={code}>
             {shifts.map((roomShift, index) => {
               const style = SHIFTS.find((shift) => shift.id === roomShift.shift);
+              const badgeY = rect.y + 4 + index * (LABEL_HEIGHT + LABEL_GAP);
               return (
                 <g
                   key={roomShift.id}
-                  className="cursor-pointer"
-                  transform={`translate(${rect.x + 2}, ${rect.y + 2 + index * (LABEL_HEIGHT + LABEL_GAP)})`}
+                  className="mapa-room-label-badge"
                   onClick={(event) => {
                     event.stopPropagation();
                     onSelectLocation?.(code, roomShift.shift);
                   }}
                 >
                   <rect
-                    width={Math.max(rect.width - 4, LABEL_HEIGHT)}
+                    x={centerX - badgeWidth / 2}
+                    y={badgeY}
+                    width={badgeWidth}
                     height={LABEL_HEIGHT}
+                    rx={LABEL_HEIGHT / 2}
                     fill={style?.background ?? "#ffd93d"}
                   />
                   <text
-                    x={3}
-                    y={LABEL_HEIGHT - 3}
-                    fontSize={8}
+                    x={centerX}
+                    y={badgeY + LABEL_HEIGHT / 2}
+                    fontSize={Math.max(LABEL_HEIGHT * 0.62, 8)}
                     fill={style?.foreground ?? "#5c4a00"}
                   >
                     {roomShift.classGroup?.grade} {roomShift.classGroup?.section}
