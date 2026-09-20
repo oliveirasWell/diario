@@ -43,19 +43,16 @@ export const LocationPanel = ({
         {MAP_COPY.howToGetHere}
       </button>
       {location.kind === "ROOM" ? (
-        <>
-          {!dbLocation ? <p className="mapa-seed-note">{MAP_COPY.seedLocations}</p> : null}
-          <RoomSchedule
-            key={location.code}
-            locationCode={location.code}
-            locationName={location.name}
-            locationId={dbLocation?.id}
-            roomShifts={roomShifts}
-            subjects={subjects}
-            teachers={teachers}
-            initialShift={initialShift}
-          />
-        </>
+        <RoomSchedule
+          key={location.code}
+          locationCode={location.code}
+          locationName={location.name}
+          locationId={dbLocation?.id}
+          roomShifts={roomShifts}
+          subjects={subjects}
+          teachers={teachers}
+          initialShift={initialShift}
+        />
       ) : (
         <p>{MAP_COPY.poiDescription}</p>
       )}

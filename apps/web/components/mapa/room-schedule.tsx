@@ -170,14 +170,14 @@ export const RoomSchedule = ({
   const clearLessonCell = useClearLessonCellMutation();
 
   const roomShift = roomShifts.find((shift) => shift.shift === currentShift);
-  const canEdit = Boolean(locationId);
+  const locationInput = {
+    ...(locationId ? { locationId } : {}),
+    locationCode,
+  };
 
   const assignClassGroupIfComplete = (nextGrade: string, nextSection: string) => {
-    if (!locationId) {
-      return;
-    }
     assignClassGroup.mutate({
-      locationId,
+      ...locationInput,
       shift: currentShift as Shift,
       grade: nextGrade,
       section: nextSection,
@@ -207,7 +207,7 @@ export const RoomSchedule = ({
         initialGrade={roomShift?.classGroup?.grade ?? ""}
         initialSection={roomShift?.classGroup?.section ?? ""}
         extraSections={extraSections}
-        canEdit={canEdit}
+        canEdit
         onComplete={assignClassGroupIfComplete}
         onAddSection={(section) =>
           setExtraSections((current) =>
@@ -242,9 +242,6 @@ export const RoomSchedule = ({
                         key={day.id}
                         className={lesson ? "mapa-schedule-cell is-filled" : "mapa-schedule-cell"}
                         onClick={() => {
-                          if (!canEdit) {
-                            return;
-                          }
                           setOpenCell({ weekday: day.id, period });
                         }}
                       >
@@ -264,7 +261,7 @@ export const RoomSchedule = ({
         </table>
       </div>
 
-      {openCell && locationId ? (
+      {openCell ? (
         <CellEditorDialog
           roomName={locationName}
           weekday={openCell.weekday}
@@ -279,7 +276,7 @@ export const RoomSchedule = ({
           onSave={({ subjectName, teacherName }) => {
             saveLessonCell.mutate(
               {
-                locationId,
+                ...locationInput,
                 shift: currentShift as Shift,
                 weekday: openCell.weekday as Weekday,
                 period: openCell.period,
@@ -292,7 +289,7 @@ export const RoomSchedule = ({
           onClear={() => {
             clearLessonCell.mutate(
               {
-                locationId,
+                ...locationInput,
                 shift: currentShift as Shift,
                 weekday: openCell.weekday as Weekday,
                 period: openCell.period,

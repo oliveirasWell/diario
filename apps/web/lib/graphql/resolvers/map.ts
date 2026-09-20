@@ -2,7 +2,11 @@ import type { Prisma } from "@diario/db";
 import { createGraphQLError } from "graphql-yoga";
 import { toPrismaShift, toPrismaWeekday } from "@/lib/graphql/db-bridge";
 import { ownerIdsFrom, requireOwnerIds } from "@/lib/graphql/auth";
-import { ensureCampusLocations } from "@/lib/graphql/ensure-campus-locations";
+import {
+  ensureCampusLocations,
+  findOrCreateCampusLocation,
+  isPrismaUniqueConflict,
+} from "@/lib/graphql/ensure-campus-locations";
 import { claimUnownedMapRecords } from "@/lib/graphql/map-owner-backfill";
 import { DEFAULT_SUBJECT_NAMES } from "@/lib/mapa/constants";
 import type {
@@ -96,11 +100,20 @@ const findOrCreateTeacher = async (
   return store.teacher.create({ data: { name, normalizedName, ownerId } });
 };
 
-const isPrismaUniqueConflict = (error: unknown): boolean => {
-  if (typeof error !== "object" || error === null || !("code" in error)) {
-    return false;
+const resolveWritableLocationId = async (
+  prisma: Parameters<typeof findOrCreateCampusLocation>[0],
+  locationId?: string | null,
+  locationCode?: string | null,
+) => {
+  if (locationId) {
+    return locationId;
   }
-  return error.code === "P2002";
+  const code = locationCode?.trim() ?? "";
+  const location = code ? await findOrCreateCampusLocation(prisma, code) : null;
+  if (!location) {
+    throw createGraphQLError("Local é obrigatório");
+  }
+  return location.id;
 };
 
 const ensureDefaultSubjects = async (
@@ -137,7 +150,11 @@ export const mapQueryResolvers = {
     if (!ownerIds.length || !ownerId) {
       return { locations, roomShifts: [], subjects: [], teachers: [] };
     }
-    await claimUnownedMapRecords(prisma, ownerId);
+    try {
+      await claimUnownedMapRecords(prisma, ownerId);
+    } catch {
+      // Best-effort backfill; map reads/writes must still work.
+    }
     const [roomShifts, existingSubjects, teachers] = await Promise.all([
       prisma.roomShift.findMany({
         where: ownerWhere(ownerIds),
@@ -168,12 +185,13 @@ export const mapMutationResolvers = {
       throw createGraphQLError("Série e turma são obrigatórias");
     }
     const prisma = await getPrisma();
+    const locationId = await resolveWritableLocationId(prisma, args.locationId, args.locationCode);
     const classGroup = await findOrCreateClassGroup(prisma, ownerIds, ownerId, grade, section);
     const roomShift = await findOrCreateRoomShift(
       prisma,
       ownerIds,
       ownerId,
-      args.locationId,
+      locationId,
       toPrismaShift(args.shift),
     );
     return prisma.roomShift.update({
@@ -197,31 +215,29 @@ export const mapMutationResolvers = {
     if (!teacherName) {
       throw createGraphQLError("Professor é obrigatório");
     }
+    if (args.period < 1 || args.period > 6) {
+      throw createGraphQLError("Período inválido");
+    }
     const shift = toPrismaShift(args.shift);
     const weekday = toPrismaWeekday(args.weekday);
     const prisma = await getPrisma();
-
-    return prisma.$transaction(async (transaction) => {
-      const subject = await findOrCreateSubject(transaction, ownerIds, ownerId, subjectName);
-      const teacher = await findOrCreateTeacher(transaction, ownerIds, ownerId, teacherName);
-      const roomShift = await findOrCreateRoomShift(
-        transaction,
-        ownerIds,
-        ownerId,
-        args.locationId,
-        shift,
-      );
-
-      return transaction.lesson.upsert({
-        where: {
-          roomShiftId_weekday_period: {
-            roomShiftId: roomShift.id,
-            weekday,
-            period: args.period,
-          },
-        },
-        update: { subjectId: subject.id, teacherId: teacher.id },
-        create: {
+    const locationId = await resolveWritableLocationId(prisma, args.locationId, args.locationCode);
+    const subject = await findOrCreateSubject(prisma, ownerIds, ownerId, subjectName);
+    const teacher = await findOrCreateTeacher(prisma, ownerIds, ownerId, teacherName);
+    const roomShift = await findOrCreateRoomShift(prisma, ownerIds, ownerId, locationId, shift);
+    const existingLesson = await prisma.lesson.findFirst({
+      where: { roomShiftId: roomShift.id, weekday, period: args.period },
+    });
+    if (existingLesson) {
+      return prisma.lesson.update({
+        where: { id: existingLesson.id },
+        data: { subjectId: subject.id, teacherId: teacher.id },
+        include: { subject: true, teacher: true },
+      });
+    }
+    try {
+      return await prisma.lesson.create({
+        data: {
           roomShiftId: roomShift.id,
           weekday,
           period: args.period,
@@ -230,7 +246,22 @@ export const mapMutationResolvers = {
         },
         include: { subject: true, teacher: true },
       });
-    });
+    } catch (error) {
+      if (!isPrismaUniqueConflict(error)) {
+        throw error;
+      }
+      const raced = await prisma.lesson.findFirst({
+        where: { roomShiftId: roomShift.id, weekday, period: args.period },
+      });
+      if (!raced) {
+        throw error;
+      }
+      return prisma.lesson.update({
+        where: { id: raced.id },
+        data: { subjectId: subject.id, teacherId: teacher.id },
+        include: { subject: true, teacher: true },
+      });
+    }
   },
 
   clearLessonCell: async (
@@ -242,8 +273,9 @@ export const mapMutationResolvers = {
     const shift = toPrismaShift(args.shift);
     const weekday = toPrismaWeekday(args.weekday);
     const prisma = await getPrisma();
+    const locationId = await resolveWritableLocationId(prisma, args.locationId, args.locationCode);
     const roomShift = await prisma.roomShift.findFirst({
-      where: { locationId: args.locationId, shift, ...ownerWhere(ownerIds) },
+      where: { locationId, shift, ...ownerWhere(ownerIds) },
     });
     if (!roomShift) {
       return true;

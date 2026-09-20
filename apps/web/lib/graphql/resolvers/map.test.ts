@@ -91,6 +91,22 @@ describe("mapQueryResolvers.mapData", () => {
     }
   });
 
+  it("still returns campus locations when owner backfill fails", async () => {
+    const location = { id: LOCATION_ID, code: "07", kind: "ROOM", name: "Sala 07" };
+    prismaMock.location.findMany.mockResolvedValue([location]);
+    prismaMock.$runCommandRaw.mockRejectedValue(new Error("backfill failed"));
+    prismaMock.roomShift.findMany.mockResolvedValue([]);
+    prismaMock.subject.findMany.mockResolvedValue([{ id: SUBJECT_ID }]);
+    prismaMock.teacher.findMany.mockResolvedValue([]);
+
+    await expect(mapQueryResolvers.mapData(null, {}, teacherContext)).resolves.toEqual({
+      locations: [location],
+      roomShifts: [],
+      subjects: [{ id: SUBJECT_ID }],
+      teachers: [],
+    });
+  });
+
   it("seeds the default subjects for a user who has none yet", async () => {
     prismaMock.location.findMany.mockResolvedValue([]);
     prismaMock.roomShift.findMany.mockResolvedValue([]);
@@ -246,7 +262,8 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     });
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(
       null,
@@ -265,7 +282,8 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     prismaMock.subject.create.mockResolvedValue({ id: SUBJECT_ID });
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
@@ -282,7 +300,8 @@ describe("mapMutationResolvers.saveLessonCell", () => {
       normalizedName: "prof. ana",
     });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(
       null,
@@ -301,7 +320,8 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue(null);
     prismaMock.roomShift.create.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
@@ -315,7 +335,8 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     prismaMock.teacher.findFirst.mockResolvedValue(null);
     prismaMock.teacher.create.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
@@ -324,20 +345,18 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     });
   });
 
-  it("upserts the lesson on the room shift/weekday/period key", async () => {
+  it("creates the lesson on the room shift/weekday/period key", async () => {
     prismaMock.subject.findFirst.mockResolvedValue({ id: SUBJECT_ID });
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
-    expect(prismaMock.lesson.upsert).toHaveBeenCalledWith({
-      where: {
-        roomShiftId_weekday_period: { roomShiftId: ROOM_SHIFT_ID, weekday: "SEG", period: 1 },
-      },
-      update: { subjectId: SUBJECT_ID, teacherId: TEACHER_ID },
-      create: {
+    expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    expect(prismaMock.lesson.create).toHaveBeenCalledWith({
+      data: {
         roomShiftId: ROOM_SHIFT_ID,
         weekday: "SEG",
         period: 1,
@@ -348,15 +367,41 @@ describe("mapMutationResolvers.saveLessonCell", () => {
     });
   });
 
-  it("runs inside a transaction", async () => {
+  it("updates the lesson when that cell already exists", async () => {
     prismaMock.subject.findFirst.mockResolvedValue({ id: SUBJECT_ID });
     prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
     prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
-    prismaMock.lesson.upsert.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue({ id: LESSON_ID });
+    prismaMock.lesson.update.mockResolvedValue({ id: LESSON_ID });
 
     await mapMutationResolvers.saveLessonCell(null, args, teacherContext);
 
-    expect(prismaMock.$transaction).toHaveBeenCalled();
+    expect(prismaMock.lesson.create).not.toHaveBeenCalled();
+    expect(prismaMock.lesson.update).toHaveBeenCalledWith({
+      where: { id: LESSON_ID },
+      data: { subjectId: SUBJECT_ID, teacherId: TEACHER_ID },
+      include: { subject: true, teacher: true },
+    });
+  });
+
+  it("creates the campus location from the floor-plan code when no id is sent", async () => {
+    prismaMock.location.findUnique.mockResolvedValue(null);
+    prismaMock.location.create.mockResolvedValue({ id: LOCATION_ID, code: "07" });
+    prismaMock.subject.findFirst.mockResolvedValue({ id: SUBJECT_ID });
+    prismaMock.teacher.findFirst.mockResolvedValue({ id: TEACHER_ID });
+    prismaMock.roomShift.findFirst.mockResolvedValue({ id: ROOM_SHIFT_ID });
+    prismaMock.lesson.findFirst.mockResolvedValue(null);
+    prismaMock.lesson.create.mockResolvedValue({ id: LESSON_ID });
+
+    await mapMutationResolvers.saveLessonCell(
+      null,
+      { ...args, locationId: undefined, locationCode: "07" },
+      teacherContext,
+    );
+
+    expect(prismaMock.location.create).toHaveBeenCalledWith({
+      data: { code: "07", name: "Sala 07", kind: "ROOM" },
+    });
   });
 });
 

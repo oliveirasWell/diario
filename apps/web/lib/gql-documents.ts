@@ -307,8 +307,20 @@ export const MapDataDocument = graphql(`
 `);
 
 export const AssignClassGroupDocument = graphql(`
-  mutation AssignClassGroup($locationId: ID!, $shift: Shift!, $grade: String!, $section: String!) {
-    assignClassGroup(locationId: $locationId, shift: $shift, grade: $grade, section: $section) {
+  mutation AssignClassGroup(
+    $locationId: ID
+    $locationCode: String
+    $shift: Shift!
+    $grade: String!
+    $section: String!
+  ) {
+    assignClassGroup(
+      locationId: $locationId
+      locationCode: $locationCode
+      shift: $shift
+      grade: $grade
+      section: $section
+    ) {
       id
       shift
       location {
@@ -328,7 +340,8 @@ export const AssignClassGroupDocument = graphql(`
 
 export const SaveLessonCellDocument = graphql(`
   mutation SaveLessonCell(
-    $locationId: ID!
+    $locationId: ID
+    $locationCode: String
     $shift: Shift!
     $weekday: Weekday!
     $period: Int!
@@ -337,6 +350,7 @@ export const SaveLessonCellDocument = graphql(`
   ) {
     saveLessonCell(
       locationId: $locationId
+      locationCode: $locationCode
       shift: $shift
       weekday: $weekday
       period: $period
@@ -359,8 +373,20 @@ export const SaveLessonCellDocument = graphql(`
 `);
 
 export const ClearLessonCellDocument = graphql(`
-  mutation ClearLessonCell($locationId: ID!, $shift: Shift!, $weekday: Weekday!, $period: Int!) {
-    clearLessonCell(locationId: $locationId, shift: $shift, weekday: $weekday, period: $period)
+  mutation ClearLessonCell(
+    $locationId: ID
+    $locationCode: String
+    $shift: Shift!
+    $weekday: Weekday!
+    $period: Int!
+  ) {
+    clearLessonCell(
+      locationId: $locationId
+      locationCode: $locationCode
+      shift: $shift
+      weekday: $weekday
+      period: $period
+    )
   }
 `);
 

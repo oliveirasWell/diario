@@ -4,6 +4,7 @@ import {
   CAMPUS_LOCATION_COUNT,
   CAMPUS_LOCATION_INPUTS,
   ensureCampusLocations,
+  findOrCreateCampusLocation,
 } from "./ensure-campus-locations";
 
 describe("ensureCampusLocations", () => {
@@ -38,5 +39,36 @@ describe("ensureCampusLocations", () => {
     prismaMock.location.create.mockRejectedValue({ code: "P2002" });
 
     await expect(ensureCampusLocations(prismaMock as never)).resolves.toEqual([]);
+  });
+});
+
+describe("findOrCreateCampusLocation", () => {
+  it("reuses a location that already exists for that floor-plan code", async () => {
+    const existing = { id: "loc-07", code: "07", name: "Sala 07", kind: "ROOM" as const };
+    prismaMock.location.findUnique.mockResolvedValue(existing);
+
+    await expect(findOrCreateCampusLocation(prismaMock as never, "07")).resolves.toEqual(existing);
+    expect(prismaMock.location.create).not.toHaveBeenCalled();
+  });
+
+  it("creates the campus location from static geometry", async () => {
+    prismaMock.location.findUnique.mockResolvedValue(null);
+    prismaMock.location.create.mockResolvedValue({
+      id: "loc-07",
+      code: "07",
+      name: "Sala 07",
+      kind: "ROOM",
+    });
+
+    await expect(findOrCreateCampusLocation(prismaMock as never, "07")).resolves.toMatchObject({
+      code: "07",
+    });
+    expect(prismaMock.location.create).toHaveBeenCalledWith({
+      data: { code: "07", name: "Sala 07", kind: "ROOM" },
+    });
+  });
+
+  it("returns null for a code that is not on the floor plan", async () => {
+    await expect(findOrCreateCampusLocation(prismaMock as never, "nope")).resolves.toBeNull();
   });
 });
