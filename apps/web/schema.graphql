@@ -9,6 +9,7 @@ type Query {
   gradesByClass(classId: ID!): ClassGrades!
   attendanceDates(classId: ID!, from: DateTime, to: DateTime): [DateTime!]!
   attendanceRecords(classId: ID!, from: DateTime, to: DateTime): [AttendanceRecord!]!
+  mapData: MapData!
 }
 
 type Mutation {
@@ -40,6 +41,17 @@ type Mutation {
   excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
   createInviteLink(classId: ID!): String!
   acceptInvite(id: ID!): Class!
+  assignClassGroup(locationId: ID!, shift: Shift!, grade: String!, section: String!): RoomShift!
+  saveLessonCell(
+    locationId: ID!
+    shift: Shift!
+    weekday: Weekday!
+    period: Int!
+    subjectName: String!
+    teacherName: String!
+  ): Lesson!
+  clearLessonCell(locationId: ID!, shift: Shift!, weekday: Weekday!, period: Int!): Boolean!
+  createSubject(name: String!): Subject!
 }
 
 type Class {
@@ -134,4 +146,69 @@ type AttendanceRecord {
   enrollmentId: ID!
   status: AttendanceStatus!
   session: AttendanceSession!
+}
+
+enum LocationKind {
+  ROOM
+  POI
+}
+
+enum Shift {
+  MATUTINO
+  VESPERTINO
+  NOTURNO
+}
+
+enum Weekday {
+  SEG
+  TER
+  QUA
+  QUI
+  SEX
+}
+
+type Location {
+  id: ID!
+  code: String!
+  kind: LocationKind!
+  name: String!
+}
+
+type ClassGroup {
+  id: ID!
+  grade: String!
+  section: String!
+}
+
+type Teacher {
+  id: ID!
+  name: String!
+}
+
+type Subject {
+  id: ID!
+  name: String!
+}
+
+type Lesson {
+  id: ID!
+  weekday: Weekday!
+  period: Int!
+  subject: Subject!
+  teacher: Teacher!
+}
+
+type RoomShift {
+  id: ID!
+  location: Location!
+  shift: Shift!
+  classGroup: ClassGroup
+  lessons: [Lesson!]!
+}
+
+type MapData {
+  locations: [Location!]!
+  roomShifts: [RoomShift!]!
+  subjects: [Subject!]!
+  teachers: [Teacher!]!
 }

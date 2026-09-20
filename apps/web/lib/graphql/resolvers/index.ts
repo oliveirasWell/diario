@@ -3,6 +3,7 @@ import { enrollmentMutationResolvers, enrollmentQueryResolvers } from "./enrollm
 import { evaluationMutationResolvers, evaluationQueryResolvers } from "./evaluation";
 import { gradeMutationResolvers, gradeQueryResolvers } from "./grade";
 import { attendanceMutationResolvers, attendanceQueryResolvers } from "./attendance";
+import { mapMutationResolvers, mapQueryResolvers } from "./map";
 
 export const resolvers = {
   ...classFieldResolvers,
@@ -12,6 +13,7 @@ export const resolvers = {
     ...evaluationQueryResolvers,
     ...gradeQueryResolvers,
     ...attendanceQueryResolvers,
+    ...mapQueryResolvers,
   },
   Mutation: {
     ...classMutationResolvers,
@@ -19,5 +21,6 @@ export const resolvers = {
     ...evaluationMutationResolvers,
     ...gradeMutationResolvers,
     ...attendanceMutationResolvers,
+    ...mapMutationResolvers,
   },
 };

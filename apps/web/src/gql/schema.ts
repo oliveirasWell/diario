@@ -67,6 +67,13 @@ export type ClassGrades = {
   rows: Array<ClassGradeRow>;
 };
 
+export type ClassGroup = {
+  __typename?: 'ClassGroup';
+  grade: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  section: Scalars['String']['output'];
+};
+
 export type ClassInviteInfo = {
   __typename?: 'ClassInviteInfo';
   id: Scalars['ID']['output'];
@@ -102,13 +109,46 @@ export type Grade = {
   score: Scalars['Float']['output'];
 };
 
+export type Lesson = {
+  __typename?: 'Lesson';
+  id: Scalars['ID']['output'];
+  period: Scalars['Int']['output'];
+  subject: Subject;
+  teacher: Teacher;
+  weekday: Weekday;
+};
+
+export type Location = {
+  __typename?: 'Location';
+  code: Scalars['String']['output'];
+  id: Scalars['ID']['output'];
+  kind: LocationKind;
+  name: Scalars['String']['output'];
+};
+
+export enum LocationKind {
+  Poi = 'POI',
+  Room = 'ROOM'
+}
+
+export type MapData = {
+  __typename?: 'MapData';
+  locations: Array<Location>;
+  roomShifts: Array<RoomShift>;
+  subjects: Array<Subject>;
+  teachers: Array<Teacher>;
+};
+
 export type Mutation = {
   __typename?: 'Mutation';
   acceptInvite: Class;
+  assignClassGroup: RoomShift;
+  clearLessonCell: Scalars['Boolean']['output'];
   createAndEnroll: Enrollment;
   createClass: Class;
   createEvaluation: Evaluation;
   createInviteLink: Scalars['String']['output'];
+  createSubject: Subject;
   deleteClass: Scalars['Boolean']['output'];
   deleteEvaluation: Scalars['Boolean']['output'];
   excludeAttendanceDate: Scalars['Boolean']['output'];
@@ -117,6 +157,7 @@ export type Mutation = {
   renameClass: Class;
   renameEvaluation: Evaluation;
   renameStudent: Enrollment;
+  saveLessonCell: Lesson;
   setEnrollmentConcept: Enrollment;
   unenrollStudent: Scalars['Boolean']['output'];
   updateClassSchedule: Class;
@@ -126,6 +167,22 @@ export type Mutation = {
 
 export type MutationAcceptInviteArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type MutationAssignClassGroupArgs = {
+  grade: Scalars['String']['input'];
+  locationId: Scalars['ID']['input'];
+  section: Scalars['String']['input'];
+  shift: Shift;
+};
+
+
+export type MutationClearLessonCellArgs = {
+  locationId: Scalars['ID']['input'];
+  period: Scalars['Int']['input'];
+  shift: Shift;
+  weekday: Weekday;
 };
 
 
@@ -155,6 +212,11 @@ export type MutationCreateEvaluationArgs = {
 
 export type MutationCreateInviteLinkArgs = {
   classId: Scalars['ID']['input'];
+};
+
+
+export type MutationCreateSubjectArgs = {
+  name: Scalars['String']['input'];
 };
 
 
@@ -207,6 +269,16 @@ export type MutationRenameStudentArgs = {
 };
 
 
+export type MutationSaveLessonCellArgs = {
+  locationId: Scalars['ID']['input'];
+  period: Scalars['Int']['input'];
+  shift: Shift;
+  subjectName: Scalars['String']['input'];
+  teacherName: Scalars['String']['input'];
+  weekday: Weekday;
+};
+
+
 export type MutationSetEnrollmentConceptArgs = {
   concept?: InputMaybe<Scalars['String']['input']>;
   enrollmentId: Scalars['ID']['input'];
@@ -242,6 +314,7 @@ export type Query = {
   enrollments: Array<Enrollment>;
   evaluations: Array<Evaluation>;
   gradesByClass: ClassGrades;
+  mapData: MapData;
 };
 
 
@@ -283,6 +356,21 @@ export type QueryGradesByClassArgs = {
   classId: Scalars['ID']['input'];
 };
 
+export type RoomShift = {
+  __typename?: 'RoomShift';
+  classGroup?: Maybe<ClassGroup>;
+  id: Scalars['ID']['output'];
+  lessons: Array<Lesson>;
+  location: Location;
+  shift: Shift;
+};
+
+export enum Shift {
+  Matutino = 'MATUTINO',
+  Noturno = 'NOTURNO',
+  Vespertino = 'VESPERTINO'
+}
+
 export type Student = {
   __typename?: 'Student';
   createdAt: Scalars['DateTime']['output'];
@@ -293,6 +381,18 @@ export type Student = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+export type Subject = {
+  __typename?: 'Subject';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
+export type Teacher = {
+  __typename?: 'Teacher';
+  id: Scalars['ID']['output'];
+  name: Scalars['String']['output'];
+};
+
 export type User = {
   __typename?: 'User';
   email?: Maybe<Scalars['String']['output']>;
@@ -300,3 +400,11 @@ export type User = {
   image?: Maybe<Scalars['String']['output']>;
   name?: Maybe<Scalars['String']['output']>;
 };
+
+export enum Weekday {
+  Qua = 'QUA',
+  Qui = 'QUI',
+  Seg = 'SEG',
+  Sex = 'SEX',
+  Ter = 'TER'
+}

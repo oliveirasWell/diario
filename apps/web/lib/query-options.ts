@@ -7,6 +7,7 @@ import {
   EnrollmentsDocument,
   EvaluationsDocument,
   GradesByClassDocument,
+  MapDataDocument,
 } from "@/src/gql/graphql";
 import type { AttendanceBoardQuery } from "@/src/gql/graphql";
 
@@ -26,6 +27,7 @@ export const queryKeys = {
     ["attendanceBoard", classId, from, to] as const,
   evaluations: (classId: string) => ["evaluations", classId] as const,
   grades: (classId: string) => ["grades", classId] as const,
+  mapData: () => ["mapData"] as const,
 };
 
 export const classesQueryOptions = () => {
@@ -104,6 +106,18 @@ export const gradesQueryOptions = (classId: string) => {
       return data.gradesByClass;
     },
     enabled: !!classId,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
+  });
+};
+
+export const mapDataQueryOptions = () => {
+  return queryOptions({
+    queryKey: queryKeys.mapData(),
+    queryFn: async () => {
+      const data = await gqlRequest(MapDataDocument);
+      return data.mapData;
+    },
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });
