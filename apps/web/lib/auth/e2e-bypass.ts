@@ -1,5 +1,6 @@
 export const E2E_AUTH_BYPASS_ENV = "E2E_AUTH_BYPASS";
 export const E2E_AUTH_BYPASS_VALUE = "1";
+export const E2E_BYPASS_USER_EMAIL = "mapa-e2e@localhost";
 
 export const E2E_PUBLIC_PATHS = ["/mapa", "/api/graphql"] as const;
 

@@ -16,7 +16,8 @@ export const useAssignClassGroupMutation = () => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: {
-      locationId: string;
+      locationId?: string;
+      locationCode: string;
       shift: Shift;
       grade: string;
       section: string;
@@ -34,7 +35,8 @@ export const useSaveLessonCellMutation = () => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: {
-      locationId: string;
+      locationId?: string;
+      locationCode: string;
       shift: Shift;
       weekday: Weekday;
       period: number;
@@ -54,7 +56,8 @@ export const useClearLessonCellMutation = () => {
   const queryClient = useQueryClient();
   return useAppMutation({
     mutationFn: async (input: {
-      locationId: string;
+      locationId?: string;
+      locationCode: string;
       shift: Shift;
       weekday: Weekday;
       period: number;

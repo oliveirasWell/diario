@@ -41,16 +41,29 @@ type Mutation {
   excludeAttendanceDate(classId: ID!, date: DateTime!): Boolean!
   createInviteLink(classId: ID!): String!
   acceptInvite(id: ID!): Class!
-  assignClassGroup(locationId: ID!, shift: Shift!, grade: String!, section: String!): RoomShift!
+  assignClassGroup(
+    locationId: ID
+    locationCode: String
+    shift: Shift!
+    grade: String!
+    section: String!
+  ): RoomShift!
   saveLessonCell(
-    locationId: ID!
+    locationId: ID
+    locationCode: String
     shift: Shift!
     weekday: Weekday!
     period: Int!
     subjectName: String!
     teacherName: String!
   ): Lesson!
-  clearLessonCell(locationId: ID!, shift: Shift!, weekday: Weekday!, period: Int!): Boolean!
+  clearLessonCell(
+    locationId: ID
+    locationCode: String
+    shift: Shift!
+    weekday: Weekday!
+    period: Int!
+  ): Boolean!
   createSubject(name: String!): Subject!
 }
 

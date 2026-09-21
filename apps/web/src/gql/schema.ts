@@ -172,14 +172,16 @@ export type MutationAcceptInviteArgs = {
 
 export type MutationAssignClassGroupArgs = {
   grade: Scalars['String']['input'];
-  locationId: Scalars['ID']['input'];
+  locationCode?: InputMaybe<Scalars['String']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   section: Scalars['String']['input'];
   shift: Shift;
 };
 
 
 export type MutationClearLessonCellArgs = {
-  locationId: Scalars['ID']['input'];
+  locationCode?: InputMaybe<Scalars['String']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   period: Scalars['Int']['input'];
   shift: Shift;
   weekday: Weekday;
@@ -270,7 +272,8 @@ export type MutationRenameStudentArgs = {
 
 
 export type MutationSaveLessonCellArgs = {
-  locationId: Scalars['ID']['input'];
+  locationCode?: InputMaybe<Scalars['String']['input']>;
+  locationId?: InputMaybe<Scalars['ID']['input']>;
   period: Scalars['Int']['input'];
   shift: Shift;
   subjectName: Scalars['String']['input'];
