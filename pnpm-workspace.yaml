@@ -1,6 +1,13 @@
 packages:
   - "apps/*"
   - "packages/*"
+saveExact: true
+# Security floors for transitive deps whose parents pin a vulnerable patch line.
+overrides:
+  "immutable@<3.8.4": "3.8.4"
+  "lodash@<4.18.1": "4.18.1"
+  "postcss@<8.5.23": "8.5.23"
+  "vite@<6.4.6": "6.4.6"
 allowBuilds:
   "@apollo/protobufjs": true
   "@parcel/watcher": true

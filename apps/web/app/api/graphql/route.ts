@@ -12,6 +12,7 @@ const { handleRequest } = createYoga({
   graphqlEndpoint: "/api/graphql",
   context: createGraphQLContext,
   maskedErrors: { errorMessage: "Algo deu errado. Tente novamente." },
+  graphiql: process.env.NODE_ENV !== "production",
 });
 
 async function toGlobalResponse(res: Response): Promise<Response> {
@@ -26,9 +27,9 @@ async function proxyYoga(request: Request): Promise<Response> {
     const res = await handleRequest(request, {});
     return await toGlobalResponse(res as unknown as Response);
   } catch (err: unknown) {
+    // The error is logged server-side only; echoing it would leak internals to the client.
     log.error("graphql.route_uncaught", { route: "/api/graphql" }, err);
-    const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ error: "GraphQL handler error", message }), {
+    return new Response(JSON.stringify({ error: "GraphQL handler error" }), {
       status: 500,
       headers: { "content-type": "application/json" },
     });
