@@ -29,7 +29,7 @@ export const HeaderTitle = () => {
         <Link href={CLASSES_PATH} className={navClassName(inClassesIndex || inClassDetail)}>
           {MAP_COPY.navTurmas}
         </Link>
-        <Link href={MAPA_PATH} className={navClassName(inMapa)}>
+        <Link href={MAPA_PATH} className={cn(navClassName(inMapa), "hidden")}>
           {MAP_COPY.navMapa}
         </Link>
       </nav>
